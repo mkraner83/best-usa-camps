@@ -12,6 +12,9 @@ defined( 'ABSPATH' ) || exit;
 class I18n {
 
 	public function load_textdomain(){
+		if ( ! defined( 'CREATIVE_DBS_CAMPMGMT_FILE' ) ) {
+			return;
+		}
 		load_plugin_textdomain(
 			'creativedbs-camp-mgmt',
 			false,

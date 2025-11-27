@@ -2,12 +2,12 @@
 /*
 Plugin Name: CreativeDBS Camp Management
 Description: Ultimate US Summer Camp Management Application.
-Version: 2.0.0
+Version: 2.0.1
 Author: CreativeDBS
 Text Domain: creativedbs-camp-mgmt
 */
 
-define('CDBS_CAMP_VERSION', '2.0.0');
+define('CDBS_CAMP_VERSION', '2.0.1');
 
 defined( 'ABSPATH' ) || exit;
 
@@ -15,28 +15,41 @@ if ( ! defined( 'CREATIVE_DBS_CAMPMGMT_FILE' ) ) {
 	define( 'CREATIVE_DBS_CAMPMGMT_FILE', __FILE__ );
 }
 
-require_once __DIR__ . '/includes/class-i18n.php';
-require_once __DIR__ . '/includes/class-assets.php';
-require_once __DIR__ . '/includes/class-plugin.php';
-if ( is_admin() ) { require_once __DIR__ . '/includes/admin-credentials.php'; }
-add_action( 'admin_menu', [ '\\CreativeDBS\\CampMgmt\\Admin_Creds', 'register_menu' ], 99 );
-require_once __DIR__ . '/includes/migrations-phase7.php';
-add_action( 'admin_init', [ '\\CreativeDBS\\CampMgmt\\Migrations_Phase7', 'run' ] );
-if ( file_exists( __DIR__ . '/includes/class-db.php' ) ) {
-    require_once __DIR__ . '/includes/class-db.php';
+// Load required classes
+$required_files = [
+    __DIR__ . '/includes/class-i18n.php',
+    __DIR__ . '/includes/class-assets.php',
+    __DIR__ . '/includes/class-plugin.php',
+    __DIR__ . '/includes/class-db.php',
+    __DIR__ . '/includes/class-helpers.php',
+    __DIR__ . '/includes/migrations-phase7.php',
+    __DIR__ . '/includes/Public/class-public-controller.php',
+    __DIR__ . '/includes/Admin/class-admin.php',
+];
+
+foreach ( $required_files as $file ) {
+    if ( file_exists( $file ) ) {
+        require_once $file;
+    }
 }
+
+if ( is_admin() ) { 
+    require_once __DIR__ . '/includes/admin-credentials.php';
+    add_action( 'admin_menu', [ '\\CreativeDBS\\CampMgmt\\Admin_Creds', 'register_menu' ], 99 );
+}
+add_action( 'admin_init', [ '\\CreativeDBS\\CampMgmt\\Migrations_Phase7', 'run' ] );
 if ( function_exists( 'register_uninstall_hook' ) ) {
     if ( ! function_exists( 'creativedbs_campmgmt_uninstall_marker' ) ) {
         function creativedbs_campmgmt_uninstall_marker() {}
     }
     register_uninstall_hook( __FILE__, 'creativedbs_campmgmt_uninstall_marker' );
 }
-require_once __DIR__ . '/includes/Public/class-public-controller.php';
-require_once __DIR__ . '/includes/Admin/class-admin.php';
-require_once __DIR__ . '/includes/class-helpers.php';
 
 // Instantiate plugin early.
 add_action( 'plugins_loaded', function() {
+	if ( ! class_exists( '\\CreativeDBS\\CampMgmt\\Plugin' ) ) {
+		return;
+	}
 	\CreativeDBS\CampMgmt\Plugin::instance();
 	new \CreativeDBS\CampMgmt\Admin\Admin();
 	new \CreativeDBS\CampMgmt\PublicArea\Public_Controller();
@@ -51,7 +64,7 @@ if (!defined('ABSPATH')) { exit; }
 if (!class_exists('CreativeDBS_Camp_Management')):
 
 class CreativeDBS_Camp_Management {
-    const VERSION = '2.0.0';
+    const VERSION = '2.0.1';
     const SLUG    = 'creativedbs-camp-mgmt';
 
     private static $instance = null;
