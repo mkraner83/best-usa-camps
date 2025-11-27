@@ -305,33 +305,54 @@ class Ninja_Forms_Integration {
 		// Generate unique key
 		$unique_key = md5( uniqid( 'camp_', true ) );
 
-		// Extract additional fields from form data if available
+		// Extract fields from form data
 		$fields = isset( $form_data['fields'] ) ? $form_data['fields'] : [];
 		
-		$phone = $this->get_field_value( $fields, 'phone' );
-		$website = $this->get_field_value( $fields, 'website' );
-		$address = $this->get_field_value( $fields, 'address' );
-		$city = $this->get_field_value( $fields, 'city' );
-		$state = $this->get_field_value( $fields, 'state' );
-		$zip = $this->get_field_value( $fields, 'zip' );
+		// Map Ninja Forms field labels/keys to values
+		$opening_day    = $this->get_field_by_label( $fields, 'Camp Opening Day' );
+		$closing_day    = $this->get_field_by_label( $fields, 'Camp Closing Day' );
+		$camp_type      = $this->get_field_by_label( $fields, 'Camp Type' ); // checkbox list
+		$duration       = $this->get_field_by_label( $fields, 'Duration' ); // checkbox list
+		$lowest_rate    = $this->get_field_by_label( $fields, 'Lowest Rate' );
+		$highest_rate   = $this->get_field_by_label( $fields, 'Highest Rate' );
+		$activities     = $this->get_field_by_label( $fields, 'Activities' );
+		$website        = $this->get_field_by_label( $fields, 'Website URL' );
+		$phone          = $this->get_field_by_label( $fields, 'Phone' );
+		$camp_director  = $this->get_field_by_label( $fields, 'Camp Director' );
+		$address        = $this->get_field_by_label( $fields, 'Address' );
+		$city           = $this->get_field_by_label( $fields, 'City' );
+		$state          = $this->get_field_by_label( $fields, 'State' );
+		$zip            = $this->get_field_by_label( $fields, 'Zip' );
+		$about_camp     = $this->get_field_by_label( $fields, 'About Camp' );
+		$photos         = $this->get_field_by_label( $fields, 'Photos Upload' ); // file upload
 
-		// Prepare camp data
+		// Prepare camp data for database insertion
 		$camp_data = [
 			'ninja_entry_id' => $entry_id,
 			'unique_key'     => $unique_key,
-			'camp_name'      => sanitize_text_field( $camp_name ?: ( $first_name . ' ' . $last_name ) ),
+			'camp_name'      => sanitize_text_field( $camp_name ),
+			'opening_day'    => ! empty( $opening_day ) ? sanitize_text_field( $opening_day ) : null,
+			'closing_day'    => ! empty( $closing_day ) ? sanitize_text_field( $closing_day ) : null,
+			'minprice_2026'  => ! empty( $lowest_rate ) ? floatval( $lowest_rate ) : null,
+			'maxprice_2026'  => ! empty( $highest_rate ) ? floatval( $highest_rate ) : null,
+			'activities'     => sanitize_textarea_field( $activities ),
 			'email'          => sanitize_email( $email ),
 			'phone'          => sanitize_text_field( $phone ),
 			'website'        => esc_url_raw( $website ),
-			'camp_directors' => sanitize_text_field( $first_name . ' ' . $last_name ),
+			'camp_directors' => sanitize_text_field( $camp_director ?: ( $first_name . ' ' . $last_name ) ),
 			'address'        => sanitize_text_field( $address ),
 			'city'           => sanitize_text_field( $city ),
 			'state'          => sanitize_text_field( $state ),
 			'zip'            => sanitize_text_field( $zip ),
+			'about_camp'     => sanitize_textarea_field( $about_camp ),
+			'photos'         => sanitize_text_field( $photos ), // Store file path/URL
 			'approved'       => 0, // Not approved by default
 			'created_at'     => current_time( 'mysql' ),
 			'updated_at'     => current_time( 'mysql' ),
 		];
+
+		// Log the data being inserted for debugging
+		error_log( 'CDBS Camp: Preparing to insert camp data: ' . print_r( $camp_data, true ) );
 
 		// Insert into database
 		$inserted = $wpdb->insert( $table, $camp_data );
@@ -355,6 +376,29 @@ class Ninja_Forms_Integration {
 		foreach ( $fields as $field ) {
 			if ( isset( $field['key'] ) && $field['key'] === $key && isset( $field['value'] ) ) {
 				return sanitize_text_field( $field['value'] );
+			}
+		}
+		return '';
+	}
+
+	/**
+	 * Get field value from Ninja Forms submission by field label.
+	 *
+	 * @param array  $fields Ninja Forms fields array.
+	 * @param string $label  Field label to search for (case-insensitive).
+	 * @return string Field value or empty string. For arrays (checkboxes), returns comma-separated values.
+	 */
+	private function get_field_by_label( $fields, $label ) {
+		foreach ( $fields as $field ) {
+			// Check if label matches (case-insensitive)
+			if ( isset( $field['label'] ) && strcasecmp( trim( $field['label'] ), trim( $label ) ) === 0 ) {
+				if ( isset( $field['value'] ) ) {
+					// Handle array values (checkbox lists)
+					if ( is_array( $field['value'] ) ) {
+						return implode( ', ', array_map( 'sanitize_text_field', $field['value'] ) );
+					}
+					return $field['value'];
+				}
 			}
 		}
 		return '';
