@@ -2,12 +2,12 @@
 /*
 Plugin Name: CreativeDBS Camp Management
 Description: Ultimate US Summer Camp Management Application.
-Version: 2.0.1
+Version: 2.0.2
 Author: CreativeDBS
 Text Domain: creativedbs-camp-mgmt
 */
 
-define('CDBS_CAMP_VERSION', '2.0.1');
+define('CDBS_CAMP_VERSION', '2.0.2');
 
 defined( 'ABSPATH' ) || exit;
 
@@ -64,7 +64,7 @@ if (!defined('ABSPATH')) { exit; }
 if (!class_exists('CreativeDBS_Camp_Management')):
 
 class CreativeDBS_Camp_Management {
-    const VERSION = '2.0.1';
+    const VERSION = '2.0.2';
     const SLUG    = 'creativedbs-camp-mgmt';
 
     private static $instance = null;
@@ -409,7 +409,7 @@ class CreativeDBS_Camp_Management {
         }
 
         // List
-        $items = $wpdb->get_results("SELECT id, camp_name, state, website, created_at FROM {$table} ORDER BY {$orderby_sql} {$order_sql}, id DESC LIMIT 500");
+        $items = $wpdb->get_results("SELECT id, camp_name, state, website, logo, created_at FROM {$table} ORDER BY {$orderby_sql} {$order_sql}, id DESC LIMIT 500");
         $base_admin = admin_url('admin.php');
 
         $build_sort = function($key, $label) use ($base_admin, $orderby, $order) {
