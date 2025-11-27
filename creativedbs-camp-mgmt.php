@@ -2,12 +2,12 @@
 /*
 Plugin Name: CreativeDBS Camp Management
 Description: Ultimate US Summer Camp Management Application.
-Version: 2.0.2
+Version: 2.0.3
 Author: CreativeDBS
 Text Domain: creativedbs-camp-mgmt
 */
 
-define('CDBS_CAMP_VERSION', '2.0.2');
+define('CDBS_CAMP_VERSION', '2.0.3');
 
 defined( 'ABSPATH' ) || exit;
 
@@ -25,6 +25,7 @@ $required_files = [
     __DIR__ . '/includes/migrations-phase7.php',
     __DIR__ . '/includes/Public/class-public-controller.php',
     __DIR__ . '/includes/Admin/class-admin.php',
+    __DIR__ . '/includes/class-ninja-forms-integration.php',
 ];
 
 foreach ( $required_files as $file ) {
@@ -53,6 +54,7 @@ add_action( 'plugins_loaded', function() {
 	\CreativeDBS\CampMgmt\Plugin::instance();
 	new \CreativeDBS\CampMgmt\Admin\Admin();
 	new \CreativeDBS\CampMgmt\PublicArea\Public_Controller();
+	new \CreativeDBS\CampMgmt\Ninja_Forms_Integration();
 }, 0);
 
 // === Legacy code below kept for backward-compatibility. ===
@@ -64,7 +66,7 @@ if (!defined('ABSPATH')) { exit; }
 if (!class_exists('CreativeDBS_Camp_Management')):
 
 class CreativeDBS_Camp_Management {
-    const VERSION = '2.0.2';
+    const VERSION = '2.0.3';
     const SLUG    = 'creativedbs-camp-mgmt';
 
     private static $instance = null;
