@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<ruleset name="WordPress Plugin Standards">
+    <description>PHPCS rules for this plugin.</description>
+    <arg name="basepath" value="."/>
+    <file>./</file>
+    <exclude-pattern>vendor/*</exclude-pattern>
+    <rule ref="WordPress"/>
+    <rule ref="WordPress-Extra"/>
+    <rule ref="WordPress-Docs"/>
+    <config name="testVersion" value="8.0-"/>
+    <config name="minimum_supported_wp_version" value="5.8"/>
+    <severity>5</severity>
+    <warning-severity>5</warning-severity>
+</ruleset>
