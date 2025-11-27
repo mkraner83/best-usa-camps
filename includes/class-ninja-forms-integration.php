@@ -22,9 +22,63 @@ class Ninja_Forms_Integration {
 	const CAMP_FORM_ID = 4;
 
 	public function __construct() {
-		add_action( 'ninja_forms_after_submission', [ $this, 'handle_camp_submission' ] );
+		// Add comprehensive hook logging to detect which hooks exist
+		add_action( 'init', [ $this, 'log_available_hooks' ], 999 );
+		
+		// Try ALL possible Ninja Forms hooks
+		add_action( 'ninja_forms_after_submission', [ $this, 'handle_camp_submission' ], 999 );
+		add_action( 'nf_after_submission', [ $this, 'handle_camp_submission_alt' ], 999 );
+		add_action( 'ninja_forms_process_form', [ $this, 'handle_camp_submission_v3' ], 999 );
+		add_action( 'nf_process_form', [ $this, 'handle_camp_submission_alt' ], 999 );
+		
+		// Additional v3 hooks
+		add_action( 'ninja_forms_after_processing', [ $this, 'handle_camp_submission_alt' ], 999 );
+		add_action( 'ninja_forms_submission_actions', [ $this, 'handle_camp_submission_alt' ], 999 );
+		
 		add_action( 'init', [ $this, 'register_camp_role' ] );
 		add_filter( 'ninja_forms_submit_data', [ $this, 'validate_unique_email' ] );
+		
+		// Log on every single action to see if ANYTHING from Ninja Forms fires
+		add_action( 'all', [ $this, 'log_all_actions' ], 1 );
+	}
+	
+	/**
+	 * Log ALL actions to see which Ninja Forms hooks are firing.
+	 */
+	public function log_all_actions( $hook ) {
+		// Only log Ninja Forms related hooks
+		if ( strpos( $hook, 'ninja' ) !== false || strpos( $hook, 'nf_' ) === 0 ) {
+			error_log( 'CDBS Camp: Detected Ninja Forms action: ' . $hook );
+		}
+	}
+	
+	/**
+	 * Log available hooks at init.
+	 */
+	public function log_available_hooks() {
+		error_log( 'CDBS Camp: Integration class loaded and hooks registered' );
+		
+		// Check if Ninja Forms is active
+		if ( class_exists( 'Ninja_Forms' ) ) {
+			error_log( 'CDBS Camp: Ninja Forms plugin is ACTIVE' );
+			if ( defined( 'NF_PLUGIN_VERSION' ) ) {
+				error_log( 'CDBS Camp: Ninja Forms version: ' . NF_PLUGIN_VERSION );
+			}
+		} else {
+			error_log( 'CDBS Camp: WARNING - Ninja Forms plugin NOT detected!' );
+		}
+		
+		// Check if our form exists
+		global $wpdb;
+		$forms_table = $wpdb->prefix . 'nf3_forms';
+		if ( $wpdb->get_var( "SHOW TABLES LIKE '{$forms_table}'" ) ) {
+			$form_exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$forms_table} WHERE id = %d", self::CAMP_FORM_ID ) );
+			if ( $form_exists ) {
+				error_log( 'CDBS Camp: Form ID ' . self::CAMP_FORM_ID . ' exists in database' );
+			} else {
+				error_log( 'CDBS Camp: WARNING - Form ID ' . self::CAMP_FORM_ID . ' NOT found in database!' );
+			}
+		}
 	}
 
 	/**
@@ -85,68 +139,209 @@ class Ninja_Forms_Integration {
 	 * @param array $form_data Form submission data.
 	 */
 	public function handle_camp_submission( $form_data ) {
+		// Debug: Log that hook was triggered
+		error_log( 'CDBS Camp: ninja_forms_after_submission hook triggered' );
+		error_log( 'CDBS Camp: Form data: ' . print_r( $form_data, true ) );
+
 		// Only process our specific form
 		if ( empty( $form_data['form_id'] ) || intval( $form_data['form_id'] ) !== self::CAMP_FORM_ID ) {
+			error_log( 'CDBS Camp: Skipping - not form ID ' . self::CAMP_FORM_ID . ' (got: ' . ( $form_data['form_id'] ?? 'none' ) . ')' );
 			return;
 		}
+		
+		error_log( 'CDBS Camp: Processing form submission for Form ID ' . self::CAMP_FORM_ID );
 
 		// Extract field values
 		$fields = isset( $form_data['fields'] ) ? $form_data['fields'] : [];
+		
+		error_log( 'CDBS Camp: Available fields: ' . print_r( array_keys( $fields ), true ) );
 		
 		$email      = $this->get_field_value( $fields, 'email' );
 		$camp_name  = $this->get_field_value( $fields, 'camp_name' );
 		$first_name = $this->get_field_value( $fields, 'first_name' );
 		$last_name  = $this->get_field_value( $fields, 'last_name' );
+		
+		error_log( 'CDBS Camp: Extracted - Email: ' . $email . ', Camp: ' . $camp_name . ', Name: ' . $first_name . ' ' . $last_name );
 
-		// Validate required fields
+		// Use shared create function
+		$this->create_user_from_data( $email, $camp_name, $first_name, $last_name, $form_data );
+	}
+
+	/**
+	 * Handle Ninja Forms v3+ submission (alternative hook).
+	 *
+	 * @param array $form_data Form data array.
+	 */
+	public function handle_camp_submission_v3( $form_data ) {
+		error_log( 'CDBS Camp: ninja_forms_process_form hook triggered (v3)' );
+		
+		if ( ! isset( $form_data['form_id'] ) || intval( $form_data['form_id'] ) !== self::CAMP_FORM_ID ) {
+			error_log( 'CDBS Camp: Skipping v3 hook - not form ID ' . self::CAMP_FORM_ID );
+			return;
+		}
+
+		error_log( 'CDBS Camp: Processing v3 form submission' );
+		
+		// Extract fields from v3 structure
+		$fields_data = isset( $form_data['fields'] ) ? $form_data['fields'] : [];
+		$email = $camp_name = $first_name = $last_name = '';
+		
+		foreach ( $fields_data as $field ) {
+			if ( ! isset( $field['key'] ) || ! isset( $field['value'] ) ) {
+				continue;
+			}
+			
+			switch ( $field['key'] ) {
+				case 'email':
+					$email = sanitize_email( $field['value'] );
+					break;
+				case 'camp_name':
+					$camp_name = sanitize_text_field( $field['value'] );
+					break;
+				case 'first_name':
+					$first_name = sanitize_text_field( $field['value'] );
+					break;
+				case 'last_name':
+					$last_name = sanitize_text_field( $field['value'] );
+					break;
+			}
+		}
+		
+		$this->create_user_from_data( $email, $camp_name, $first_name, $last_name, $form_data );
+	}
+
+	/**
+	 * Handle alternative Ninja Forms hook.
+	 *
+	 * @param array $form_data Form data.
+	 */
+	public function handle_camp_submission_alt( $form_data ) {
+		error_log( 'CDBS Camp: nf_after_submission hook triggered (alt)' );
+		$this->handle_camp_submission( $form_data );
+	}
+
+	/**
+	 * Create user from extracted data.
+	 *
+	 * @param string $email      User email.
+	 * @param string $camp_name  Camp name.
+	 * @param string $first_name First name.
+	 * @param string $last_name  Last name.
+	 * @param array  $form_data  Original form data.
+	 */
+	private function create_user_from_data( $email, $camp_name, $first_name, $last_name, $form_data = [] ) {
+		error_log( 'CDBS Camp: Creating user - Email: ' . $email . ', Camp: ' . $camp_name );
+		
+		// Validate email
 		if ( empty( $email ) || ! is_email( $email ) ) {
-			error_log( 'Camp user creation failed: Invalid or missing email' );
+			error_log( 'CDBS Camp: Invalid or missing email' );
 			return;
 		}
 
-		// Check if user already exists
+		// Check if user exists
 		if ( email_exists( $email ) ) {
-			error_log( "Camp user creation skipped: Email {$email} already exists" );
-			$this->send_already_registered_email( $email, $username );
+			error_log( "CDBS Camp: Email {$email} already exists" );
+			$this->send_already_registered_email( $email, '' );
 			return;
 		}
 
-		// Generate username from email or camp name
+		// Generate username
 		$username = $this->generate_username( $email, $camp_name );
 
-		// Create the user
+		// Create user
 		$user_id = wp_create_user( $username, wp_generate_password(), $email );
 
 		if ( is_wp_error( $user_id ) ) {
-			error_log( 'Camp user creation failed: ' . $user_id->get_error_message() );
+			error_log( 'CDBS Camp: User creation failed: ' . $user_id->get_error_message() );
 			return;
 		}
 
-		// Set user role
+		// Set role
 		$user = new \WP_User( $user_id );
 		$user->set_role( 'camp' );
 
-		// Update user meta
+		// Update meta
 		if ( $first_name ) {
-			update_user_meta( $user_id, 'first_name', sanitize_text_field( $first_name ) );
+			update_user_meta( $user_id, 'first_name', $first_name );
 		}
 		if ( $last_name ) {
-			update_user_meta( $user_id, 'last_name', sanitize_text_field( $last_name ) );
+			update_user_meta( $user_id, 'last_name', $last_name );
 		}
 		if ( $camp_name ) {
-			update_user_meta( $user_id, 'camp_name', sanitize_text_field( $camp_name ) );
+			update_user_meta( $user_id, 'camp_name', $camp_name );
 		}
 
-		// Store Ninja Forms entry ID for reference
+		// Store entry ID if available
+		$entry_id = null;
 		if ( ! empty( $form_data['entry_id'] ) ) {
-			update_user_meta( $user_id, 'ninja_forms_entry_id', intval( $form_data['entry_id'] ) );
+			$entry_id = intval( $form_data['entry_id'] );
+			update_user_meta( $user_id, 'ninja_forms_entry_id', $entry_id );
 		}
 
-		// Send password reset email
-		$this->send_welcome_email( $user_id, $username, $email );
+		// Create camp entry in camp_management table
+		$this->create_camp_entry( $email, $camp_name, $first_name, $last_name, $entry_id, $form_data );
 
-		// Log success
-		error_log( "Camp user created successfully: {$username} (ID: {$user_id})" );
+		// Send welcome email
+		error_log( "CDBS Camp: Attempting to send welcome email to {$email}" );
+		$email_sent = $this->send_welcome_email( $user_id, $username, $email );
+
+		error_log( "CDBS Camp: User created successfully: {$username} (ID: {$user_id}), Email sent: " . ( $email_sent ? 'YES' : 'NO' ) );
+	}
+
+	/**
+	 * Create camp entry in camp_management table.
+	 *
+	 * @param string $email      User email.
+	 * @param string $camp_name  Camp name.
+	 * @param string $first_name First name.
+	 * @param string $last_name  Last name.
+	 * @param int    $entry_id   Ninja Forms entry ID.
+	 * @param array  $form_data  Full form data for extracting additional fields.
+	 */
+	private function create_camp_entry( $email, $camp_name, $first_name, $last_name, $entry_id = null, $form_data = [] ) {
+		global $wpdb;
+		$table = $wpdb->prefix . 'camp_management';
+
+		// Generate unique key
+		$unique_key = md5( uniqid( 'camp_', true ) );
+
+		// Extract additional fields from form data if available
+		$fields = isset( $form_data['fields'] ) ? $form_data['fields'] : [];
+		
+		$phone = $this->get_field_value( $fields, 'phone' );
+		$website = $this->get_field_value( $fields, 'website' );
+		$address = $this->get_field_value( $fields, 'address' );
+		$city = $this->get_field_value( $fields, 'city' );
+		$state = $this->get_field_value( $fields, 'state' );
+		$zip = $this->get_field_value( $fields, 'zip' );
+
+		// Prepare camp data
+		$camp_data = [
+			'ninja_entry_id' => $entry_id,
+			'unique_key'     => $unique_key,
+			'camp_name'      => sanitize_text_field( $camp_name ?: ( $first_name . ' ' . $last_name ) ),
+			'email'          => sanitize_email( $email ),
+			'phone'          => sanitize_text_field( $phone ),
+			'website'        => esc_url_raw( $website ),
+			'camp_directors' => sanitize_text_field( $first_name . ' ' . $last_name ),
+			'address'        => sanitize_text_field( $address ),
+			'city'           => sanitize_text_field( $city ),
+			'state'          => sanitize_text_field( $state ),
+			'zip'            => sanitize_text_field( $zip ),
+			'approved'       => 0, // Not approved by default
+			'created_at'     => current_time( 'mysql' ),
+			'updated_at'     => current_time( 'mysql' ),
+		];
+
+		// Insert into database
+		$inserted = $wpdb->insert( $table, $camp_data );
+
+		if ( $inserted ) {
+			$camp_id = $wpdb->insert_id;
+			error_log( "CDBS Camp: Camp entry created in database (ID: {$camp_id}, Entry ID: {$entry_id})" );
+		} else {
+			error_log( "CDBS Camp: FAILED to create camp entry in database: " . $wpdb->last_error );
+		}
 	}
 
 	/**
@@ -198,18 +393,20 @@ class Ninja_Forms_Integration {
 	 * @param int    $user_id  User ID.
 	 * @param string $username Username.
 	 * @param string $email    User email.
+	 * @return bool Whether email was sent successfully.
 	 */
 	private function send_welcome_email( $user_id, $username, $email ) {
 		// Generate password reset key
 		$user = get_userdata( $user_id );
 		if ( ! $user ) {
-			return;
+			error_log( 'CDBS Camp: Failed to get user data for ID ' . $user_id );
+			return false;
 		}
 
 		$key = get_password_reset_key( $user );
 		if ( is_wp_error( $key ) ) {
-			error_log( 'Failed to generate password reset key: ' . $key->get_error_message() );
-			return;
+			error_log( 'CDBS Camp: Failed to generate password reset key: ' . $key->get_error_message() );
+			return false;
 		}
 
 		// Build reset link
@@ -243,11 +440,19 @@ Thank you!', 'creativedbs-camp-mgmt' ),
 		);
 
 		// Send email
+		error_log( 'CDBS Camp: Sending email to: ' . $email );
+		error_log( 'CDBS Camp: Email subject: ' . $subject );
+		error_log( 'CDBS Camp: Reset URL: ' . $reset_url );
+		
 		$sent = wp_mail( $email, $subject, $message );
 
 		if ( ! $sent ) {
-			error_log( "Failed to send welcome email to {$email}" );
+			error_log( "CDBS Camp: FAILED to send welcome email to {$email}" );
+		} else {
+			error_log( "CDBS Camp: Successfully sent welcome email to {$email}" );
 		}
+		
+		return $sent;
 	}
 
 	/**
