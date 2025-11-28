@@ -225,7 +225,6 @@ class Ninja_Forms_Integration {
 		$zip            = $this->get_field_by_label( $fields, 'Zip' );
 		$about_camp     = $this->get_field_by_label( $fields, 'About Camp' );
 		$photos         = $this->get_field_by_label( $fields, 'Photos Upload' ); // file upload
-		$logo_upload    = $this->get_field_by_label( $fields, 'Logo Upload' ); // file upload
 
 		// Convert dates to MySQL format (Y-m-d)
 		$opening_day_formatted = $this->convert_to_mysql_date( $opening_day );
@@ -255,7 +254,6 @@ class Ninja_Forms_Integration {
 			'zip'            => sanitize_text_field( $zip ),
 			'about_camp'     => sanitize_textarea_field( $about_camp ),
 			'photos'         => sanitize_text_field( $photos ), // Store file path/URL
-			'logo'           => sanitize_text_field( $logo_upload ), // Store logo file path/URL
 			'approved'       => 0, // Not approved by default
 			'created_at'     => current_time( 'mysql' ),
 			'updated_at'     => current_time( 'mysql' ),
