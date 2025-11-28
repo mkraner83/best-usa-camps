@@ -109,13 +109,11 @@ class Camp_Dashboard {
 			'phone'            => sanitize_text_field( $_POST['phone'] ?? '' ),
 			'email'            => sanitize_email( $_POST['email'] ?? '' ),
 			'website'          => esc_url_raw( $_POST['website'] ?? '' ),
-			'description'      => wp_kses_post( $_POST['description'] ?? '' ),
+			'about_camp'       => wp_kses_post( $_POST['about_camp'] ?? '' ),
 			'opening_day'      => sanitize_text_field( $_POST['opening_day'] ?? '' ),
 			'closing_day'      => sanitize_text_field( $_POST['closing_day'] ?? '' ),
 			'minprice_2026'    => floatval( $_POST['minprice_2026'] ?? 0 ),
 			'maxprice_2026'    => floatval( $_POST['maxprice_2026'] ?? 0 ),
-			'capacity'         => absint( $_POST['capacity'] ?? 0 ),
-			'age_range'        => sanitize_text_field( $_POST['age_range'] ?? '' ),
 		];
 
 		$wpdb->update(
@@ -123,7 +121,7 @@ class Camp_Dashboard {
 			$camp_data,
 			[ 'id' => $camp_id ],
 			[
-				'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f', '%d', '%s'
+				'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f'
 			],
 			[ '%d' ]
 		);
@@ -256,7 +254,9 @@ class Camp_Dashboard {
 	 */
 	private function get_all_options( $table_name ) {
 		global $wpdb;
-		$table = "{$wpdb->prefix}camp_{$table_name}_terms";
+		// Remove trailing 's' to match actual table names (type, week, activity - not types, weeks, activities)
+		$singular_name = rtrim( $table_name, 's' );
+		$table = "{$wpdb->prefix}camp_{$singular_name}_terms";
 		
 		$results = $wpdb->get_results( "SELECT id, name FROM {$table} WHERE is_active = 1 ORDER BY name ASC", ARRAY_A );
 		
@@ -346,8 +346,8 @@ class Camp_Dashboard {
 
 					<div class="form-row">
 					<div class="form-group">
-						<label for="description">Camp Description <span class="required">*</span></label>
-						<textarea id="description" name="description" rows="6" required><?php echo esc_textarea( $camp['description'] ); ?></textarea>
+						<label for="about_camp">Camp Description <span class="required">*</span></label>
+						<textarea id="about_camp" name="about_camp" rows="6" required><?php echo esc_textarea( $camp['about_camp'] ); ?></textarea>
 					</div>
 					</div>
 				</div>
@@ -423,16 +423,7 @@ class Camp_Dashboard {
 				<div class="form-section">
 					<h2 class="section-title">Camp Details</h2>
 					
-					<div class="form-row">
-						<div class="form-group half">
-							<label for="age_range">Age Range <span class="required">*</span></label>
-							<input type="text" id="age_range" name="age_range" value="<?php echo esc_attr( $camp['age_range'] ); ?>" placeholder="e.g., 8-16" required>
-						</div>
-						<div class="form-group half">
-							<label for="capacity">Capacity <span class="required">*</span></label>
-							<input type="number" id="capacity" name="capacity" value="<?php echo esc_attr( $camp['capacity'] ); ?>" min="0" required>
-						</div>
-					</div>
+
 
 				<div class="form-row">
 					<div class="form-group half">
