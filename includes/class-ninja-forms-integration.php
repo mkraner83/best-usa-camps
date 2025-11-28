@@ -309,25 +309,41 @@ class Ninja_Forms_Integration {
 		foreach ( $fields as $field ) {
 			// Check if label matches (case-insensitive)
 			if ( isset( $field['label'] ) && strcasecmp( trim( $field['label'] ), trim( $label ) ) === 0 ) {
-				if ( isset( $field['value'] ) ) {
-					// Handle file upload fields - value is array with numeric keys containing URLs
-					if ( is_array( $field['value'] ) && isset( $field['type'] ) && $field['type'] === 'file_upload' ) {
-						$urls = [];
+				// Handle file upload fields - check files array first
+				if ( isset( $field['type'] ) && $field['type'] === 'file_upload' ) {
+					$urls = [];
+					
+					// Method 1: Check 'files' array with data.file_url structure
+					if ( isset( $field['files'] ) && is_array( $field['files'] ) ) {
+						foreach ( $field['files'] as $file ) {
+							if ( is_array( $file ) && isset( $file['data']['file_url'] ) ) {
+								$urls[] = $file['data']['file_url'];
+							}
+						}
+					}
+					
+					// Method 2: Check 'value' array with numeric keys containing URLs
+					if ( empty( $urls ) && isset( $field['value'] ) && is_array( $field['value'] ) ) {
 						foreach ( $field['value'] as $key => $file ) {
-							// Ninja Forms stores URLs directly in the value array with numeric keys
 							if ( is_string( $file ) && filter_var( $file, FILTER_VALIDATE_URL ) ) {
 								$urls[] = $file;
-							}
-							// Some cases have nested array with 'url' key
-							elseif ( is_array( $file ) && isset( $file['url'] ) ) {
+							} elseif ( is_array( $file ) && isset( $file['url'] ) ) {
 								$urls[] = $file['url'];
 							}
 						}
+					}
+					
+					if ( ! empty( $urls ) ) {
 						error_log( 'CDBS Camp: File upload field "' . $label . '" URLs extracted: ' . implode( ', ', $urls ) );
 						return implode( ', ', $urls );
 					}
+					return '';
+				}
+				
+				// Handle regular fields
+				if ( isset( $field['value'] ) ) {
 					// Handle checkbox lists
-					elseif ( is_array( $field['value'] ) ) {
+					if ( is_array( $field['value'] ) ) {
 						return implode( ', ', array_map( 'sanitize_text_field', $field['value'] ) );
 					}
 					return $field['value'];
