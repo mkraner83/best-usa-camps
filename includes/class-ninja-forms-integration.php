@@ -31,6 +31,21 @@ class Ninja_Forms_Integration {
 		
 		// Hide admin bar for Camp users
 		add_action( 'after_setup_theme', [ $this, 'hide_admin_bar_for_camps' ] );
+		
+		// Redirect Camp users to dashboard after login
+		add_filter( 'login_redirect', [ $this, 'camp_login_redirect' ], 10, 3 );
+	}
+	
+	/**
+	 * Redirect Camp users to dashboard after login
+	 */
+	public function camp_login_redirect( $redirect_to, $request, $user ) {
+		// Check if user has Camp role
+		if ( isset( $user->roles ) && is_array( $user->roles ) && in_array( 'camp', $user->roles ) ) {
+			return home_url( '/user-dashboard/' );
+		}
+		
+		return $redirect_to;
 	}
 	
 	/**

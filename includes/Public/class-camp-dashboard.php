@@ -217,8 +217,9 @@ class Camp_Dashboard {
 				<h2>Camp Login</h2>
 				<p>Please log in to access your camp dashboard.</p>
 				<?php
+				$current_url = ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
 				wp_login_form( [
-					'redirect' => get_permalink(),
+					'redirect' => $current_url,
 					'label_username' => 'Username or Email',
 					'label_password' => 'Password',
 					'label_remember' => 'Remember Me',
