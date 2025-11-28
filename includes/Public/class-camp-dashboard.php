@@ -862,7 +862,6 @@ class Camp_Dashboard {
 					<?php else : ?>
 						<img src="<?php echo esc_url( $camp['logo'] ); ?>" alt="Camp logo">
 					<?php endif; ?>
-					<button type="submit" name="remove_logo_action" value="1" class="remove-logo">&times; Remove Logo</button>
 				</div>
 			<?php endif; ?>
 			
