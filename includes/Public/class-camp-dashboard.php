@@ -256,16 +256,18 @@ class Camp_Dashboard {
 		global $wpdb;
 		// Map plural to singular table names
 		$table_map = [
-			'types' => 'type',
-			'weeks' => 'week',
+			'types'      => 'type',
+			'weeks'      => 'week',
 			'activities' => 'activity'
 		];
-		$singular_name = $table_map[$table_name] ?? $table_name;
+		
+		// Use the mapped name if it exists, otherwise use the input
+		$singular_name = isset( $table_map[$table_name] ) ? $table_map[$table_name] : $table_name;
 		$table = "{$wpdb->prefix}camp_{$singular_name}_terms";
 		
 		$results = $wpdb->get_results( "SELECT id, name FROM {$table} WHERE is_active = 1 ORDER BY name ASC", ARRAY_A );
 		
-		error_log( "CDBS Camp Dashboard: get_all_options for {$table_name} - Table: {$table}, Count: " . count( $results ) );
+		error_log( "CDBS Camp Dashboard: get_all_options for {$table_name} - Singular: {$singular_name}, Table: {$table}, Count: " . count( $results ) );
 		if ( $wpdb->last_error ) {
 			error_log( "CDBS Camp Dashboard: Database error: " . $wpdb->last_error );
 		}
