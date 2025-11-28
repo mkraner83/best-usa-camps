@@ -129,9 +129,9 @@ class Camp_Dashboard {
 		);
 
 		// Update pivot tables
-		$this->update_pivot_data( $camp_id, 'camp_types', $_POST['camp_types'] ?? [] );
-		$this->update_pivot_data( $camp_id, 'camp_weeks', $_POST['camp_weeks'] ?? [] );
-		$this->update_pivot_data( $camp_id, 'camp_activities', $_POST['camp_activities'] ?? [] );
+		$this->update_pivot_data( $camp_id, 'camp_management_types_map', 'type_id', $_POST['camp_types'] ?? [] );
+		$this->update_pivot_data( $camp_id, 'camp_management_weeks_map', 'week_id', $_POST['camp_weeks'] ?? [] );
+		$this->update_pivot_data( $camp_id, 'camp_management_activities_map', 'activity_id', $_POST['camp_activities'] ?? [] );
 
 		// Redirect to avoid resubmission
 		wp_redirect( add_query_arg( 'updated', 'true', wp_get_referer() ) );
@@ -141,9 +141,9 @@ class Camp_Dashboard {
 	/**
 	 * Update pivot table data
 	 */
-	private function update_pivot_data( $camp_id, $table_suffix, $values ) {
+	private function update_pivot_data( $camp_id, $table_name, $id_column, $values ) {
 		global $wpdb;
-		$table = "{$wpdb->prefix}{$table_suffix}";
+		$table = "{$wpdb->prefix}{$table_name}";
 
 		// Delete existing relationships
 		$wpdb->delete( $table, [ 'camp_id' => $camp_id ], [ '%d' ] );
@@ -155,8 +155,7 @@ class Camp_Dashboard {
 					$table,
 					[
 						'camp_id' => $camp_id,
-						$table_suffix === 'camp_types' ? 'type_id' : 
-						( $table_suffix === 'camp_weeks' ? 'week_id' : 'activity_id' ) => absint( $value_id )
+						$id_column => absint( $value_id )
 					],
 					[ '%d', '%d' ]
 				);
@@ -218,9 +217,9 @@ class Camp_Dashboard {
 		}
 
 		// Get pivot data
-		$camp_types = $this->get_pivot_data( $camp['id'], 'camp_types', 'type_id' );
-		$camp_weeks = $this->get_pivot_data( $camp['id'], 'camp_weeks', 'week_id' );
-		$camp_activities = $this->get_pivot_data( $camp['id'], 'camp_activities', 'activity_id' );
+		$camp_types = $this->get_pivot_data( $camp['id'], 'camp_management_types_map', 'type_id' );
+		$camp_weeks = $this->get_pivot_data( $camp['id'], 'camp_management_weeks_map', 'week_id' );
+		$camp_activities = $this->get_pivot_data( $camp['id'], 'camp_management_activities_map', 'activity_id' );
 
 		// Get all available options
 		$all_types = $this->get_all_options( 'types' );
@@ -235,9 +234,9 @@ class Camp_Dashboard {
 	/**
 	 * Get pivot data for a camp
 	 */
-	private function get_pivot_data( $camp_id, $table_suffix, $value_column ) {
+	private function get_pivot_data( $camp_id, $table_name, $value_column ) {
 		global $wpdb;
-		$table = "{$wpdb->prefix}{$table_suffix}";
+		$table = "{$wpdb->prefix}{$table_name}";
 		
 		$results = $wpdb->get_col( $wpdb->prepare(
 			"SELECT {$value_column} FROM {$table} WHERE camp_id = %d",
