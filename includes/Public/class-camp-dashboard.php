@@ -298,7 +298,21 @@ class Camp_Dashboard {
 	private function handle_logo_upload( $camp_id, $camp ) {
 		global $wpdb;
 		
-		// Handle logo removal
+		// Handle logo removal via button click
+		if ( ! empty( $_POST['remove_logo_action'] ) && ! empty( $camp['logo'] ) ) {
+			$this->delete_uploaded_file( $camp['logo'] );
+			
+			$wpdb->update(
+				"{$wpdb->prefix}camp_management",
+				[ 'logo' => '' ],
+				[ 'id' => $camp_id ],
+				[ '%s' ],
+				[ '%d' ]
+			);
+			return; // Exit after removal, don't process upload
+		}
+		
+		// Handle logo removal via hidden field (for JS-based removal if needed)
 		if ( ! empty( $_POST['logo_to_remove'] ) ) {
 			$logo_to_remove = trim( $_POST['logo_to_remove'] );
 			$this->delete_uploaded_file( $logo_to_remove );
@@ -848,7 +862,7 @@ class Camp_Dashboard {
 					<?php else : ?>
 						<img src="<?php echo esc_url( $camp['logo'] ); ?>" alt="Camp logo">
 					<?php endif; ?>
-					<button type="button" class="remove-logo" data-logo="<?php echo esc_attr( $camp['logo'] ); ?>">&times; Remove Logo</button>
+					<button type="submit" name="remove_logo_action" value="1" class="remove-logo">&times; Remove Logo</button>
 				</div>
 			<?php endif; ?>
 			
@@ -880,18 +894,7 @@ class Camp_Dashboard {
 				});
 			});
 
-			// Logo removal
-			const logoRemoveBtn = document.querySelector('.remove-logo');
-			const logoToRemoveField = document.getElementById('logo_to_remove');
-			if (logoRemoveBtn) {
-				logoRemoveBtn.addEventListener('click', function(e) {
-					e.preventDefault();
-					const logoUrl = this.getAttribute('data-logo');
-					logoToRemoveField.value = logoUrl;
-					// Submit the form to actually remove the logo
-					document.querySelector('.camp-edit-form').submit();
-				});
-			}
+			// Logo removal handled by submit button
 
 			// File validation for photos
 			document.getElementById('photos_upload').addEventListener('change', function(e) {
