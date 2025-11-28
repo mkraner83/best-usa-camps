@@ -51,7 +51,7 @@ class Camp_Dashboard {
 			return 'CAMP DASHBOARD';
 		}
 
-		return 'Camp ' . esc_html( $camp['camp_name'] );
+		return 'Admin: ' . esc_html( $camp['camp_name'] );
 	}
 
 	/**
@@ -336,10 +336,10 @@ class Camp_Dashboard {
 					</div>
 
 					<div class="form-row">
-						<div class="form-group">
-							<label for="description">Camp Description</label>
-							<textarea id="description" name="description" rows="6"><?php echo esc_textarea( $camp['description'] ); ?></textarea>
-						</div>
+					<div class="form-group">
+						<label for="description">Camp Description <span class="required">*</span></label>
+						<textarea id="description" name="description" rows="6" required><?php echo esc_textarea( $camp['description'] ); ?></textarea>
+					</div>
 					</div>
 				</div>
 
@@ -352,29 +352,29 @@ class Camp_Dashboard {
 							<input type="email" id="email" name="email" value="<?php echo esc_attr( $camp['email'] ); ?>" required>
 						</div>
 						<div class="form-group half">
-							<label for="phone">Phone</label>
-							<input type="tel" id="phone" name="phone" value="<?php echo esc_attr( $camp['phone'] ); ?>">
+							<label for="phone">Phone <span class="required">*</span></label>
+							<input type="tel" id="phone" name="phone" value="<?php echo esc_attr( $camp['phone'] ); ?>" required>
 						</div>
 					</div>
 
 					<div class="form-row">
 						<div class="form-group">
-							<label for="website">Website</label>
-							<input type="url" id="website" name="website" value="<?php echo esc_attr( $camp['website'] ); ?>" placeholder="https://">
+							<label for="website">Website <span class="required">*</span></label>
+							<input type="url" id="website" name="website" value="<?php echo esc_attr( $camp['website'] ); ?>" placeholder="https://" required>
 						</div>
 					</div>
 
 					<div class="form-row">
 						<div class="form-group">
-							<label for="address">Street Address</label>
-							<input type="text" id="address" name="address" value="<?php echo esc_attr( $camp['address'] ); ?>">
+							<label for="address">Street Address <span class="required">*</span></label>
+							<input type="text" id="address" name="address" value="<?php echo esc_attr( $camp['address'] ); ?>" required>
 						</div>
 					</div>
 
 					<div class="form-row">
 						<div class="form-group third">
-							<label for="city">City</label>
-							<input type="text" id="city" name="city" value="<?php echo esc_attr( $camp['city'] ); ?>">
+							<label for="city">City <span class="required">*</span></label>
+							<input type="text" id="city" name="city" value="<?php echo esc_attr( $camp['city'] ); ?>" required>
 						</div>
 					<div class="form-group third">
 						<label for="state">State <span class="required">*</span></label>
@@ -405,8 +405,8 @@ class Camp_Dashboard {
 						</select>
 					</div>
 						<div class="form-group third">
-							<label for="zip">ZIP Code</label>
-							<input type="text" id="zip" name="zip" value="<?php echo esc_attr( $camp['zip'] ); ?>">
+							<label for="zip">ZIP Code <span class="required">*</span></label>
+							<input type="text" id="zip" name="zip" value="<?php echo esc_attr( $camp['zip'] ); ?>" required>
 						</div>
 					</div>
 				</div>
@@ -416,12 +416,12 @@ class Camp_Dashboard {
 					
 					<div class="form-row">
 						<div class="form-group half">
-							<label for="age_range">Age Range</label>
-							<input type="text" id="age_range" name="age_range" value="<?php echo esc_attr( $camp['age_range'] ); ?>" placeholder="e.g., 8-16">
+							<label for="age_range">Age Range <span class="required">*</span></label>
+							<input type="text" id="age_range" name="age_range" value="<?php echo esc_attr( $camp['age_range'] ); ?>" placeholder="e.g., 8-16" required>
 						</div>
 						<div class="form-group half">
-							<label for="capacity">Capacity</label>
-							<input type="number" id="capacity" name="capacity" value="<?php echo esc_attr( $camp['capacity'] ); ?>" min="0">
+							<label for="capacity">Capacity <span class="required">*</span></label>
+							<input type="number" id="capacity" name="capacity" value="<?php echo esc_attr( $camp['capacity'] ); ?>" min="0" required>
 						</div>
 					</div>
 
@@ -457,39 +457,39 @@ class Camp_Dashboard {
 			<div class="form-section">
 				<h2 class="section-title">Camp Types <span class="required">*</span></h2>
 				<p class="field-note">Select at least one camp type</p>
-				<div class="checkbox-grid">
+				<div class="checkbox-inline-list">
 					<?php foreach ( $all_types as $type ) : ?>
-						<label class="checkbox-label">
+						<label style="display:inline-block;margin:0 12px 6px 0;">
 							<input type="checkbox" name="camp_types[]" value="<?php echo esc_attr( $type['id'] ); ?>" 
 								<?php checked( in_array( $type['id'], $camp_types ) ); ?>
 								class="required-checkbox">
-							<span><?php echo esc_html( $type['name'] ); ?></span>
+							<?php echo esc_html( $type['name'] ); ?>
 						</label>
 					<?php endforeach; ?>
 				</div>
 			</div>			<div class="form-section">
 				<h2 class="section-title">Available Weeks / Session Length <span class="required">*</span></h2>
 				<p class="field-note">Select at least one week/session</p>
-				<div class="checkbox-grid">
+				<div class="checkbox-inline-list">
 					<?php foreach ( $all_weeks as $week ) : ?>
-						<label class="checkbox-label">
+						<label style="display:inline-block;margin:0 12px 6px 0;">
 							<input type="checkbox" name="camp_weeks[]" value="<?php echo esc_attr( $week['id'] ); ?>" 
 								<?php checked( in_array( $week['id'], $camp_weeks ) ); ?>
 								class="required-checkbox-weeks">
-							<span><?php echo esc_html( $week['name'] ); ?></span>
+							<?php echo esc_html( $week['name'] ); ?>
 						</label>
 					<?php endforeach; ?>
 				</div>
 			</div>			<div class="form-section">
 				<h2 class="section-title">Activities Offered <span class="required">*</span></h2>
 				<p class="field-note">Select at least one activity</p>
-				<div class="checkbox-grid">
+				<div class="checkbox-inline-list">
 					<?php foreach ( $all_activities as $activity ) : ?>
-						<label class="checkbox-label">
+						<label style="display:inline-block;margin:0 12px 6px 0;">
 							<input type="checkbox" name="camp_activities[]" value="<?php echo esc_attr( $activity['id'] ); ?>" 
 								<?php checked( in_array( $activity['id'], $camp_activities ) ); ?>
 								class="required-checkbox-activities">
-							<span><?php echo esc_html( $activity['name'] ); ?></span>
+							<?php echo esc_html( $activity['name'] ); ?>
 						</label>
 					<?php endforeach; ?>
 				</div>
