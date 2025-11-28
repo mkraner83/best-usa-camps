@@ -21,19 +21,45 @@ class Ninja_Forms_Integration {
 	 */
 	const CAMP_FORM_ID = 4;
 
-	// Store created user credentials for use in email merge tags
-	private static $created_username = '';
-	private static $created_password_reset_url = '';
-
 	public function __construct() {
-		// Create user EARLY (priority 5) so credentials are available for email actions (priority 10)
-		add_action( 'ninja_forms_after_submission', [ $this, 'handle_camp_submission' ], 5 );
-		
+		add_action( 'ninja_forms_after_submission', [ $this, 'handle_camp_submission' ], 10 );
 		add_action( 'init', [ $this, 'register_camp_role' ] );
 		add_filter( 'ninja_forms_submit_data', [ $this, 'validate_unique_email' ], 10 );
 		
-		// Add filter to replace custom shortcodes in Ninja Forms emails (runs during email action)
-		add_filter( 'ninja_forms_action_email_message', [ $this, 'replace_custom_shortcodes' ], 10, 3 );
+		// Block Camp users from accessing wp-admin
+		add_action( 'admin_init', [ $this, 'block_camp_admin_access' ] );
+		
+		// Hide admin bar for Camp users
+		add_action( 'after_setup_theme', [ $this, 'hide_admin_bar_for_camps' ] );
+	}
+	
+	/**
+	 * Block Camp users from accessing wp-admin
+	 */
+	public function block_camp_admin_access() {
+		$user = wp_get_current_user();
+		
+		// Allow AJAX requests
+		if ( defined( 'DOING_AJAX' ) && DOING_AJAX ) {
+			return;
+		}
+		
+		// Block if user has Camp role and is trying to access admin
+		if ( in_array( 'camp', $user->roles ) ) {
+			wp_redirect( home_url( '/user-dashboard/' ) );
+			exit;
+		}
+	}
+	
+	/**
+	 * Hide admin bar for Camp users
+	 */
+	public function hide_admin_bar_for_camps() {
+		$user = wp_get_current_user();
+		
+		if ( in_array( 'camp', $user->roles ) ) {
+			show_admin_bar( false );
+		}
 	}
 
 	/**
@@ -88,29 +114,7 @@ class Ninja_Forms_Integration {
 		}
 	}
 
-	/**
-	 * Replace custom shortcodes in Ninja Forms email message.
-	 *
-	 * @param string $message Email message.
-	 * @param array  $data    Form data.
-	 * @param array  $action_settings Action settings.
-	 * @return string Modified message with shortcodes replaced.
-	 */
-	public function replace_custom_shortcodes( $message, $data, $action_settings ) {
-		error_log( '=== CDBS Camp: Replacing shortcodes in email ===' );
-		error_log( 'Username available: ' . ( ! empty( self::$created_username ) ? self::$created_username : 'EMPTY' ) );
-		error_log( 'Reset URL available: ' . ( ! empty( self::$created_password_reset_url ) ? 'YES' : 'EMPTY' ) );
-		error_log( 'Message contains {user:username}: ' . ( strpos( $message, '{user:username}' ) !== false ? 'YES' : 'NO' ) );
-		error_log( 'Message contains {user:password_reset_url}: ' . ( strpos( $message, '{user:password_reset_url}' ) !== false ? 'YES' : 'NO' ) );
-		
-		// Replace our custom shortcodes with stored values
-		$message = str_replace( '{user:username}', self::$created_username, $message );
-		$message = str_replace( '{user:password_reset_url}', self::$created_password_reset_url, $message );
-		
-		error_log( 'After replacement - Username in message: ' . ( strpos( $message, self::$created_username ) !== false ? 'YES' : 'NO' ) );
-		
-		return $message;
-	}
+
 
 	/**
 	 * Handle Ninja Forms submission and create user.
@@ -190,18 +194,6 @@ class Ninja_Forms_Integration {
 		// Set role
 		$user = new \WP_User( $user_id );
 		$user->set_role( 'camp' );
-
-		// Generate password reset key for email
-		$reset_key = get_password_reset_key( $user );
-		if ( ! is_wp_error( $reset_key ) ) {
-			self::$created_password_reset_url = network_site_url( "wp-login.php?action=rp&key={$reset_key}&login=" . rawurlencode( $username ), 'login' );
-		}
-		
-		// Store username for email shortcode
-		self::$created_username = $username;
-		
-		error_log( 'CDBS Camp: Stored credentials - Username: ' . self::$created_username );
-		error_log( 'CDBS Camp: Stored credentials - Reset URL: ' . self::$created_password_reset_url );
 
 		// Update meta
 		if ( $first_name ) {
