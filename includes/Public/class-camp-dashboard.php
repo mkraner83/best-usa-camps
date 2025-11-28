@@ -243,6 +243,11 @@ class Camp_Dashboard {
 			$camp_id
 		) );
 
+		error_log( "CDBS Camp Dashboard: get_pivot_data - Table: {$table}, Camp ID: {$camp_id}, Column: {$value_column}, Count: " . count( $results ) );
+		if ( $wpdb->last_error ) {
+			error_log( "CDBS Camp Dashboard: Database error: " . $wpdb->last_error );
+		}
+		
 		return $results;
 	}
 
@@ -254,6 +259,11 @@ class Camp_Dashboard {
 		$table = "{$wpdb->prefix}camp_{$table_name}_terms";
 		
 		$results = $wpdb->get_results( "SELECT id, name FROM {$table} WHERE is_active = 1 ORDER BY name ASC", ARRAY_A );
+		
+		error_log( "CDBS Camp Dashboard: get_all_options for {$table_name} - Table: {$table}, Count: " . count( $results ) );
+		if ( $wpdb->last_error ) {
+			error_log( "CDBS Camp Dashboard: Database error: " . $wpdb->last_error );
+		}
 		
 		return $results;
 	}
