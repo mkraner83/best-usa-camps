@@ -21,6 +21,10 @@ class Ninja_Forms_Integration {
 	 */
 	const CAMP_FORM_ID = 4;
 
+	// Store created user credentials for use in email merge tags
+	private static $created_username = '';
+	private static $created_password_reset_url = '';
+
 	public function __construct() {
 		// Use only one reliable hook that fires AFTER file uploads complete
 		// Priority 999 ensures it runs after all file processing is done
@@ -28,6 +32,9 @@ class Ninja_Forms_Integration {
 		
 		add_action( 'init', [ $this, 'register_camp_role' ] );
 		add_filter( 'ninja_forms_submit_data', [ $this, 'validate_unique_email' ], 10 );
+		
+		// Add filter to replace custom shortcodes in Ninja Forms emails
+		add_filter( 'ninja_forms_action_email_message', [ $this, 'replace_custom_shortcodes' ], 10, 3 );
 	}
 
 	/**
@@ -80,6 +87,22 @@ class Ninja_Forms_Integration {
 				]
 			);
 		}
+	}
+
+	/**
+	 * Replace custom shortcodes in Ninja Forms email message.
+	 *
+	 * @param string $message Email message.
+	 * @param array  $data    Form data.
+	 * @param array  $action_settings Action settings.
+	 * @return string Modified message with shortcodes replaced.
+	 */
+	public function replace_custom_shortcodes( $message, $data, $action_settings ) {
+		// Replace our custom shortcodes with stored values
+		$message = str_replace( '{user:username}', self::$created_username, $message );
+		$message = str_replace( '{user:password_reset_url}', self::$created_password_reset_url, $message );
+		
+		return $message;
 	}
 
 	/**
@@ -161,6 +184,18 @@ class Ninja_Forms_Integration {
 		$user = new \WP_User( $user_id );
 		$user->set_role( 'camp' );
 
+		// Generate password reset key for email
+		$reset_key = get_password_reset_key( $user );
+		if ( ! is_wp_error( $reset_key ) ) {
+			self::$created_password_reset_url = network_site_url( "wp-login.php?action=rp&key={$reset_key}&login=" . rawurlencode( $username ), 'login' );
+		}
+		
+		// Store username for email shortcode
+		self::$created_username = $username;
+		
+		error_log( 'CDBS Camp: Stored credentials - Username: ' . self::$created_username );
+		error_log( 'CDBS Camp: Stored credentials - Reset URL: ' . self::$created_password_reset_url );
+
 		// Update meta
 		if ( $first_name ) {
 			update_user_meta( $user_id, 'first_name', $first_name );
@@ -182,7 +217,7 @@ class Ninja_Forms_Integration {
 		// Create camp entry in camp_management table
 		$this->create_camp_entry( $email, $camp_name, $first_name, $last_name, $entry_id, $form_data );
 
-		// Note: Welcome email is now sent via Ninja Forms Email Action (not by plugin)
+		// Note: Credentials email sent via Ninja Forms Email Action using {user:username} and {user:password_reset_url} shortcodes
 		error_log( "CDBS Camp: User created successfully: {$username} (ID: {$user_id})" );
 	}
 
@@ -385,17 +420,17 @@ class Ninja_Forms_Integration {
 	}
 
 	/**
-	 * Send welcome email with password reset link.
+	 * Send credentials email with password reset link.
 	 * 
-	 * NOTE: This method is currently disabled. Welcome emails are now sent via Ninja Forms Email Action.
-	 * Kept for reference in case needed in the future.
+	 * NOTE: This is the second email sent (after Ninja Forms confirmation).
+	 * Contains username and password reset URL that only plugin can generate.
 	 *
 	 * @param int    $user_id  User ID.
 	 * @param string $username Username.
 	 * @param string $email    User email.
 	 * @return bool Whether email was sent successfully.
 	 */
-	private function send_welcome_email_DISABLED( $user_id, $username, $email ) {
+	private function send_welcome_email( $user_id, $username, $email ) {
 		// Generate password reset key
 		$user = get_userdata( $user_id );
 		if ( ! $user ) {
@@ -414,8 +449,8 @@ class Ninja_Forms_Integration {
 		$site_url  = 'https://bestusacamps.com';
 		$site_name = 'Best USA Summer Camps';
 
-		// Email subject
-		$subject = sprintf( '[%s] Welcome! Your Camp Profile Has Been Created', $site_name );
+		// Email subject (different from Ninja Forms confirmation email)
+		$subject = sprintf( '[%s] Your Account Credentials - Set Your Password', $site_name );
 
 		// HTML Email message
 		$message = '

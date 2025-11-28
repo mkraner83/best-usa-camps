@@ -14,7 +14,7 @@
 		}
 		.container { 
 			max-width: 600px; 
-			margin: 20px auto; 
+			margin: 20px 10px; 
 			background: #ffffff; 
 			border-radius: 8px; 
 			overflow: hidden; 
@@ -98,7 +98,7 @@
 			<p>We're excited to let you know that your camp profile has been successfully created on <strong>Best USA Summer Camps</strong>. You can now manage your camp information and connect with families searching for the perfect summer camp experience.</p>
 			
 			<div class="credentials-box">
-				<p style="margin: 0;"><strong>Username:</strong> {field:username}</p>
+				<p style="margin: 0;"><strong>Username:</strong> {user:username}</p>
 				<p style="margin: 10px 0 0 0;"><strong>Email:</strong> {field:email}</p>
 			</div>
 			
@@ -106,11 +106,11 @@
 			<p>To secure your account and access your camp dashboard, please click the button below to create your password:</p>
 			
 			<div style="text-align: center;">
-				<a href="{field:password_reset_url}" class="button" style="background: #497C5E !important; background-color: #497C5E !important; color: #ffffff !important;">Set My Password</a>
+				<a href="{user:password_reset_url}" class="button" style="background: #497C5E !important; background-color: #497C5E !important; color: #ffffff !important;">Set My Password</a>
 			</div>
 			
 			<p style="font-size: 14px; color: #666; margin-top: 25px;">If the button doesn't work, copy and paste this link into your browser:<br>
-			<a href="{field:password_reset_url}" style="color: #497C5E; word-break: break-all;">{field:password_reset_url}</a></p>
+			<a href="{user:password_reset_url}" style="color: #497C5E; word-break: break-all;">{user:password_reset_url}</a></p>
 			
 			<div class="divider"></div>
 			
