@@ -884,10 +884,12 @@ class Camp_Dashboard {
 			const logoRemoveBtn = document.querySelector('.remove-logo');
 			const logoToRemoveField = document.getElementById('logo_to_remove');
 			if (logoRemoveBtn) {
-				logoRemoveBtn.addEventListener('click', function() {
+				logoRemoveBtn.addEventListener('click', function(e) {
+					e.preventDefault();
 					const logoUrl = this.getAttribute('data-logo');
 					logoToRemoveField.value = logoUrl;
-					this.closest('.logo-preview').remove();
+					// Submit the form to actually remove the logo
+					document.querySelector('.camp-edit-form').submit();
 				});
 			}
 
