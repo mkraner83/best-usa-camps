@@ -231,6 +231,19 @@ class Camp_Dashboard {
 			$files = $_FILES['photos_upload'];
 			$uploaded_count = 0;
 			
+			// Calculate total size of all files
+			$total_size = 0;
+			for ( $i = 0; $i < count( $files['name'] ); $i++ ) {
+				if ( ! empty( $files['name'][$i] ) ) {
+					$total_size += $files['size'][$i];
+				}
+			}
+			
+			// Validate total size (25MB)
+			if ( $total_size > 25 * 1024 * 1024 ) {
+				return; // Skip upload if total size exceeds limit
+			}
+			
 			for ( $i = 0; $i < count( $files['name'] ); $i++ ) {
 				// Check if we've reached the limit
 				if ( count( $existing_photos ) + $uploaded_count >= 10 ) {
@@ -254,11 +267,6 @@ class Camp_Dashboard {
 				// Validate file type
 				$file_type = wp_check_filetype( $file['name'] );
 				if ( ! in_array( $file_type['ext'], [ 'jpg', 'jpeg' ] ) ) {
-					continue;
-				}
-				
-				// Validate file size (25MB)
-				if ( $file['size'] > 25 * 1024 * 1024 ) {
 					continue;
 				}
 				
@@ -798,7 +806,7 @@ class Camp_Dashboard {
 		<!-- Photos Upload Section -->
 		<div class="form-section">
 			<h2 class="section-title">Photos</h2>
-			<p class="section-description">Upload up to 10 camp photos (JPG/JPEG only, max 25MB each)</p>
+			<p class="section-description">Upload up to 10 camp photos (JPG/JPEG only, 25MB total for all photos)</p>
 			
 			<div class="photos-container">
 				<?php
@@ -819,7 +827,7 @@ class Camp_Dashboard {
 			<div class="form-group">
 				<label for="photos_upload">Add Photos (up to <?php echo 10 - count( $photos ); ?> more)</label>
 				<input type="file" id="photos_upload" name="photos_upload[]" accept="image/jpeg,image/jpg" multiple>
-				<p class="field-note">JPG/JPEG only, max 25MB per file, up to 10 total photos</p>
+				<p class="field-note">JPG/JPEG only, 25MB total for all photos, up to 10 photos</p>
 			</div>
 			
 			<input type="hidden" id="photos_to_remove" name="photos_to_remove" value="">
@@ -892,6 +900,7 @@ class Camp_Dashboard {
 					return;
 				}
 				
+				let totalSize = 0;
 				for (let i = 0; i < files.length; i++) {
 					const file = files[i];
 					// Check file type
@@ -900,12 +909,15 @@ class Camp_Dashboard {
 						this.value = '';
 						return;
 					}
-					// Check file size (25MB = 25 * 1024 * 1024 bytes)
-					if (file.size > 25 * 1024 * 1024) {
-						alert('Each photo must be under 25MB. ' + file.name + ' is too large.');
-						this.value = '';
-						return;
-					}
+					totalSize += file.size;
+				}
+				
+				// Check total size (25MB = 25 * 1024 * 1024 bytes)
+				if (totalSize > 25 * 1024 * 1024) {
+					const totalMB = (totalSize / (1024 * 1024)).toFixed(2);
+					alert('Total size of all photos must be under 25MB. Current total: ' + totalMB + 'MB.');
+					this.value = '';
+					return;
 				}
 			});
 
