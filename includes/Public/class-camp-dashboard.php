@@ -254,8 +254,13 @@ class Camp_Dashboard {
 	 */
 	private function get_all_options( $table_name ) {
 		global $wpdb;
-		// Remove trailing 's' to match actual table names (type, week, activity - not types, weeks, activities)
-		$singular_name = rtrim( $table_name, 's' );
+		// Map plural to singular table names
+		$table_map = [
+			'types' => 'type',
+			'weeks' => 'week',
+			'activities' => 'activity'
+		];
+		$singular_name = $table_map[$table_name] ?? $table_name;
 		$table = "{$wpdb->prefix}camp_{$singular_name}_terms";
 		
 		$results = $wpdb->get_results( "SELECT id, name FROM {$table} WHERE is_active = 1 ORDER BY name ASC", ARRAY_A );
