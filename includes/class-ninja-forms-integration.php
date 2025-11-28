@@ -285,6 +285,7 @@ class Ninja_Forms_Integration {
 		$camp_data = [
 			'ninja_entry_id' => $entry_id,
 			'unique_key'     => $unique_key,
+			'user_id'        => $user_id, // Link to WordPress user
 			'camp_name'      => sanitize_text_field( $camp_name ),
 			'opening_day'    => $opening_day_formatted,
 			'closing_day'    => $closing_day_formatted,

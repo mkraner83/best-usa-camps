@@ -17,7 +17,7 @@ class Migrations_Phase7 {
         if ( ! is_admin() ) {
             return;
         }
-        if ( get_option( 'creativedbs_campmgmt_phase7_migrated' ) ) {
+        if ( get_option( 'creativedbs_campmgmt_phase7_migrated' ) >= 2 ) {
             return;
         }
 
@@ -47,6 +47,30 @@ class Migrations_Phase7 {
         ) {$charset};";
         dbDelta( $sql );
 
-        update_option( 'creativedbs_campmgmt_phase7_migrated', 1 );
+        // 3) Add user_id column to camp_management table if missing
+        $user_id_col = $wpdb->get_var( $wpdb->prepare( "SHOW COLUMNS FROM {$camps} LIKE %s", 'user_id' ) );
+        if ( ! $user_id_col ) {
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            $wpdb->query( "ALTER TABLE {$camps} ADD COLUMN user_id BIGINT UNSIGNED NULL AFTER id, ADD KEY user_id (user_id)" );
+            error_log( 'CDBS Camp: Added user_id column to camp_management table' );
+            
+            // Link existing camps to their users based on email matching
+            $existing_camps = $wpdb->get_results( "SELECT id, email FROM {$camps} WHERE user_id IS NULL AND email != ''" );
+            foreach ( $existing_camps as $camp ) {
+                $user = get_user_by( 'email', $camp->email );
+                if ( $user && in_array( 'camp', $user->roles ) ) {
+                    $wpdb->update(
+                        $camps,
+                        [ 'user_id' => $user->ID ],
+                        [ 'id' => $camp->id ],
+                        [ '%d' ],
+                        [ '%d' ]
+                    );
+                    error_log( "CDBS Camp: Linked camp ID {$camp->id} to user ID {$user->ID}" );
+                }
+            }
+        }
+
+        update_option( 'creativedbs_campmgmt_phase7_migrated', 2 );
     }
 }
