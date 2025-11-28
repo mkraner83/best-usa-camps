@@ -298,34 +298,6 @@ class Camp_Dashboard {
 	private function handle_logo_upload( $camp_id, $camp ) {
 		global $wpdb;
 		
-		// Handle logo removal via button click
-		if ( ! empty( $_POST['remove_logo_action'] ) && ! empty( $camp['logo'] ) ) {
-			$this->delete_uploaded_file( $camp['logo'] );
-			
-			$wpdb->update(
-				"{$wpdb->prefix}camp_management",
-				[ 'logo' => '' ],
-				[ 'id' => $camp_id ],
-				[ '%s' ],
-				[ '%d' ]
-			);
-			return; // Exit after removal, don't process upload
-		}
-		
-		// Handle logo removal via hidden field (for JS-based removal if needed)
-		if ( ! empty( $_POST['logo_to_remove'] ) ) {
-			$logo_to_remove = trim( $_POST['logo_to_remove'] );
-			$this->delete_uploaded_file( $logo_to_remove );
-			
-			$wpdb->update(
-				"{$wpdb->prefix}camp_management",
-				[ 'logo' => '' ],
-				[ 'id' => $camp_id ],
-				[ '%s' ],
-				[ '%d' ]
-			);
-		}
-		
 		// Handle new logo upload
 		if ( ! empty( $_FILES['logo_upload']['name'] ) ) {
 			require_once( ABSPATH . 'wp-admin/includes/file.php' );
