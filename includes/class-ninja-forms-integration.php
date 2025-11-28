@@ -404,40 +404,86 @@ class Ninja_Forms_Integration {
 
 		// Build reset link
 		$reset_url = network_site_url( "wp-login.php?action=rp&key={$key}&login=" . rawurlencode( $username ), 'login' );
+		$site_url  = 'https://bestusacamps.com';
+		$site_name = 'Best USA Summer Camps';
 
 		// Email subject
-		$subject = sprintf(
-			/* translators: %s: Site name */
-			__( '[%s] Your Camp Account Has Been Created', 'creativedbs-camp-mgmt' ),
-			wp_specialchars_decode( get_option( 'blogname' ), ENT_QUOTES )
-		);
+		$subject = sprintf( '[%s] Welcome! Your Camp Profile Has Been Created', $site_name );
 
-		// Email message
-		$message = sprintf(
-			/* translators: 1: Username, 2: Site name, 3: Password reset URL */
-			__( 'Hello,
+		// HTML Email message
+		$message = '
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<style>
+		body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
+		.container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+		.header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 30px 20px; text-align: center; }
+		.header h1 { margin: 0; font-size: 28px; font-weight: bold; }
+		.content { padding: 30px 20px; }
+		.content h2 { color: #667eea; margin-top: 0; font-size: 22px; }
+		.content p { margin: 15px 0; font-size: 16px; }
+		.credentials-box { background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; border-radius: 4px; }
+		.credentials-box strong { color: #667eea; }
+		.button { display: inline-block; padding: 14px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff !important; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; text-align: center; }
+		.button:hover { opacity: 0.9; }
+		.footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #666; border-top: 1px solid #e9ecef; }
+		.footer a { color: #667eea; text-decoration: none; }
+		.divider { height: 1px; background: #e9ecef; margin: 25px 0; }
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="header">
+			<h1>🏕️ Welcome to Best USA Summer Camps!</h1>
+		</div>
+		<div class="content">
+			<h2>Your Camp Profile Has Been Created</h2>
+			<p>Hello!</p>
+			<p>We\'re excited to let you know that your camp profile has been successfully created on <strong>Best USA Summer Camps</strong>. You can now manage your camp information and connect with families searching for the perfect summer camp experience.</p>
+			
+			<div class="credentials-box">
+				<p style="margin: 0;"><strong>Username:</strong> ' . esc_html( $username ) . '</p>
+				<p style="margin: 10px 0 0 0;"><strong>Email:</strong> ' . esc_html( $email ) . '</p>
+			</div>
+			
+			<p><strong>Next Step: Set Your Password</strong></p>
+			<p>To secure your account and access your camp dashboard, please click the button below to create your password:</p>
+			
+			<div style="text-align: center;">
+				<a href="' . esc_url( $reset_url ) . '" class="button">Set My Password</a>
+			</div>
+			
+			<p style="font-size: 14px; color: #666; margin-top: 25px;">If the button doesn\'t work, copy and paste this link into your browser:<br>
+			<a href="' . esc_url( $reset_url ) . '" style="color: #667eea; word-break: break-all;">' . esc_url( $reset_url ) . '</a></p>
+			
+			<div class="divider"></div>
+			
+			<p style="font-size: 14px; color: #666;"><strong>Need Help?</strong><br>
+			If you did not create this account or have any questions, please contact our support team. We\'re here to help!</p>
+		</div>
+		<div class="footer">
+			<p style="margin: 0 0 10px 0;"><strong>Best USA Summer Camps</strong></p>
+			<p style="margin: 0 0 10px 0;"><a href="' . esc_url( $site_url ) . '">' . esc_html( $site_url ) . '</a></p>
+			<p style="margin: 0; font-size: 12px; color: #999;">© ' . date( 'Y' ) . ' Best USA Summer Camps. All rights reserved.</p>
+		</div>
+	</div>
+</body>
+</html>';
 
-Your camp account has been created on %2$s.
-
-Username: %1$s
-
-To set your password, please click the link below:
-%3$s
-
-If you did not request this account, please contact the site administrator.
-
-Thank you!', 'creativedbs-camp-mgmt' ),
-			$username,
-			wp_specialchars_decode( get_option( 'blogname' ), ENT_QUOTES ),
-			$reset_url
+		// Set email headers for HTML
+		$headers = array(
+			'Content-Type: text/html; charset=UTF-8',
+			'From: Best USA Summer Camps <noreply@bestusacamps.com>',
 		);
 
 		// Send email
-		error_log( 'CDBS Camp: Sending email to: ' . $email );
-		error_log( 'CDBS Camp: Email subject: ' . $subject );
-		error_log( 'CDBS Camp: Reset URL: ' . $reset_url );
+		error_log( 'CDBS Camp: Sending welcome email to: ' . $email );
+		error_log( 'CDBS Camp: Username: ' . $username );
 		
-		$sent = wp_mail( $email, $subject, $message );
+		$sent = wp_mail( $email, $subject, $message, $headers );
 
 		if ( ! $sent ) {
 			error_log( "CDBS Camp: FAILED to send welcome email to {$email}" );
