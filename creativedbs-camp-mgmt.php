@@ -2,12 +2,12 @@
 /*
 Plugin Name: CreativeDBS Camp Management
 Description: Ultimate US Summer Camp Management Application.
-Version: 2.3.0
+Version: 2.3.1
 Author: CreativeDBS
 Text Domain: creativedbs-camp-mgmt
 */
 
-define('CDBS_CAMP_VERSION', '2.3.0');
+define('CDBS_CAMP_VERSION', '2.3.1');
 
 defined( 'ABSPATH' ) || exit;
 
@@ -56,7 +56,7 @@ add_action( 'plugins_loaded', function() {
 	new \CreativeDBS\CampMgmt\Admin\Admin();
 	new \CreativeDBS\CampMgmt\PublicArea\Public_Controller();
 	new \CreativeDBS\CampMgmt\Ninja_Forms_Integration();
-	new \CreativeDBS\CampMgmt\Frontend\Camp_Dashboard();
+	new \CreativeDBS\CampMgmt\PublicArea\Camp_Dashboard();
 }, 0);
 
 // === Legacy code below kept for backward-compatibility. ===

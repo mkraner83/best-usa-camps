@@ -5,7 +5,7 @@
  * @package CreativeDBS\CampMgmt
  */
 
-namespace CreativeDBS\CampMgmt\Frontend;
+namespace CreativeDBS\CampMgmt\PublicArea;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -31,7 +31,7 @@ class Camp_Dashboard {
 		if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'camp_dashboard' ) ) {
 			wp_enqueue_style( 
 				'camp-dashboard', 
-				plugins_url( 'assets/camp-dashboard.css', dirname( dirname( __FILE__ ) ) ),
+				plugin_dir_url( CREATIVE_DBS_CAMPMGMT_FILE ) . 'assets/camp-dashboard.css',
 				[],
 				CDBS_CAMP_VERSION
 			);
