@@ -88,12 +88,6 @@ class Ninja_Forms_Integration {
 	 * @param array $form_data Form submission data.
 	 */
 	public function handle_camp_submission( $form_data ) {
-		// Don't interfere with AJAX file upload requests
-		if ( wp_doing_ajax() && isset( $_REQUEST['action'] ) && 
-		     ( $_REQUEST['action'] === 'nf_ajax_submit' || strpos( $_REQUEST['action'], 'nf_' ) === 0 ) ) {
-			return;
-		}
-
 		// Debug: Log that hook was triggered
 		error_log( 'CDBS Camp: ninja_forms_after_submission hook triggered' );
 
