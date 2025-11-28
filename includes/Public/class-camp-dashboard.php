@@ -78,8 +78,10 @@ class Camp_Dashboard {
 			'email'            => sanitize_email( $_POST['email'] ?? '' ),
 			'website'          => esc_url_raw( $_POST['website'] ?? '' ),
 			'description'      => wp_kses_post( $_POST['description'] ?? '' ),
-			'tuition_fees'     => sanitize_text_field( $_POST['tuition_fees'] ?? '' ),
-			'session_length'   => sanitize_text_field( $_POST['session_length'] ?? '' ),
+			'opening_day'      => sanitize_text_field( $_POST['opening_day'] ?? '' ),
+			'closing_day'      => sanitize_text_field( $_POST['closing_day'] ?? '' ),
+			'minprice_2026'    => floatval( $_POST['minprice_2026'] ?? 0 ),
+			'maxprice_2026'    => floatval( $_POST['maxprice_2026'] ?? 0 ),
 			'capacity'         => absint( $_POST['capacity'] ?? 0 ),
 			'age_range'        => sanitize_text_field( $_POST['age_range'] ?? '' ),
 		];
@@ -89,7 +91,7 @@ class Camp_Dashboard {
 			$camp_data,
 			[ 'id' => $camp_id ],
 			[
-				'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%d', '%s'
+				'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f', '%d', '%s'
 			],
 			[ '%d' ]
 		);
@@ -342,10 +344,34 @@ class Camp_Dashboard {
 							<label for="city">City</label>
 							<input type="text" id="city" name="city" value="<?php echo esc_attr( $camp['city'] ); ?>">
 						</div>
-						<div class="form-group third">
-							<label for="state">State</label>
-							<input type="text" id="state" name="state" value="<?php echo esc_attr( $camp['state'] ); ?>">
-						</div>
+					<div class="form-group third">
+						<label for="state">State <span class="required">*</span></label>
+						<select id="state" name="state" required>
+							<option value="">Select State</option>
+							<?php
+							$us_states = [
+								'AL' => 'Alabama', 'AK' => 'Alaska', 'AZ' => 'Arizona', 'AR' => 'Arkansas', 'CA' => 'California',
+								'CO' => 'Colorado', 'CT' => 'Connecticut', 'DE' => 'Delaware', 'FL' => 'Florida', 'GA' => 'Georgia',
+								'HI' => 'Hawaii', 'ID' => 'Idaho', 'IL' => 'Illinois', 'IN' => 'Indiana', 'IA' => 'Iowa',
+								'KS' => 'Kansas', 'KY' => 'Kentucky', 'LA' => 'Louisiana', 'ME' => 'Maine', 'MD' => 'Maryland',
+								'MA' => 'Massachusetts', 'MI' => 'Michigan', 'MN' => 'Minnesota', 'MS' => 'Mississippi', 'MO' => 'Missouri',
+								'MT' => 'Montana', 'NE' => 'Nebraska', 'NV' => 'Nevada', 'NH' => 'New Hampshire', 'NJ' => 'New Jersey',
+								'NM' => 'New Mexico', 'NY' => 'New York', 'NC' => 'North Carolina', 'ND' => 'North Dakota', 'OH' => 'Ohio',
+								'OK' => 'Oklahoma', 'OR' => 'Oregon', 'PA' => 'Pennsylvania', 'RI' => 'Rhode Island', 'SC' => 'South Carolina',
+								'SD' => 'South Dakota', 'TN' => 'Tennessee', 'TX' => 'Texas', 'UT' => 'Utah', 'VT' => 'Vermont',
+								'VA' => 'Virginia', 'WA' => 'Washington', 'WV' => 'West Virginia', 'WI' => 'Wisconsin', 'WY' => 'Wyoming'
+							];
+							foreach ( $us_states as $code => $name ) {
+								printf(
+									'<option value="%s" %s>%s</option>',
+									esc_attr( $code ),
+									selected( $camp['state'], $code, false ),
+									esc_html( $name )
+								);
+							}
+							?>
+						</select>
+					</div>
 						<div class="form-group third">
 							<label for="zip">ZIP Code</label>
 							<input type="text" id="zip" name="zip" value="<?php echo esc_attr( $camp['zip'] ); ?>">
@@ -367,62 +393,117 @@ class Camp_Dashboard {
 						</div>
 					</div>
 
-					<div class="form-row">
-						<div class="form-group half">
-							<label for="session_length">Session Length</label>
-							<input type="text" id="session_length" name="session_length" value="<?php echo esc_attr( $camp['session_length'] ); ?>" placeholder="e.g., 2 weeks">
+				<div class="form-row">
+					<div class="form-group half">
+						<label for="opening_day">Starting Date <span class="required">*</span></label>
+						<input type="date" id="opening_day" name="opening_day" value="<?php echo esc_attr( $camp['opening_day'] ); ?>" required>
+					</div>
+					<div class="form-group half">
+						<label for="closing_day">Ending Date <span class="required">*</span></label>
+						<input type="date" id="closing_day" name="closing_day" value="<?php echo esc_attr( $camp['closing_day'] ); ?>" required>
+					</div>
+				</div>
+
+				<div class="form-row">
+					<div class="form-group half">
+						<label for="minprice_2026">Lowest Rate <span class="required">*</span></label>
+						<div class="input-with-prefix">
+							<span class="prefix">$</span>
+							<input type="number" id="minprice_2026" name="minprice_2026" value="<?php echo esc_attr( $camp['minprice_2026'] ); ?>" min="0" step="0.01" placeholder="0.00" required>
 						</div>
-						<div class="form-group half">
-							<label for="tuition_fees">Tuition & Fees</label>
-							<input type="text" id="tuition_fees" name="tuition_fees" value="<?php echo esc_attr( $camp['tuition_fees'] ); ?>" placeholder="e.g., $2,500">
+					</div>
+					<div class="form-group half">
+						<label for="maxprice_2026">Highest Rate <span class="required">*</span></label>
+						<div class="input-with-prefix">
+							<span class="prefix">$</span>
+							<input type="number" id="maxprice_2026" name="maxprice_2026" value="<?php echo esc_attr( $camp['maxprice_2026'] ); ?>" min="0" step="0.01" placeholder="0.00" required>
 						</div>
 					</div>
 				</div>
-
-				<div class="form-section">
-					<h2 class="section-title">Camp Types</h2>
-					<div class="checkbox-grid">
-						<?php foreach ( $all_types as $type ) : ?>
-							<label class="checkbox-label">
-								<input type="checkbox" name="camp_types[]" value="<?php echo esc_attr( $type['id'] ); ?>" 
-									<?php checked( in_array( $type['id'], $camp_types ) ); ?>>
-								<span><?php echo esc_html( $type['name'] ); ?></span>
-							</label>
-						<?php endforeach; ?>
-					</div>
 				</div>
 
-				<div class="form-section">
-					<h2 class="section-title">Available Weeks</h2>
-					<div class="checkbox-grid">
-						<?php foreach ( $all_weeks as $week ) : ?>
-							<label class="checkbox-label">
-								<input type="checkbox" name="camp_weeks[]" value="<?php echo esc_attr( $week['id'] ); ?>" 
-									<?php checked( in_array( $week['id'], $camp_weeks ) ); ?>>
-								<span><?php echo esc_html( $week['name'] ); ?></span>
-							</label>
-						<?php endforeach; ?>
-					</div>
+			<div class="form-section">
+				<h2 class="section-title">Camp Types <span class="required">*</span></h2>
+				<p class="field-note">Select at least one camp type</p>
+				<div class="checkbox-grid">
+					<?php foreach ( $all_types as $type ) : ?>
+						<label class="checkbox-label">
+							<input type="checkbox" name="camp_types[]" value="<?php echo esc_attr( $type['id'] ); ?>" 
+								<?php checked( in_array( $type['id'], $camp_types ) ); ?>
+								class="required-checkbox">
+							<span><?php echo esc_html( $type['name'] ); ?></span>
+						</label>
+					<?php endforeach; ?>
 				</div>
-
-				<div class="form-section">
-					<h2 class="section-title">Activities Offered</h2>
-					<div class="checkbox-grid">
-						<?php foreach ( $all_activities as $activity ) : ?>
-							<label class="checkbox-label">
-								<input type="checkbox" name="camp_activities[]" value="<?php echo esc_attr( $activity['id'] ); ?>" 
-									<?php checked( in_array( $activity['id'], $camp_activities ) ); ?>>
-								<span><?php echo esc_html( $activity['name'] ); ?></span>
-							</label>
-						<?php endforeach; ?>
-					</div>
+			</div>			<div class="form-section">
+				<h2 class="section-title">Available Weeks / Session Length <span class="required">*</span></h2>
+				<p class="field-note">Select at least one week/session</p>
+				<div class="checkbox-grid">
+					<?php foreach ( $all_weeks as $week ) : ?>
+						<label class="checkbox-label">
+							<input type="checkbox" name="camp_weeks[]" value="<?php echo esc_attr( $week['id'] ); ?>" 
+								<?php checked( in_array( $week['id'], $camp_weeks ) ); ?>
+								class="required-checkbox-weeks">
+							<span><?php echo esc_html( $week['name'] ); ?></span>
+						</label>
+					<?php endforeach; ?>
 				</div>
-
-				<div class="form-actions">
+			</div>			<div class="form-section">
+				<h2 class="section-title">Activities Offered <span class="required">*</span></h2>
+				<p class="field-note">Select at least one activity</p>
+				<div class="checkbox-grid">
+					<?php foreach ( $all_activities as $activity ) : ?>
+						<label class="checkbox-label">
+							<input type="checkbox" name="camp_activities[]" value="<?php echo esc_attr( $activity['id'] ); ?>" 
+								<?php checked( in_array( $activity['id'], $camp_activities ) ); ?>
+								class="required-checkbox-activities">
+							<span><?php echo esc_html( $activity['name'] ); ?></span>
+						</label>
+					<?php endforeach; ?>
+				</div>
+			</div>				<div class="form-actions">
 					<button type="submit" class="btn-primary">Save Changes</button>
 					<a href="<?php echo get_permalink(); ?>" class="btn-secondary">Cancel</a>
 				</div>
 			</form>
+
+			<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				const form = document.querySelector('.camp-edit-form');
+				
+				form.addEventListener('submit', function(e) {
+					let valid = true;
+					let errorMessage = '';
+
+					// Validate Camp Types
+					const campTypes = document.querySelectorAll('.required-checkbox:checked');
+					if (campTypes.length === 0) {
+						valid = false;
+						errorMessage += 'Please select at least one Camp Type.\n';
+					}
+
+					// Validate Available Weeks
+					const campWeeks = document.querySelectorAll('.required-checkbox-weeks:checked');
+					if (campWeeks.length === 0) {
+						valid = false;
+						errorMessage += 'Please select at least one Available Week/Session.\n';
+					}
+
+					// Validate Activities
+					const activities = document.querySelectorAll('.required-checkbox-activities:checked');
+					if (activities.length === 0) {
+						valid = false;
+						errorMessage += 'Please select at least one Activity.\n';
+					}
+
+					if (!valid) {
+						e.preventDefault();
+						alert(errorMessage);
+						return false;
+					}
+				});
+			});
+			</script>
 		</div>
 		<?php
 	}

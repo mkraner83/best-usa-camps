@@ -231,11 +231,38 @@
 	color: #c33;
 }
 
+.field-note {
+	margin: -10px 0 15px 0;
+	font-size: 14px;
+	color: #666;
+	font-style: italic;
+}
+
+.input-with-prefix {
+	position: relative;
+	display: flex;
+	align-items: center;
+}
+
+.input-with-prefix .prefix {
+	position: absolute;
+	left: 12px;
+	font-size: 16px;
+	color: #333;
+	font-weight: 600;
+	z-index: 1;
+}
+
+.input-with-prefix input {
+	padding-left: 28px !important;
+}
+
 .form-group input[type="text"],
 .form-group input[type="email"],
 .form-group input[type="tel"],
 .form-group input[type="url"],
 .form-group input[type="number"],
+.form-group input[type="date"],
 .form-group textarea,
 .form-group select {
 	width: 100%;
