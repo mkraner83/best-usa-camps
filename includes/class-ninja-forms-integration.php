@@ -26,14 +26,13 @@ class Ninja_Forms_Integration {
 	private static $created_password_reset_url = '';
 
 	public function __construct() {
-		// Use only one reliable hook that fires AFTER file uploads complete
-		// Priority 999 ensures it runs after all file processing is done
-		add_action( 'ninja_forms_after_submission', [ $this, 'handle_camp_submission' ], 999 );
+		// Create user EARLY (priority 5) so credentials are available for email actions (priority 10)
+		add_action( 'ninja_forms_after_submission', [ $this, 'handle_camp_submission' ], 5 );
 		
 		add_action( 'init', [ $this, 'register_camp_role' ] );
 		add_filter( 'ninja_forms_submit_data', [ $this, 'validate_unique_email' ], 10 );
 		
-		// Add filter to replace custom shortcodes in Ninja Forms emails
+		// Add filter to replace custom shortcodes in Ninja Forms emails (runs during email action)
 		add_filter( 'ninja_forms_action_email_message', [ $this, 'replace_custom_shortcodes' ], 10, 3 );
 	}
 
@@ -98,9 +97,17 @@ class Ninja_Forms_Integration {
 	 * @return string Modified message with shortcodes replaced.
 	 */
 	public function replace_custom_shortcodes( $message, $data, $action_settings ) {
+		error_log( '=== CDBS Camp: Replacing shortcodes in email ===' );
+		error_log( 'Username available: ' . ( ! empty( self::$created_username ) ? self::$created_username : 'EMPTY' ) );
+		error_log( 'Reset URL available: ' . ( ! empty( self::$created_password_reset_url ) ? 'YES' : 'EMPTY' ) );
+		error_log( 'Message contains {user:username}: ' . ( strpos( $message, '{user:username}' ) !== false ? 'YES' : 'NO' ) );
+		error_log( 'Message contains {user:password_reset_url}: ' . ( strpos( $message, '{user:password_reset_url}' ) !== false ? 'YES' : 'NO' ) );
+		
 		// Replace our custom shortcodes with stored values
 		$message = str_replace( '{user:username}', self::$created_username, $message );
 		$message = str_replace( '{user:password_reset_url}', self::$created_password_reset_url, $message );
+		
+		error_log( 'After replacement - Username in message: ' . ( strpos( $message, self::$created_username ) !== false ? 'YES' : 'NO' ) );
 		
 		return $message;
 	}

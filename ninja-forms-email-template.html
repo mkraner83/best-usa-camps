@@ -14,11 +14,16 @@
 		}
 		.container { 
 			max-width: 600px; 
-			margin: 20px 10px; 
+			margin: 20px auto; 
 			background: #ffffff; 
 			border-radius: 8px; 
 			overflow: hidden; 
 			box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+		}
+		@media only screen and (max-width: 620px) {
+			.container {
+				margin: 20px 10px;
+			}
 		}
 		.header { 
 			background: #679B7C; 
