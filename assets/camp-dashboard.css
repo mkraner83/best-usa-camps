@@ -15,6 +15,21 @@
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
+.camp-dashboard-login .login-message {
+	background: #fff3cd;
+	border-left: 4px solid #ffc107;
+	padding: 15px;
+	margin-bottom: 25px;
+	border-radius: 4px;
+}
+
+.camp-dashboard-login .login-message p {
+	margin: 0;
+	color: #856404;
+	font-weight: 600;
+	text-align: center;
+}
+
 .camp-dashboard-login h2 {
 	color: #497C5E;
 	margin-top: 0;

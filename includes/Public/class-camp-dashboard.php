@@ -154,7 +154,7 @@ class Camp_Dashboard {
 		), ARRAY_A );
 
 		if ( ! $camp ) {
-			return '<div class="camp-dashboard-error"><p>No camp profile found for your account. Please contact support.</p></div>';
+			return $this->render_login_form( 'No camp profile found for your account.' );
 		}
 
 		// Get pivot data
@@ -201,12 +201,19 @@ class Camp_Dashboard {
 
 	/**
 	 * Render login form
+	 * 
+	 * @param string $message Optional message to display above login form
 	 */
-	private function render_login_form() {
+	private function render_login_form( $message = '' ) {
 		ob_start();
 		?>
 		<div class="camp-dashboard-login">
 			<div class="login-wrapper">
+				<?php if ( ! empty( $message ) ) : ?>
+					<div class="login-message">
+						<p><?php echo esc_html( $message ); ?></p>
+					</div>
+				<?php endif; ?>
 				<h2>Camp Login</h2>
 				<p>Please log in to access your camp dashboard.</p>
 				<?php
