@@ -15,7 +15,7 @@ class Assets {
     /** Plugin slug used for asset handles */
     public const SLUG = 'creativedbs-camp-mgmt';
     /** Plugin version for cache-busting */
-    public const VERSION = '2.0.8';
+    public const VERSION = '2.0.9';
     /** Plugin slug used for handles */
 //     public const SLUG = 'creativedbs-camp-mgmt';
 

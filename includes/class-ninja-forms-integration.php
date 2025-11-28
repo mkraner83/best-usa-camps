@@ -326,15 +326,23 @@ class Ninja_Forms_Integration {
 		$about_camp     = $this->get_field_by_label( $fields, 'About Camp' );
 		$photos         = $this->get_field_by_label( $fields, 'Photos Upload' ); // file upload
 
+		// Convert dates to MySQL format (Y-m-d)
+		$opening_day_formatted = $this->convert_to_mysql_date( $opening_day );
+		$closing_day_formatted = $this->convert_to_mysql_date( $closing_day );
+
+		// Parse currency values (remove $ and commas)
+		$min_price = $this->parse_currency( $lowest_rate );
+		$max_price = $this->parse_currency( $highest_rate );
+
 		// Prepare camp data for database insertion
 		$camp_data = [
 			'ninja_entry_id' => $entry_id,
 			'unique_key'     => $unique_key,
 			'camp_name'      => sanitize_text_field( $camp_name ),
-			'opening_day'    => ! empty( $opening_day ) ? sanitize_text_field( $opening_day ) : null,
-			'closing_day'    => ! empty( $closing_day ) ? sanitize_text_field( $closing_day ) : null,
-			'minprice_2026'  => ! empty( $lowest_rate ) ? floatval( $lowest_rate ) : null,
-			'maxprice_2026'  => ! empty( $highest_rate ) ? floatval( $highest_rate ) : null,
+			'opening_day'    => $opening_day_formatted,
+			'closing_day'    => $closing_day_formatted,
+			'minprice_2026'  => $min_price,
+			'maxprice_2026'  => $max_price,
 			'activities'     => sanitize_textarea_field( $activities ),
 			'email'          => sanitize_email( $email ),
 			'phone'          => sanitize_text_field( $phone ),
@@ -360,6 +368,21 @@ class Ninja_Forms_Integration {
 		if ( $inserted ) {
 			$camp_id = $wpdb->insert_id;
 			error_log( "CDBS Camp: Camp entry created in database (ID: {$camp_id}, Entry ID: {$entry_id})" );
+
+			// Link Camp Type terms to pivot table
+			if ( ! empty( $camp_type ) ) {
+				$this->link_camp_types( $camp_id, $camp_type );
+			}
+
+			// Link Duration (weeks) to pivot table
+			if ( ! empty( $duration ) ) {
+				$this->link_camp_weeks( $camp_id, $duration );
+			}
+
+			// Link Activities to pivot table
+			if ( ! empty( $activities ) ) {
+				$this->link_camp_activities( $camp_id, $activities );
+			}
 		} else {
 			error_log( "CDBS Camp: FAILED to create camp entry in database: " . $wpdb->last_error );
 		}
@@ -542,6 +565,177 @@ Thank you!', 'creativedbs-camp-mgmt' ),
 
 		if ( ! $sent ) {
 			error_log( "Failed to send 'already registered' email to {$email}" );
+		}
+	}
+
+	/**
+	 * Convert various date formats to MySQL DATE format (Y-m-d).
+	 *
+	 * @param string $date_string Date in various formats (m/d/Y, Y-m-d, etc.).
+	 * @return string|null MySQL formatted date or null if invalid.
+	 */
+	private function convert_to_mysql_date( $date_string ) {
+		if ( empty( $date_string ) ) {
+			return null;
+		}
+
+		// Try to parse the date
+		$timestamp = strtotime( $date_string );
+		if ( $timestamp === false ) {
+			error_log( "CDBS Camp: Invalid date format: {$date_string}" );
+			return null;
+		}
+
+		return date( 'Y-m-d', $timestamp );
+	}
+
+	/**
+	 * Parse currency value (remove $, commas, etc.).
+	 *
+	 * @param string $currency Currency string like "$1,234.56".
+	 * @return float|null Numeric value or null if empty.
+	 */
+	private function parse_currency( $currency ) {
+		if ( empty( $currency ) ) {
+			return null;
+		}
+
+		// Remove currency symbols, commas, spaces
+		$clean = preg_replace( '/[^0-9.]/', '', $currency );
+		$value = floatval( $clean );
+
+		return $value > 0 ? $value : null;
+	}
+
+	/**
+	 * Link camp types to the pivot table.
+	 *
+	 * @param int    $camp_id   Camp ID.
+	 * @param string $types_csv Comma-separated camp types.
+	 */
+	private function link_camp_types( $camp_id, $types_csv ) {
+		global $wpdb;
+		$type_terms_table = $wpdb->prefix . 'camp_type_terms';
+		$pivot_table = $wpdb->prefix . 'camp_management_types_map';
+
+		// Split by comma and clean
+		$types = array_filter( array_map( 'trim', explode( ',', $types_csv ) ) );
+
+		foreach ( $types as $type_name ) {
+			// Find or create the type term
+			$type_id = $wpdb->get_var( $wpdb->prepare(
+				"SELECT id FROM {$type_terms_table} WHERE name=%s OR slug=%s",
+				$type_name,
+				sanitize_title( $type_name )
+			) );
+
+			if ( ! $type_id ) {
+				// Create new type term
+				$wpdb->insert( $type_terms_table, [
+					'name'       => $type_name,
+					'slug'       => sanitize_title( $type_name ),
+					'is_active'  => 1,
+					'created_at' => current_time( 'mysql' ),
+					'updated_at' => current_time( 'mysql' ),
+				] );
+				$type_id = $wpdb->insert_id;
+				error_log( "CDBS Camp: Created new camp type: {$type_name} (ID: {$type_id})" );
+			}
+
+			// Link to camp
+			$wpdb->insert( $pivot_table, [
+				'camp_id' => $camp_id,
+				'type_id' => intval( $type_id ),
+			] );
+			error_log( "CDBS Camp: Linked camp {$camp_id} to type {$type_name} (ID: {$type_id})" );
+		}
+	}
+
+	/**
+	 * Link camp weeks/duration to the pivot table.
+	 *
+	 * @param int    $camp_id   Camp ID.
+	 * @param string $weeks_csv Comma-separated week durations.
+	 */
+	private function link_camp_weeks( $camp_id, $weeks_csv ) {
+		global $wpdb;
+		$week_terms_table = $wpdb->prefix . 'camp_week_terms';
+		$pivot_table = $wpdb->prefix . 'camp_management_weeks_map';
+
+		// Split by comma and clean
+		$weeks = array_filter( array_map( 'trim', explode( ',', $weeks_csv ) ) );
+
+		foreach ( $weeks as $week_name ) {
+			// Find or create the week term
+			$week_id = $wpdb->get_var( $wpdb->prepare(
+				"SELECT id FROM {$week_terms_table} WHERE name=%s OR slug=%s",
+				$week_name,
+				sanitize_title( $week_name )
+			) );
+
+			if ( ! $week_id ) {
+				// Create new week term
+				$wpdb->insert( $week_terms_table, [
+					'name'       => $week_name,
+					'slug'       => sanitize_title( $week_name ),
+					'is_active'  => 1,
+					'created_at' => current_time( 'mysql' ),
+					'updated_at' => current_time( 'mysql' ),
+				] );
+				$week_id = $wpdb->insert_id;
+				error_log( "CDBS Camp: Created new week duration: {$week_name} (ID: {$week_id})" );
+			}
+
+			// Link to camp
+			$wpdb->insert( $pivot_table, [
+				'camp_id' => $camp_id,
+				'week_id' => intval( $week_id ),
+			] );
+			error_log( "CDBS Camp: Linked camp {$camp_id} to week {$week_name} (ID: {$week_id})" );
+		}
+	}
+
+	/**
+	 * Link camp activities to the pivot table.
+	 *
+	 * @param int    $camp_id       Camp ID.
+	 * @param string $activities_csv Comma-separated activities.
+	 */
+	private function link_camp_activities( $camp_id, $activities_csv ) {
+		global $wpdb;
+		$activity_terms_table = $wpdb->prefix . 'camp_activity_terms';
+		$pivot_table = $wpdb->prefix . 'camp_management_activities_map';
+
+		// Split by comma and clean
+		$activities = array_filter( array_map( 'trim', explode( ',', $activities_csv ) ) );
+
+		foreach ( $activities as $activity_name ) {
+			// Find or create the activity term
+			$activity_id = $wpdb->get_var( $wpdb->prepare(
+				"SELECT id FROM {$activity_terms_table} WHERE name=%s OR slug=%s",
+				$activity_name,
+				sanitize_title( $activity_name )
+			) );
+
+			if ( ! $activity_id ) {
+				// Create new activity term
+				$wpdb->insert( $activity_terms_table, [
+					'name'       => $activity_name,
+					'slug'       => sanitize_title( $activity_name ),
+					'is_active'  => 1,
+					'created_at' => current_time( 'mysql' ),
+					'updated_at' => current_time( 'mysql' ),
+				] );
+				$activity_id = $wpdb->insert_id;
+				error_log( "CDBS Camp: Created new activity: {$activity_name} (ID: {$activity_id})" );
+			}
+
+			// Link to camp
+			$wpdb->insert( $pivot_table, [
+				'camp_id'     => $camp_id,
+				'activity_id' => intval( $activity_id ),
+			] );
+			error_log( "CDBS Camp: Linked camp {$camp_id} to activity {$activity_name} (ID: {$activity_id})" );
 		}
 	}
 }
