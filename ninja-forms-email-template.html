@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<style>
+		body { 
+			font-family: Arial, sans-serif; 
+			line-height: 1.6; 
+			color: #333; 
+			background-color: #f4f4f4; 
+			margin: 0; 
+			padding: 0; 
+		}
+		.container { 
+			max-width: 600px; 
+			margin: 20px auto; 
+			background: #ffffff; 
+			border-radius: 8px; 
+			overflow: hidden; 
+			box-shadow: 0 2px 4px rgba(0,0,0,0.1); 
+		}
+		.header { 
+			background: #679B7C; 
+			color: #ffffff; 
+			padding: 30px 20px; 
+			text-align: center; 
+		}
+		.header h1 { 
+			margin: 0; 
+			font-size: 28px; 
+			font-weight: bold; 
+		}
+		.content { 
+			padding: 30px 20px; 
+		}
+		.content h2 { 
+			color: #497C5E; 
+			margin-top: 0; 
+			font-size: 22px; 
+		}
+		.content p { 
+			margin: 15px 0; 
+			font-size: 16px; 
+		}
+		.credentials-box { 
+			background: #f8f9fa; 
+			border-left: 4px solid #497C5E; 
+			padding: 15px; 
+			margin: 20px 0; 
+			border-radius: 4px; 
+		}
+		.credentials-box strong { 
+			color: #497C5E; 
+		}
+		.button { 
+			display: inline-block; 
+			padding: 14px 30px; 
+			background: #497C5E !important; 
+			background-color: #497C5E !important; 
+			color: #ffffff !important; 
+			text-decoration: none; 
+			border-radius: 5px; 
+			font-weight: bold; 
+			margin: 20px 0; 
+			text-align: center; 
+		}
+		.button:hover { 
+			opacity: 0.9; 
+		}
+		.footer { 
+			background: #f8f9fa; 
+			padding: 20px; 
+			text-align: center; 
+			font-size: 14px; 
+			color: #666; 
+			border-top: 1px solid #e9ecef; 
+		}
+		.footer a { 
+			color: #497C5E; 
+			text-decoration: none; 
+		}
+		.divider { 
+			height: 1px; 
+			background: #e9ecef; 
+			margin: 25px 0; 
+		}
+	</style>
+</head>
+<body>
+	<div class="container">
+		<div class="header">
+			<h1 style="color: #ffffff !important;">Welcome to Best USA Summer Camps!</h1>
+		</div>
+		<div class="content">
+			<h2>Your Camp Profile Has Been Created</h2>
+			<p>Hello!</p>
+			<p>We're excited to let you know that your camp profile has been successfully created on <strong>Best USA Summer Camps</strong>. You can now manage your camp information and connect with families searching for the perfect summer camp experience.</p>
+			
+			<div class="credentials-box">
+				<p style="margin: 0;"><strong>Username:</strong> {field:username}</p>
+				<p style="margin: 10px 0 0 0;"><strong>Email:</strong> {field:email}</p>
+			</div>
+			
+			<p><strong>Next Step: Set Your Password</strong></p>
+			<p>To secure your account and access your camp dashboard, please click the button below to create your password:</p>
+			
+			<div style="text-align: center;">
+				<a href="{field:password_reset_url}" class="button" style="background: #497C5E !important; background-color: #497C5E !important; color: #ffffff !important;">Set My Password</a>
+			</div>
+			
+			<p style="font-size: 14px; color: #666; margin-top: 25px;">If the button doesn't work, copy and paste this link into your browser:<br>
+			<a href="{field:password_reset_url}" style="color: #497C5E; word-break: break-all;">{field:password_reset_url}</a></p>
+			
+			<div class="divider"></div>
+			
+			<p style="font-size: 14px; color: #666;"><strong>Need Help?</strong><br>
+			If you did not create this account or have any questions, please contact our support team. We're here to help!</p>
+		</div>
+		<div class="footer">
+			<p style="margin: 0;"><strong>Best USA Summer Camps</strong></p>
+		</div>
+	</div>
+</body>
+</html>

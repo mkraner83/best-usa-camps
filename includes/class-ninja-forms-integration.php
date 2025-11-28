@@ -182,11 +182,8 @@ class Ninja_Forms_Integration {
 		// Create camp entry in camp_management table
 		$this->create_camp_entry( $email, $camp_name, $first_name, $last_name, $entry_id, $form_data );
 
-		// Send welcome email
-		error_log( "CDBS Camp: Attempting to send welcome email to {$email}" );
-		$email_sent = $this->send_welcome_email( $user_id, $username, $email );
-
-		error_log( "CDBS Camp: User created successfully: {$username} (ID: {$user_id}), Email sent: " . ( $email_sent ? 'YES' : 'NO' ) );
+		// Note: Welcome email is now sent via Ninja Forms Email Action (not by plugin)
+		error_log( "CDBS Camp: User created successfully: {$username} (ID: {$user_id})" );
 	}
 
 	/**
@@ -389,13 +386,16 @@ class Ninja_Forms_Integration {
 
 	/**
 	 * Send welcome email with password reset link.
+	 * 
+	 * NOTE: This method is currently disabled. Welcome emails are now sent via Ninja Forms Email Action.
+	 * Kept for reference in case needed in the future.
 	 *
 	 * @param int    $user_id  User ID.
 	 * @param string $username Username.
 	 * @param string $email    User email.
 	 * @return bool Whether email was sent successfully.
 	 */
-	private function send_welcome_email( $user_id, $username, $email ) {
+	private function send_welcome_email_DISABLED( $user_id, $username, $email ) {
 		// Generate password reset key
 		$user = get_userdata( $user_id );
 		if ( ! $user ) {
