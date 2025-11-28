@@ -8,9 +8,6 @@ namespace CreativeDBS\CampMgmt;
 
 defined( 'ABSPATH' ) || exit;
 
-// Suppress Ninja Forms upload warnings
-error_reporting( E_ALL & ~E_NOTICE & ~E_DEPRECATED );
-
 class Ninja_Forms_Integration {
 
 	/**
@@ -25,15 +22,9 @@ class Ninja_Forms_Integration {
 	const CAMP_FORM_ID = 4;
 
 	public function __construct() {
-		// Try ALL possible Ninja Forms hooks with lower priority to not interfere with success message
-		add_action( 'ninja_forms_after_submission', [ $this, 'handle_camp_submission' ], 50 );
-		add_action( 'nf_after_submission', [ $this, 'handle_camp_submission_alt' ], 50 );
-		add_action( 'ninja_forms_process_form', [ $this, 'handle_camp_submission_v3' ], 50 );
-		add_action( 'nf_process_form', [ $this, 'handle_camp_submission_alt' ], 50 );
-		
-		// Additional v3 hooks
-		add_action( 'ninja_forms_after_processing', [ $this, 'handle_camp_submission_alt' ], 50 );
-		add_action( 'ninja_forms_submission_actions', [ $this, 'handle_camp_submission_alt' ], 50 );
+		// Use only one reliable hook that fires AFTER file uploads complete
+		// Priority 999 ensures it runs after all file processing is done
+		add_action( 'ninja_forms_after_submission', [ $this, 'handle_camp_submission' ], 999 );
 		
 		add_action( 'init', [ $this, 'register_camp_role' ] );
 		add_filter( 'ninja_forms_submit_data', [ $this, 'validate_unique_email' ], 10 );
@@ -97,9 +88,14 @@ class Ninja_Forms_Integration {
 	 * @param array $form_data Form submission data.
 	 */
 	public function handle_camp_submission( $form_data ) {
+		// Don't interfere with AJAX file upload requests
+		if ( wp_doing_ajax() && isset( $_REQUEST['action'] ) && 
+		     ( $_REQUEST['action'] === 'nf_ajax_submit' || strpos( $_REQUEST['action'], 'nf_' ) === 0 ) ) {
+			return;
+		}
+
 		// Debug: Log that hook was triggered
 		error_log( 'CDBS Camp: ninja_forms_after_submission hook triggered' );
-		error_log( 'CDBS Camp: Form data: ' . print_r( $form_data, true ) );
 
 		// Only process our specific form
 		if ( empty( $form_data['form_id'] ) || intval( $form_data['form_id'] ) !== self::CAMP_FORM_ID ) {
@@ -122,63 +118,9 @@ class Ninja_Forms_Integration {
 		error_log( 'CDBS Camp: Extracted - Email: ' . $email . ', Camp: ' . $camp_name . ', Name: ' . $first_name . ' ' . $last_name );
 
 		// Use shared create function
-		$this->create_user_from_data( $email, $camp_name, $first_name, $last_name, $form_data );
-	}
-
-	/**
-	 * Handle Ninja Forms v3+ submission (alternative hook).
-	 *
-	 * @param array $form_data Form data array.
-	 */
-	public function handle_camp_submission_v3( $form_data ) {
-		error_log( 'CDBS Camp: ninja_forms_process_form hook triggered (v3)' );
-		
-		if ( ! isset( $form_data['form_id'] ) || intval( $form_data['form_id'] ) !== self::CAMP_FORM_ID ) {
-			error_log( 'CDBS Camp: Skipping v3 hook - not form ID ' . self::CAMP_FORM_ID );
-			return;
-		}
-
-		error_log( 'CDBS Camp: Processing v3 form submission' );
-		
-		// Extract fields from v3 structure
-		$fields_data = isset( $form_data['fields'] ) ? $form_data['fields'] : [];
-		$email = $camp_name = $first_name = $last_name = '';
-		
-		foreach ( $fields_data as $field ) {
-			if ( ! isset( $field['key'] ) || ! isset( $field['value'] ) ) {
-				continue;
-			}
-			
-			switch ( $field['key'] ) {
-				case 'email':
-					$email = sanitize_email( $field['value'] );
-					break;
-				case 'camp_name':
-					$camp_name = sanitize_text_field( $field['value'] );
-					break;
-				case 'first_name':
-					$first_name = sanitize_text_field( $field['value'] );
-					break;
-				case 'last_name':
-					$last_name = sanitize_text_field( $field['value'] );
-					break;
-			}
-		}
 		
 		$this->create_user_from_data( $email, $camp_name, $first_name, $last_name, $form_data );
-	}
-
-	/**
-	 * Handle alternative Ninja Forms hook.
-	 *
-	 * @param array $form_data Form data.
-	 */
-	public function handle_camp_submission_alt( $form_data ) {
-		error_log( 'CDBS Camp: nf_after_submission hook triggered (alt)' );
-		$this->handle_camp_submission( $form_data );
-	}
-
-	/**
+	}	/**
 	 * Create user from extracted data.
 	 *
 	 * @param string $email      User email.
