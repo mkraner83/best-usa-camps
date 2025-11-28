@@ -133,6 +133,12 @@ class Camp_Dashboard {
 		// Handle activities - create new ones if needed and link to camp
 		$this->update_activities( $camp_id, $_POST['activity_names'] ?? '' );
 
+		// Handle photo uploads
+		$this->handle_photo_uploads( $camp_id, $camp );
+
+		// Handle logo upload
+		$this->handle_logo_upload( $camp_id, $camp );
+
 		// Redirect to avoid resubmission
 		wp_redirect( add_query_arg( 'updated', 'true', wp_get_referer() ) );
 		exit;
@@ -190,6 +196,169 @@ class Camp_Dashboard {
 					[ '%d', '%d' ]
 				);
 			}
+		}
+	}
+
+	/**
+	 * Handle photo uploads
+	 */
+	private function handle_photo_uploads( $camp_id, $camp ) {
+		global $wpdb;
+		
+		// Get existing photos
+		$existing_photos = ! empty( $camp['photos'] ) ? explode( ',', $camp['photos'] ) : [];
+		$existing_photos = array_map( 'trim', $existing_photos );
+		$existing_photos = array_filter( $existing_photos );
+		
+		// Handle photo removal
+		if ( ! empty( $_POST['photos_to_remove'] ) ) {
+			$photos_to_remove = explode( ',', $_POST['photos_to_remove'] );
+			$photos_to_remove = array_map( 'trim', $photos_to_remove );
+			$existing_photos = array_diff( $existing_photos, $photos_to_remove );
+			
+			// Delete physical files
+			foreach ( $photos_to_remove as $photo_url ) {
+				$this->delete_uploaded_file( $photo_url );
+			}
+		}
+		
+		// Handle new photo uploads
+		if ( ! empty( $_FILES['photos_upload']['name'][0] ) ) {
+			require_once( ABSPATH . 'wp-admin/includes/file.php' );
+			require_once( ABSPATH . 'wp-admin/includes/image.php' );
+			require_once( ABSPATH . 'wp-admin/includes/media.php' );
+			
+			$files = $_FILES['photos_upload'];
+			$uploaded_count = 0;
+			
+			for ( $i = 0; $i < count( $files['name'] ); $i++ ) {
+				// Check if we've reached the limit
+				if ( count( $existing_photos ) + $uploaded_count >= 10 ) {
+					break;
+				}
+				
+				// Skip empty files
+				if ( empty( $files['name'][$i] ) ) {
+					continue;
+				}
+				
+				// Prepare file array for wp_handle_upload
+				$file = [
+					'name'     => $files['name'][$i],
+					'type'     => $files['type'][$i],
+					'tmp_name' => $files['tmp_name'][$i],
+					'error'    => $files['error'][$i],
+					'size'     => $files['size'][$i],
+				];
+				
+				// Validate file type
+				$file_type = wp_check_filetype( $file['name'] );
+				if ( ! in_array( $file_type['ext'], [ 'jpg', 'jpeg' ] ) ) {
+					continue;
+				}
+				
+				// Validate file size (25MB)
+				if ( $file['size'] > 25 * 1024 * 1024 ) {
+					continue;
+				}
+				
+				// Upload file
+				$upload_overrides = [ 'test_form' => false ];
+				$uploaded_file = wp_handle_upload( $file, $upload_overrides );
+				
+				if ( ! isset( $uploaded_file['error'] ) && isset( $uploaded_file['url'] ) ) {
+					$existing_photos[] = $uploaded_file['url'];
+					$uploaded_count++;
+				}
+			}
+		}
+		
+		// Update database with new photo list
+		$photos_csv = implode( ',', $existing_photos );
+		$wpdb->update(
+			"{$wpdb->prefix}camp_management",
+			[ 'photos' => $photos_csv ],
+			[ 'id' => $camp_id ],
+			[ '%s' ],
+			[ '%d' ]
+		);
+	}
+
+	/**
+	 * Handle logo upload
+	 */
+	private function handle_logo_upload( $camp_id, $camp ) {
+		global $wpdb;
+		
+		// Handle logo removal
+		if ( ! empty( $_POST['logo_to_remove'] ) ) {
+			$logo_to_remove = trim( $_POST['logo_to_remove'] );
+			$this->delete_uploaded_file( $logo_to_remove );
+			
+			$wpdb->update(
+				"{$wpdb->prefix}camp_management",
+				[ 'logo' => '' ],
+				[ 'id' => $camp_id ],
+				[ '%s' ],
+				[ '%d' ]
+			);
+		}
+		
+		// Handle new logo upload
+		if ( ! empty( $_FILES['logo_upload']['name'] ) ) {
+			require_once( ABSPATH . 'wp-admin/includes/file.php' );
+			require_once( ABSPATH . 'wp-admin/includes/image.php' );
+			require_once( ABSPATH . 'wp-admin/includes/media.php' );
+			
+			$file = $_FILES['logo_upload'];
+			
+			// Validate file type
+			$file_type = wp_check_filetype( $file['name'] );
+			if ( ! in_array( $file_type['ext'], [ 'jpg', 'jpeg', 'png', 'pdf' ] ) ) {
+				return;
+			}
+			
+			// Validate file size (5MB)
+			if ( $file['size'] > 5 * 1024 * 1024 ) {
+				return;
+			}
+			
+			// Delete old logo if exists
+			if ( ! empty( $camp['logo'] ) ) {
+				$this->delete_uploaded_file( $camp['logo'] );
+			}
+			
+			// Upload file
+			$upload_overrides = [ 'test_form' => false ];
+			$uploaded_file = wp_handle_upload( $file, $upload_overrides );
+			
+			if ( ! isset( $uploaded_file['error'] ) && isset( $uploaded_file['url'] ) ) {
+				$wpdb->update(
+					"{$wpdb->prefix}camp_management",
+					[ 'logo' => $uploaded_file['url'] ],
+					[ 'id' => $camp_id ],
+					[ '%s' ],
+					[ '%d' ]
+				);
+			}
+		}
+	}
+
+	/**
+	 * Delete uploaded file from server
+	 */
+	private function delete_uploaded_file( $file_url ) {
+		if ( empty( $file_url ) ) {
+			return;
+		}
+		
+		// Convert URL to file path
+		$upload_dir = wp_upload_dir();
+		$file_path = str_replace( $upload_dir['baseurl'], $upload_dir['basedir'], $file_url );
+		
+		// Delete file if it exists
+		if ( file_exists( $file_path ) ) {
+			@unlink( $file_path );
 		}
 	}
 
@@ -388,7 +557,7 @@ class Camp_Dashboard {
 				</div>
 			</div>
 
-			<form method="post" action="" class="camp-edit-form">
+			<form method="post" action="" class="camp-edit-form" enctype="multipart/form-data">
 				<?php wp_nonce_field( 'update_camp_data', 'camp_dashboard_nonce' ); ?>
 
 				<div class="form-section">
@@ -563,52 +732,14 @@ class Camp_Dashboard {
 				</ul>
 				<input type="hidden" id="activities-hidden" name="activity_names" value="" />
 				<input type="text" id="activities-field" class="regular-text" placeholder="Type an activity and press Enter or comma" />
-			</div>				<div class="form-actions">
-					<button type="submit" class="btn-primary">Save Changes</button>
-					<a href="<?php echo get_permalink(); ?>" class="btn-secondary">Cancel</a>
-				</div>
-			</form>
+			</div>
 
-			<script>
-			document.addEventListener('DOMContentLoaded', function() {
-				const form = document.querySelector('.camp-edit-form');
-				
-				form.addEventListener('submit', function(e) {
-					let valid = true;
-					let errorMessage = '';
-
-					// Validate Camp Types
-					const campTypes = document.querySelectorAll('.required-checkbox:checked');
-					if (campTypes.length === 0) {
-						valid = false;
-						errorMessage += 'Please select at least one Camp Type.\n';
-					}
-
-					// Validate Available Weeks
-					const campWeeks = document.querySelectorAll('.required-checkbox-weeks:checked');
-					if (campWeeks.length === 0) {
-						valid = false;
-						errorMessage += 'Please select at least one Available Week/Session.\n';
-					}
-
-					// Validate Activities
-					const activitiesHidden = document.getElementById('activities-hidden');
-					if (!activitiesHidden.value || activitiesHidden.value.trim() === '') {
-						valid = false;
-						errorMessage += 'Please add at least one Activity.\n';
-					}
-
-					if (!valid) {
-						e.preventDefault();
-						alert(errorMessage);
-						return false;
-					}
-				});
-
-				// Activities tag/chip functionality
-				const field = document.getElementById('activities-field');
-				const list = document.getElementById('activities-list');
-				const hidden = document.getElementById('activities-hidden');
+				<!-- Activities tag/chip functionality script -->
+				<script>
+				document.addEventListener('DOMContentLoaded', function() {
+					const field = document.getElementById('activities-field');
+					const list = document.getElementById('activities-list');
+					const hidden = document.getElementById('activities-hidden');
 
 				function normalizeLabel(s) {
 					return s.replace(/\s+/g,' ').trim();
@@ -663,6 +794,187 @@ class Camp_Dashboard {
 			});
 			</script>
 		</div>
+
+		<!-- Photos Upload Section -->
+		<div class="form-section">
+			<h2 class="section-title">Photos</h2>
+			<p class="section-description">Upload up to 10 camp photos (JPG/JPEG only, max 25MB each)</p>
+			
+			<div class="photos-container">
+				<?php
+				$photos = ! empty( $camp['photos'] ) ? explode( ',', $camp['photos'] ) : [];
+				foreach ( $photos as $index => $photo_url ) :
+					if ( ! empty( trim( $photo_url ) ) ) :
+				?>
+					<div class="photo-item">
+						<img src="<?php echo esc_url( trim( $photo_url ) ); ?>" alt="Camp photo <?php echo $index + 1; ?>">
+						<button type="button" class="remove-photo" data-photo="<?php echo esc_attr( trim( $photo_url ) ); ?>">&times;</button>
+					</div>
+				<?php 
+					endif;
+				endforeach; 
+				?>
+			</div>
+			
+			<div class="form-group">
+				<label for="photos_upload">Add Photos (up to <?php echo 10 - count( $photos ); ?> more)</label>
+				<input type="file" id="photos_upload" name="photos_upload[]" accept="image/jpeg,image/jpg" multiple>
+				<p class="field-note">JPG/JPEG only, max 25MB per file, up to 10 total photos</p>
+			</div>
+			
+			<input type="hidden" id="photos_to_remove" name="photos_to_remove" value="">
+		</div>
+
+		<!-- Logo Upload Section -->
+		<div class="form-section">
+			<h2 class="section-title">Camp Logo</h2>
+			<p class="section-description">Upload your camp logo (JPG/JPEG/PNG/PDF, max 5MB)</p>
+			
+			<?php if ( ! empty( $camp['logo'] ) ) : ?>
+				<div class="logo-preview">
+					<?php if ( pathinfo( $camp['logo'], PATHINFO_EXTENSION ) === 'pdf' ) : ?>
+						<div class="pdf-placeholder">
+							<span>📄 PDF Logo</span>
+							<a href="<?php echo esc_url( $camp['logo'] ); ?>" target="_blank">View PDF</a>
+						</div>
+					<?php else : ?>
+						<img src="<?php echo esc_url( $camp['logo'] ); ?>" alt="Camp logo">
+					<?php endif; ?>
+					<button type="button" class="remove-logo" data-logo="<?php echo esc_attr( $camp['logo'] ); ?>">&times; Remove Logo</button>
+				</div>
+			<?php endif; ?>
+			
+			<div class="form-group">
+				<label for="logo_upload"><?php echo ! empty( $camp['logo'] ) ? 'Replace Logo' : 'Upload Logo'; ?></label>
+				<input type="file" id="logo_upload" name="logo_upload" accept="image/jpeg,image/jpg,image/png,application/pdf">
+				<p class="field-note">JPG, JPEG, PNG, or PDF format, max 5MB</p>
+			</div>
+			
+			<input type="hidden" id="logo_to_remove" name="logo_to_remove" value="">
+		</div>
+
+		<div class="form-section">
+			<button type="submit" class="btn-submit">Update Camp Information</button>
+		</div>
+
+		<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			// Photo removal
+			const photosToRemoveField = document.getElementById('photos_to_remove');
+			let photosToRemove = [];
+			
+			document.querySelectorAll('.remove-photo').forEach(function(btn) {
+				btn.addEventListener('click', function() {
+					const photoUrl = btn.getAttribute('data-photo');
+					photosToRemove.push(photoUrl);
+					photosToRemoveField.value = photosToRemove.join(',');
+					btn.closest('.photo-item').remove();
+				});
+			});
+
+			// Logo removal
+			const logoRemoveBtn = document.querySelector('.remove-logo');
+			const logoToRemoveField = document.getElementById('logo_to_remove');
+			if (logoRemoveBtn) {
+				logoRemoveBtn.addEventListener('click', function() {
+					const logoUrl = this.getAttribute('data-logo');
+					logoToRemoveField.value = logoUrl;
+					this.closest('.logo-preview').remove();
+				});
+			}
+
+			// File validation for photos
+			document.getElementById('photos_upload').addEventListener('change', function(e) {
+				const files = e.target.files;
+				if (files.length > 10) {
+					alert('You can only upload up to 10 photos total.');
+					this.value = '';
+					return;
+				}
+				
+				for (let i = 0; i < files.length; i++) {
+					const file = files[i];
+					// Check file type
+					if (!file.type.match('image/jpeg') && !file.type.match('image/jpg')) {
+						alert('Photos must be in JPG or JPEG format only.');
+						this.value = '';
+						return;
+					}
+					// Check file size (25MB = 25 * 1024 * 1024 bytes)
+					if (file.size > 25 * 1024 * 1024) {
+						alert('Each photo must be under 25MB. ' + file.name + ' is too large.');
+						this.value = '';
+						return;
+					}
+				}
+			});
+
+			// File validation for logo
+			document.getElementById('logo_upload').addEventListener('change', function(e) {
+				const file = e.target.files[0];
+				if (!file) return;
+				
+				// Check file type
+				const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'application/pdf'];
+				if (!allowedTypes.includes(file.type)) {
+					alert('Logo must be JPG, JPEG, PNG, or PDF format only.');
+					this.value = '';
+					return;
+				}
+				
+				// Check file size (5MB = 5 * 1024 * 1024 bytes)
+				if (file.size > 5 * 1024 * 1024) {
+					alert('Logo must be under 5MB. Current file is ' + (file.size / (1024 * 1024)).toFixed(2) + 'MB.');
+					this.value = '';
+					return;
+				}
+			});
+		});
+		</script>
+
+			<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				const form = document.querySelector('.camp-edit-form');
+				
+				form.addEventListener('submit', function(e) {
+					// Check required text fields
+					const requiredFields = form.querySelectorAll('[required]');
+					let missingFields = [];
+					
+					requiredFields.forEach(function(field) {
+						if (!field.value.trim()) {
+							missingFields.push(field.previousElementSibling.textContent.replace('*', '').trim());
+						}
+					});
+
+					// Check camp types (at least one)
+					const campTypes = form.querySelectorAll('input[name="camp_types[]"]:checked');
+					if (campTypes.length === 0) {
+						missingFields.push('Camp Types (select at least one)');
+					}
+
+					// Check available weeks (at least one)
+					const campWeeks = form.querySelectorAll('input[name="camp_weeks[]"]:checked');
+					if (campWeeks.length === 0) {
+						missingFields.push('Available Weeks (select at least one)');
+					}
+
+					// Check activities (at least one)
+					const activitiesHidden = document.getElementById('activities-hidden');
+					if (!activitiesHidden.value.trim()) {
+						missingFields.push('Activities Offered (add at least one)');
+					}
+
+					if (missingFields.length > 0) {
+						e.preventDefault();
+						alert('Please complete the following required fields:\n\n- ' + missingFields.join('\n- '));
+						return false;
+					}
+				});
+			});
+			</script>
+		</form>
+
 		<?php
 	}
 }
