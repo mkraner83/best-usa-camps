@@ -136,14 +136,18 @@ class Camp_Dashboard {
 	public function render_dashboard( $atts ) {
 		// Check if user is logged in
 		if ( ! is_user_logged_in() ) {
+			error_log( 'CDBS Camp Dashboard: User not logged in' );
 			return $this->render_login_form();
 		}
 
 		$user = wp_get_current_user();
+		error_log( 'CDBS Camp Dashboard: User logged in - ID: ' . $user->ID . ', Username: ' . $user->user_login );
+		error_log( 'CDBS Camp Dashboard: User roles: ' . print_r( $user->roles, true ) );
 
 		// Check if user has 'camp' role
 		if ( ! in_array( 'camp', $user->roles ) ) {
-			return '<div class="camp-dashboard-error"><p>Access denied. This dashboard is only available for camp users.</p></div>';
+			error_log( 'CDBS Camp Dashboard: User does not have camp role' );
+			return '<div class="camp-dashboard-error"><p>Access denied. This dashboard is only available for camp users. Your current roles: ' . implode( ', ', $user->roles ) . '</p></div>';
 		}
 
 		// Get camp data
@@ -153,8 +157,30 @@ class Camp_Dashboard {
 			$user->ID
 		), ARRAY_A );
 
+		error_log( 'CDBS Camp Dashboard: Camp data query result: ' . ( $camp ? 'Found' : 'Not found' ) );
+		if ( $camp ) {
+			error_log( 'CDBS Camp Dashboard: Camp ID: ' . $camp['id'] . ', Camp Name: ' . $camp['camp_name'] );
+		}
+
 		if ( ! $camp ) {
-			return $this->render_login_form( 'No camp profile found for your account.' );
+			error_log( 'CDBS Camp Dashboard: No camp profile found for user ID ' . $user->ID );
+			
+			// Show diagnostic info
+			ob_start();
+			?>
+			<div class="camp-dashboard-error">
+				<p><strong>Debug Information:</strong></p>
+				<ul style="text-align: left; margin: 10px 0;">
+					<li>User ID: <?php echo $user->ID; ?></li>
+					<li>Username: <?php echo esc_html( $user->user_login ); ?></li>
+					<li>Email: <?php echo esc_html( $user->user_email ); ?></li>
+					<li>Roles: <?php echo esc_html( implode( ', ', $user->roles ) ); ?></li>
+					<li>Camp profile in database: Not found</li>
+				</ul>
+				<p>Please contact support with this information.</p>
+			</div>
+			<?php
+			return ob_get_clean();
 		}
 
 		// Get pivot data
