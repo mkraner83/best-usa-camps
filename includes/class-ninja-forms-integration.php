@@ -220,10 +220,6 @@ class Ninja_Forms_Integration {
 		$about_camp     = $this->get_field_by_label( $fields, 'About Camp' );
 		$photos         = $this->get_field_by_label( $fields, 'Photos Upload' ); // file upload
 
-		// Debug: Log photos value
-		error_log( 'CDBS Camp: Photos value extracted: ' . $photos );
-		error_log( 'CDBS Camp: Raw field data for Photos Upload: ' . print_r( $this->find_field_data( $fields, 'Photos Upload' ), true ) );
-
 		// Convert dates to MySQL format (Y-m-d)
 		$opening_day_formatted = $this->convert_to_mysql_date( $opening_day );
 		$closing_day_formatted = $this->convert_to_mysql_date( $closing_day );
@@ -303,22 +299,6 @@ class Ninja_Forms_Integration {
 	}
 
 	/**
-	 * Find raw field data for debugging (returns the entire field array).
-	 *
-	 * @param array  $fields Ninja Forms fields array.
-	 * @param string $label  Field label to search for.
-	 * @return array Field data or empty array.
-	 */
-	private function find_field_data( $fields, $label ) {
-		foreach ( $fields as $field ) {
-			if ( isset( $field['label'] ) && strcasecmp( trim( $field['label'] ), trim( $label ) ) === 0 ) {
-				return $field;
-			}
-		}
-		return [];
-	}
-
-	/**
 	 * Get field value from Ninja Forms submission by field label.
 	 *
 	 * @param array  $fields Ninja Forms fields array.
@@ -330,17 +310,20 @@ class Ninja_Forms_Integration {
 			// Check if label matches (case-insensitive)
 			if ( isset( $field['label'] ) && strcasecmp( trim( $field['label'] ), trim( $label ) ) === 0 ) {
 				if ( isset( $field['value'] ) ) {
-					// Handle file upload fields - value is array of file data
+					// Handle file upload fields - value is array with numeric keys containing URLs
 					if ( is_array( $field['value'] ) && isset( $field['type'] ) && $field['type'] === 'file_upload' ) {
 						$urls = [];
-						foreach ( $field['value'] as $file ) {
-							if ( is_array( $file ) && isset( $file['url'] ) ) {
-								$urls[] = $file['url'];
-							} elseif ( is_string( $file ) ) {
+						foreach ( $field['value'] as $key => $file ) {
+							// Ninja Forms stores URLs directly in the value array with numeric keys
+							if ( is_string( $file ) && filter_var( $file, FILTER_VALIDATE_URL ) ) {
 								$urls[] = $file;
 							}
+							// Some cases have nested array with 'url' key
+							elseif ( is_array( $file ) && isset( $file['url'] ) ) {
+								$urls[] = $file['url'];
+							}
 						}
-						error_log( 'CDBS Camp: File upload field "' . $label . '" URLs: ' . implode( ', ', $urls ) );
+						error_log( 'CDBS Camp: File upload field "' . $label . '" URLs extracted: ' . implode( ', ', $urls ) );
 						return implode( ', ', $urls );
 					}
 					// Handle checkbox lists
