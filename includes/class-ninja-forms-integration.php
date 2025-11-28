@@ -104,15 +104,22 @@ class Ninja_Forms_Integration {
 		
 		error_log( 'CDBS Camp: Available fields: ' . print_r( array_keys( $fields ), true ) );
 		
-		$email      = $this->get_field_value( $fields, 'email' );
-		$camp_name  = $this->get_field_value( $fields, 'camp_name' );
-		$first_name = $this->get_field_value( $fields, 'first_name' );
-		$last_name  = $this->get_field_value( $fields, 'last_name' );
+		$email         = $this->get_field_by_label( $fields, 'Email' );
+		$camp_name     = $this->get_field_by_label( $fields, 'Camp Name' );
+		$camp_director = $this->get_field_by_label( $fields, 'Camp Director' );
 		
-		error_log( 'CDBS Camp: Extracted - Email: ' . $email . ', Camp: ' . $camp_name . ', Name: ' . $first_name . ' ' . $last_name );
+		// Split Camp Director into first and last name
+		$first_name = '';
+		$last_name  = '';
+		if ( ! empty( $camp_director ) ) {
+			$name_parts = explode( ' ', trim( $camp_director ), 2 );
+			$first_name = $name_parts[0];
+			$last_name  = isset( $name_parts[1] ) ? $name_parts[1] : '';
+		}
+		
+		error_log( 'CDBS Camp: Extracted - Email: ' . $email . ', Camp: ' . $camp_name . ', Director: ' . $camp_director . ' (First: ' . $first_name . ', Last: ' . $last_name . ')' );
 
 		// Use shared create function
-		
 		$this->create_user_from_data( $email, $camp_name, $first_name, $last_name, $form_data );
 	}	/**
 	 * Create user from extracted data.
@@ -480,15 +487,32 @@ class Ninja_Forms_Integration {
 		);
 
 		// Send email
-		error_log( 'CDBS Camp: Sending welcome email to: ' . $email );
-		error_log( 'CDBS Camp: Username: ' . $username );
+		error_log( '========================================' );
+		error_log( 'CDBS Camp: ATTEMPTING TO SEND EMAIL' );
+		error_log( 'To: ' . $email );
+		error_log( 'Subject: ' . $subject );
+		error_log( 'Username: ' . $username );
+		error_log( 'Reset URL: ' . $reset_url );
+		error_log( 'Headers: ' . print_r( $headers, true ) );
+		error_log( '========================================' );
+		
+		// Hook to capture wp_mail errors
+		add_action( 'wp_mail_failed', function( $wp_error ) {
+			error_log( 'CDBS Camp: wp_mail ERROR - ' . $wp_error->get_error_message() );
+		} );
 		
 		$sent = wp_mail( $email, $subject, $message, $headers );
 
 		if ( ! $sent ) {
-			error_log( "CDBS Camp: FAILED to send welcome email to {$email}" );
+			error_log( "CDBS Camp: ❌ FAILED to send welcome email to {$email}" );
+			// Check if wp_mail is properly configured
+			$phpmailer_object = null;
+			add_action( 'phpmailer_init', function( $phpmailer ) use ( &$phpmailer_object ) {
+				$phpmailer_object = $phpmailer;
+			} );
+			error_log( 'CDBS Camp: PHP mail() function available: ' . ( function_exists( 'mail' ) ? 'YES' : 'NO' ) );
 		} else {
-			error_log( "CDBS Camp: Successfully sent welcome email to {$email}" );
+			error_log( "CDBS Camp: ✅ Successfully sent welcome email to {$email}" );
 		}
 		
 		return $sent;
