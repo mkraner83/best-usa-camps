@@ -281,15 +281,20 @@ class Camp_Dashboard {
 			}
 		}
 		
-		// Update database with new photo list
+		// Update database with new photo list (only if there were changes)
 		$photos_csv = implode( ',', $existing_photos );
-		$wpdb->update(
-			"{$wpdb->prefix}camp_management",
-			[ 'photos' => $photos_csv ],
-			[ 'id' => $camp_id ],
-			[ '%s' ],
-			[ '%d' ]
-		);
+		$original_photos_csv = ! empty( $camp['photos'] ) ? $camp['photos'] : '';
+		
+		// Only update if photos changed
+		if ( $photos_csv !== $original_photos_csv ) {
+			$wpdb->update(
+				"{$wpdb->prefix}camp_management",
+				[ 'photos' => $photos_csv ],
+				[ 'id' => $camp_id ],
+				[ '%s' ],
+				[ '%d' ]
+			);
+		}
 	}
 
 	/**
