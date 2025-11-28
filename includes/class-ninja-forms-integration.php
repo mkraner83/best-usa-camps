@@ -8,6 +8,9 @@ namespace CreativeDBS\CampMgmt;
 
 defined( 'ABSPATH' ) || exit;
 
+// Suppress Ninja Forms upload warnings
+error_reporting( E_ALL & ~E_NOTICE & ~E_DEPRECATED );
+
 class Ninja_Forms_Integration {
 
 	/**
@@ -22,63 +25,18 @@ class Ninja_Forms_Integration {
 	const CAMP_FORM_ID = 4;
 
 	public function __construct() {
-		// Add comprehensive hook logging to detect which hooks exist
-		add_action( 'init', [ $this, 'log_available_hooks' ], 999 );
-		
-		// Try ALL possible Ninja Forms hooks
-		add_action( 'ninja_forms_after_submission', [ $this, 'handle_camp_submission' ], 999 );
-		add_action( 'nf_after_submission', [ $this, 'handle_camp_submission_alt' ], 999 );
-		add_action( 'ninja_forms_process_form', [ $this, 'handle_camp_submission_v3' ], 999 );
-		add_action( 'nf_process_form', [ $this, 'handle_camp_submission_alt' ], 999 );
+		// Try ALL possible Ninja Forms hooks with lower priority to not interfere with success message
+		add_action( 'ninja_forms_after_submission', [ $this, 'handle_camp_submission' ], 50 );
+		add_action( 'nf_after_submission', [ $this, 'handle_camp_submission_alt' ], 50 );
+		add_action( 'ninja_forms_process_form', [ $this, 'handle_camp_submission_v3' ], 50 );
+		add_action( 'nf_process_form', [ $this, 'handle_camp_submission_alt' ], 50 );
 		
 		// Additional v3 hooks
-		add_action( 'ninja_forms_after_processing', [ $this, 'handle_camp_submission_alt' ], 999 );
-		add_action( 'ninja_forms_submission_actions', [ $this, 'handle_camp_submission_alt' ], 999 );
+		add_action( 'ninja_forms_after_processing', [ $this, 'handle_camp_submission_alt' ], 50 );
+		add_action( 'ninja_forms_submission_actions', [ $this, 'handle_camp_submission_alt' ], 50 );
 		
 		add_action( 'init', [ $this, 'register_camp_role' ] );
-		add_filter( 'ninja_forms_submit_data', [ $this, 'validate_unique_email' ] );
-		
-		// Log on every single action to see if ANYTHING from Ninja Forms fires
-		add_action( 'all', [ $this, 'log_all_actions' ], 1 );
-	}
-	
-	/**
-	 * Log ALL actions to see which Ninja Forms hooks are firing.
-	 */
-	public function log_all_actions( $hook ) {
-		// Only log Ninja Forms related hooks
-		if ( strpos( $hook, 'ninja' ) !== false || strpos( $hook, 'nf_' ) === 0 ) {
-			error_log( 'CDBS Camp: Detected Ninja Forms action: ' . $hook );
-		}
-	}
-	
-	/**
-	 * Log available hooks at init.
-	 */
-	public function log_available_hooks() {
-		error_log( 'CDBS Camp: Integration class loaded and hooks registered' );
-		
-		// Check if Ninja Forms is active
-		if ( class_exists( 'Ninja_Forms' ) ) {
-			error_log( 'CDBS Camp: Ninja Forms plugin is ACTIVE' );
-			if ( defined( 'NF_PLUGIN_VERSION' ) ) {
-				error_log( 'CDBS Camp: Ninja Forms version: ' . NF_PLUGIN_VERSION );
-			}
-		} else {
-			error_log( 'CDBS Camp: WARNING - Ninja Forms plugin NOT detected!' );
-		}
-		
-		// Check if our form exists
-		global $wpdb;
-		$forms_table = $wpdb->prefix . 'nf3_forms';
-		if ( $wpdb->get_var( "SHOW TABLES LIKE '{$forms_table}'" ) ) {
-			$form_exists = $wpdb->get_var( $wpdb->prepare( "SELECT id FROM {$forms_table} WHERE id = %d", self::CAMP_FORM_ID ) );
-			if ( $form_exists ) {
-				error_log( 'CDBS Camp: Form ID ' . self::CAMP_FORM_ID . ' exists in database' );
-			} else {
-				error_log( 'CDBS Camp: WARNING - Form ID ' . self::CAMP_FORM_ID . ' NOT found in database!' );
-			}
-		}
+		add_filter( 'ninja_forms_submit_data', [ $this, 'validate_unique_email' ], 10 );
 	}
 
 	/**
@@ -325,6 +283,7 @@ class Ninja_Forms_Integration {
 		$zip            = $this->get_field_by_label( $fields, 'Zip' );
 		$about_camp     = $this->get_field_by_label( $fields, 'About Camp' );
 		$photos         = $this->get_field_by_label( $fields, 'Photos Upload' ); // file upload
+		$logo_upload    = $this->get_field_by_label( $fields, 'Logo Upload' ); // file upload
 
 		// Convert dates to MySQL format (Y-m-d)
 		$opening_day_formatted = $this->convert_to_mysql_date( $opening_day );
@@ -354,6 +313,7 @@ class Ninja_Forms_Integration {
 			'zip'            => sanitize_text_field( $zip ),
 			'about_camp'     => sanitize_textarea_field( $about_camp ),
 			'photos'         => sanitize_text_field( $photos ), // Store file path/URL
+			'logo'           => sanitize_text_field( $logo_upload ), // Store logo file path/URL
 			'approved'       => 0, // Not approved by default
 			'created_at'     => current_time( 'mysql' ),
 			'updated_at'     => current_time( 'mysql' ),
