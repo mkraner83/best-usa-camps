@@ -12,14 +12,46 @@ defined( 'ABSPATH' ) || exit;
 class Camp_Dashboard {
 
 	public function __construct() {
-		// Register shortcode for front-end dashboard
+		// Register shortcodes for front-end dashboard
 		add_shortcode( 'camp_dashboard', [ $this, 'render_dashboard' ] );
+		add_shortcode( 'camp_dashboard_title', [ $this, 'render_dashboard_title' ] );
 		
 		// Handle form submissions
 		add_action( 'init', [ $this, 'handle_form_submission' ] );
 		
 		// Enqueue front-end styles
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_styles' ] );
+	}
+
+	/**
+	 * Render the dashboard title shortcode
+	 * Returns "Camp [Camp Name]" if logged in, or "CAMP DASHBOARD" if not
+	 */
+	public function render_dashboard_title( $atts ) {
+		// Check if user is logged in
+		if ( ! is_user_logged_in() ) {
+			return 'CAMP DASHBOARD';
+		}
+
+		$user = wp_get_current_user();
+		
+		// Check if user has camp role
+		if ( ! in_array( 'camp', $user->roles ) ) {
+			return 'CAMP DASHBOARD';
+		}
+
+		// Get camp data
+		global $wpdb;
+		$camp = $wpdb->get_row( $wpdb->prepare(
+			"SELECT camp_name FROM {$wpdb->prefix}camp_management WHERE user_id = %d",
+			$user->ID
+		), ARRAY_A );
+
+		if ( ! $camp || empty( $camp['camp_name'] ) ) {
+			return 'CAMP DASHBOARD';
+		}
+
+		return 'Camp ' . esc_html( $camp['camp_name'] );
 	}
 
 	/**
@@ -220,9 +252,9 @@ class Camp_Dashboard {
 	 */
 	private function get_all_options( $table_name ) {
 		global $wpdb;
-		$table = "{$wpdb->prefix}{$table_name}";
+		$table = "{$wpdb->prefix}camp_{$table_name}_terms";
 		
-		$results = $wpdb->get_results( "SELECT id, name FROM {$table} ORDER BY name ASC", ARRAY_A );
+		$results = $wpdb->get_results( "SELECT id, name FROM {$table} WHERE is_active = 1 ORDER BY name ASC", ARRAY_A );
 		
 		return $results;
 	}
