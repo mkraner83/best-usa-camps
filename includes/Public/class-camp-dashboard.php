@@ -129,11 +129,68 @@ class Camp_Dashboard {
 		// Update pivot tables
 		$this->update_pivot_data( $camp_id, 'camp_management_types_map', 'type_id', $_POST['camp_types'] ?? [] );
 		$this->update_pivot_data( $camp_id, 'camp_management_weeks_map', 'week_id', $_POST['camp_weeks'] ?? [] );
-		$this->update_pivot_data( $camp_id, 'camp_management_activities_map', 'activity_id', $_POST['camp_activities'] ?? [] );
+		
+		// Handle activities - create new ones if needed and link to camp
+		$this->update_activities( $camp_id, $_POST['activity_names'] ?? '' );
 
 		// Redirect to avoid resubmission
 		wp_redirect( add_query_arg( 'updated', 'true', wp_get_referer() ) );
 		exit;
+	}
+
+	/**
+	 * Update activities - create new ones if needed and link to camp
+	 */
+	private function update_activities( $camp_id, $activity_names_string ) {
+		global $wpdb;
+		$activities_table = "{$wpdb->prefix}camp_activity_terms";
+		$pivot_table = "{$wpdb->prefix}camp_management_activities_map";
+		
+		// Delete existing activity relationships
+		$wpdb->delete( $pivot_table, [ 'camp_id' => $camp_id ], [ '%d' ] );
+		
+		// Parse activity names from comma-separated string
+		if ( empty( $activity_names_string ) ) {
+			return;
+		}
+		
+		$activity_names = array_map( 'trim', explode( ',', $activity_names_string ) );
+		$activity_names = array_filter( $activity_names ); // Remove empty values
+		
+		foreach ( $activity_names as $activity_name ) {
+			// Check if activity exists
+			$activity_id = $wpdb->get_var( $wpdb->prepare(
+				"SELECT id FROM {$activities_table} WHERE name = %s",
+				$activity_name
+			) );
+			
+			// Create activity if it doesn't exist
+			if ( ! $activity_id ) {
+				$slug = sanitize_title( $activity_name );
+				$wpdb->insert(
+					$activities_table,
+					[
+						'name' => $activity_name,
+						'slug' => $slug,
+						'is_active' => 1
+					],
+					[ '%s', '%s', '%d' ]
+				);
+				$activity_id = $wpdb->insert_id;
+			}
+			
+			// Link activity to camp
+			if ( $activity_id ) {
+				$wpdb->insert(
+					$pivot_table,
+					[
+						'camp_id' => $camp_id,
+						'activity_id' => $activity_id
+					],
+					[ '%d', '%d' ]
+				);
+			}
+		}
 	}
 
 	/**
@@ -489,17 +546,23 @@ class Camp_Dashboard {
 				</div>
 			</div>			<div class="form-section">
 				<h2 class="section-title">Activities Offered <span class="required">*</span></h2>
-				<p class="field-note">Select at least one activity</p>
-				<div class="checkbox-inline-list">
-					<?php foreach ( $all_activities as $activity ) : ?>
-						<label style="display:inline-block;margin:0 12px 6px 0;">
-							<input type="checkbox" name="camp_activities[]" value="<?php echo esc_attr( $activity['id'] ); ?>" 
-								<?php checked( in_array( $activity['id'], $camp_activities ) ); ?>
-								class="required-checkbox-activities">
-							<?php echo esc_html( $activity['name'] ); ?>
-						</label>
-					<?php endforeach; ?>
-				</div>
+				<p class="field-note">Type an activity and press Enter or comma to add it</p>
+				<ul id="activities-list" class="chip-list">
+					<?php 
+					// Get activity names for existing activities
+					foreach ( $camp_activities as $activity_id ) {
+						$activity = array_filter( $all_activities, function($a) use ($activity_id) {
+							return $a['id'] == $activity_id;
+						});
+						if ( ! empty( $activity ) ) {
+							$activity = reset( $activity );
+							echo '<li class="chip" data-val="' . esc_attr( $activity['name'] ) . '"><span>' . esc_html( $activity['name'] ) . '</span><button type="button" aria-label="Remove">×</button></li>';
+						}
+					}
+					?>
+				</ul>
+				<input type="hidden" id="activities-hidden" name="activity_names" value="" />
+				<input type="text" id="activities-field" class="regular-text" placeholder="Type an activity and press Enter or comma" />
 			</div>				<div class="form-actions">
 					<button type="submit" class="btn-primary">Save Changes</button>
 					<a href="<?php echo get_permalink(); ?>" class="btn-secondary">Cancel</a>
@@ -529,10 +592,10 @@ class Camp_Dashboard {
 					}
 
 					// Validate Activities
-					const activities = document.querySelectorAll('.required-checkbox-activities:checked');
-					if (activities.length === 0) {
+					const activitiesHidden = document.getElementById('activities-hidden');
+					if (!activitiesHidden.value || activitiesHidden.value.trim() === '') {
 						valid = false;
-						errorMessage += 'Please select at least one Activity.\n';
+						errorMessage += 'Please add at least one Activity.\n';
 					}
 
 					if (!valid) {
@@ -540,6 +603,62 @@ class Camp_Dashboard {
 						alert(errorMessage);
 						return false;
 					}
+				});
+
+				// Activities tag/chip functionality
+				const field = document.getElementById('activities-field');
+				const list = document.getElementById('activities-list');
+				const hidden = document.getElementById('activities-hidden');
+
+				function normalizeLabel(s) {
+					return s.replace(/\s+/g,' ').trim();
+				}
+
+				function syncHidden() {
+					const vals = [];
+					list.querySelectorAll('li[data-val]').forEach(function(li) {
+						vals.push(li.getAttribute('data-val'));
+					});
+					hidden.value = vals.join(',');
+				}
+
+				function addToken(label) {
+					label = normalizeLabel(label);
+					if (!label) return;
+					const exists = Array.from(list.querySelectorAll('li[data-val]')).some(function(li) {
+						return li.getAttribute('data-val').toLowerCase() === label.toLowerCase();
+					});
+					if (exists) return;
+					const li = document.createElement('li');
+					li.setAttribute('data-val', label);
+					li.className = 'chip';
+					li.innerHTML = '<span>' + label + '</span><button type="button" aria-label="Remove">×</button>';
+					li.querySelector('button').addEventListener('click', function() {
+						li.remove();
+						syncHidden();
+					});
+					list.appendChild(li);
+					syncHidden();
+				}
+
+				field.addEventListener('keydown', function(e) {
+					if (e.key === 'Enter' || e.key === ',') {
+						e.preventDefault();
+						const val = field.value;
+						field.value = '';
+						addToken(val);
+					}
+				});
+
+				// Initialize hidden field with existing values
+				syncHidden();
+
+				// Setup remove buttons for existing chips
+				list.querySelectorAll('button').forEach(function(btn) {
+					btn.addEventListener('click', function() {
+						btn.closest('li').remove();
+						syncHidden();
+					});
 				});
 			});
 			</script>
