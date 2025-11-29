@@ -292,6 +292,20 @@ class Camp_Dashboard {
 				$uploaded_file = wp_handle_upload( $file, $upload_overrides );
 				
 				if ( ! isset( $uploaded_file['error'] ) && isset( $uploaded_file['url'] ) ) {
+					// Add to media library
+					$attachment = [
+						'post_mime_type' => $uploaded_file['type'],
+						'post_title'     => sanitize_file_name( pathinfo( $uploaded_file['file'], PATHINFO_FILENAME ) ),
+						'post_content'   => '',
+						'post_status'    => 'inherit'
+					];
+					
+					$attach_id = wp_insert_attachment( $attachment, $uploaded_file['file'] );
+					
+					// Generate attachment metadata
+					$attach_data = wp_generate_attachment_metadata( $attach_id, $uploaded_file['file'] );
+					wp_update_attachment_metadata( $attach_id, $attach_data );
+					
 					$existing_photos[] = $uploaded_file['url'];
 					$uploaded_count++;
 					$photos_changed = true;
@@ -359,6 +373,20 @@ class Camp_Dashboard {
 			remove_filter( 'upload_dir', [ $this, 'custom_upload_dir_for_camps' ] );
 			
 			if ( ! isset( $uploaded_file['error'] ) && isset( $uploaded_file['url'] ) ) {
+				// Add to media library
+				$attachment = [
+					'post_mime_type' => $uploaded_file['type'],
+					'post_title'     => sanitize_file_name( pathinfo( $uploaded_file['file'], PATHINFO_FILENAME ) ),
+					'post_content'   => '',
+					'post_status'    => 'inherit'
+				];
+				
+				$attach_id = wp_insert_attachment( $attachment, $uploaded_file['file'] );
+				
+				// Generate attachment metadata
+				$attach_data = wp_generate_attachment_metadata( $attach_id, $uploaded_file['file'] );
+				wp_update_attachment_metadata( $attach_id, $attach_data );
+				
 				$wpdb->update(
 					"{$wpdb->prefix}camp_management",
 					[ 'logo' => $uploaded_file['url'] ],
