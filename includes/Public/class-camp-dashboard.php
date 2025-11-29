@@ -24,9 +24,6 @@ class Camp_Dashboard {
 		
 		// Register custom media category taxonomy
 		add_action( 'init', [ $this, 'register_media_category' ] );
-		
-		// Add media library folder filter
-		add_filter( 'add_attachment', [ $this, 'assign_camp_category_to_attachment' ] );
 	}
 	
 	/**
@@ -61,25 +58,6 @@ class Camp_Dashboard {
 				'slug'        => 'camps',
 			] );
 		}
-	}
-	
-	/**
-	 * Automatically assign "Camps" category to camp uploads
-	 */
-	public function assign_camp_category_to_attachment( $attachment_id ) {
-		// Check if this is a camp upload (check if it's in the /camps directory)
-		$file = get_attached_file( $attachment_id );
-		
-		if ( strpos( $file, '/camps/' ) !== false ) {
-			// Get the "Camps" term
-			$term = get_term_by( 'slug', 'camps', 'media_category' );
-			
-			if ( $term ) {
-				wp_set_object_terms( $attachment_id, $term->term_id, 'media_category', false );
-			}
-		}
-		
-		return $attachment_id;
 	}
 
 	/**
@@ -361,6 +339,12 @@ class Camp_Dashboard {
 					
 					$attach_id = wp_insert_attachment( $attachment, $uploaded_file['file'] );
 					
+					// Assign to "Camps" category
+					$term = get_term_by( 'slug', 'camps', 'media_category' );
+					if ( $term ) {
+						wp_set_object_terms( $attach_id, (int) $term->term_id, 'media_category', false );
+					}
+					
 					// Generate attachment metadata
 					$attach_data = wp_generate_attachment_metadata( $attach_id, $uploaded_file['file'] );
 					wp_update_attachment_metadata( $attach_id, $attach_data );
@@ -441,6 +425,12 @@ class Camp_Dashboard {
 				];
 				
 				$attach_id = wp_insert_attachment( $attachment, $uploaded_file['file'] );
+				
+				// Assign to "Camps" category
+				$term = get_term_by( 'slug', 'camps', 'media_category' );
+				if ( $term ) {
+					wp_set_object_terms( $attach_id, (int) $term->term_id, 'media_category', false );
+				}
 				
 				// Generate attachment metadata
 				$attach_data = wp_generate_attachment_metadata( $attach_id, $uploaded_file['file'] );
