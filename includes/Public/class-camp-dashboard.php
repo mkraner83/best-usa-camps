@@ -21,6 +21,65 @@ class Camp_Dashboard {
 		
 		// Enqueue front-end styles
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_styles' ] );
+		
+		// Register custom media category taxonomy
+		add_action( 'init', [ $this, 'register_media_category' ] );
+		
+		// Add media library folder filter
+		add_filter( 'add_attachment', [ $this, 'assign_camp_category_to_attachment' ] );
+	}
+	
+	/**
+	 * Register custom media category for camp files
+	 */
+	public function register_media_category() {
+		register_taxonomy(
+			'media_category',
+			'attachment',
+			[
+				'labels' => [
+					'name'          => 'Media Folders',
+					'singular_name' => 'Media Folder',
+					'search_items'  => 'Search Folders',
+					'all_items'     => 'All Folders',
+					'edit_item'     => 'Edit Folder',
+					'add_new_item'  => 'Add New Folder',
+				],
+				'public'            => true,
+				'show_ui'           => true,
+				'show_in_menu'      => true,
+				'show_admin_column' => true,
+				'hierarchical'      => true,
+				'show_in_nav_menus' => false,
+			]
+		);
+		
+		// Create "Camps" term if it doesn't exist
+		if ( ! term_exists( 'Camps', 'media_category' ) ) {
+			wp_insert_term( 'Camps', 'media_category', [
+				'description' => 'All camp photos and logos',
+				'slug'        => 'camps',
+			] );
+		}
+	}
+	
+	/**
+	 * Automatically assign "Camps" category to camp uploads
+	 */
+	public function assign_camp_category_to_attachment( $attachment_id ) {
+		// Check if this is a camp upload (check if it's in the /camps directory)
+		$file = get_attached_file( $attachment_id );
+		
+		if ( strpos( $file, '/camps/' ) !== false ) {
+			// Get the "Camps" term
+			$term = get_term_by( 'slug', 'camps', 'media_category' );
+			
+			if ( $term ) {
+				wp_set_object_terms( $attachment_id, $term->term_id, 'media_category', false );
+			}
+		}
+		
+		return $attachment_id;
 	}
 
 	/**
@@ -1025,27 +1084,19 @@ class Camp_Dashboard {
 		</form>
 		
 		<script>
-		// Photo removal functionality - separate script to ensure it loads after DOM
+		// Photo removal functionality
 		document.addEventListener('DOMContentLoaded', function() {
-			console.log('Photo removal script loaded');
 			const removeButtons = document.querySelectorAll('.remove-photo');
-			console.log('Found remove buttons:', removeButtons.length);
-			
 			const photosToRemoveField = document.getElementById('photos_to_remove');
 			let photosToRemove = [];
 			
 			removeButtons.forEach(function(btn) {
-				console.log('Attaching listener to button:', btn);
 				btn.addEventListener('click', function(e) {
 					e.preventDefault();
 					e.stopPropagation();
-					console.log('Remove button clicked!');
 					const photoUrl = btn.getAttribute('data-photo');
 					photosToRemove.push(photoUrl);
 					photosToRemoveField.value = photosToRemove.join(',');
-					console.log('Removing photo:', photoUrl);
-					console.log('Photos to remove array:', photosToRemove);
-					console.log('Hidden field value:', photosToRemoveField.value);
 					btn.closest('.photo-item').remove();
 				});
 			});
