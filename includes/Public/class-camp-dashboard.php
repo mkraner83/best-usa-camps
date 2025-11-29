@@ -52,11 +52,14 @@ class Camp_Dashboard {
 		);
 		
 		// Create "Camps" term if it doesn't exist
-		if ( ! term_exists( 'Camps', 'media_category' ) ) {
-			wp_insert_term( 'Camps', 'media_category', [
+		// term_exists returns term_id if exists, null if not - so we need to check for null
+		$term_exists = term_exists( 'camps', 'media_category' );
+		if ( ! $term_exists ) {
+			$result = wp_insert_term( 'Camps', 'media_category', [
 				'description' => 'All camp photos and logos',
 				'slug'        => 'camps',
 			] );
+			error_log( 'Camp category term creation result: ' . print_r( $result, true ) );
 		}
 	}
 
