@@ -242,6 +242,9 @@ class Camp_Dashboard {
 			require_once( ABSPATH . 'wp-admin/includes/image.php' );
 			require_once( ABSPATH . 'wp-admin/includes/media.php' );
 			
+			// Set custom upload directory for camp photos
+			add_filter( 'upload_dir', [ $this, 'custom_upload_dir_for_camps' ] );
+			
 			$files = $_FILES['photos_upload'];
 			$uploaded_count = 0;
 			
@@ -294,6 +297,9 @@ class Camp_Dashboard {
 					$photos_changed = true;
 				}
 			}
+			
+			// Remove custom upload directory filter
+			remove_filter( 'upload_dir', [ $this, 'custom_upload_dir_for_camps' ] );
 		}
 		
 		// Update database with new photo list (only if there were changes)
@@ -322,16 +328,21 @@ class Camp_Dashboard {
 			require_once( ABSPATH . 'wp-admin/includes/image.php' );
 			require_once( ABSPATH . 'wp-admin/includes/media.php' );
 			
+			// Set custom upload directory for camp logos
+			add_filter( 'upload_dir', [ $this, 'custom_upload_dir_for_camps' ] );
+			
 			$file = $_FILES['logo_upload'];
 			
 			// Validate file type
 			$file_type = wp_check_filetype( $file['name'] );
 			if ( ! in_array( $file_type['ext'], [ 'jpg', 'jpeg', 'png', 'pdf' ] ) ) {
+				remove_filter( 'upload_dir', [ $this, 'custom_upload_dir_for_camps' ] );
 				return;
 			}
 			
 			// Validate file size (5MB)
 			if ( $file['size'] > 5 * 1024 * 1024 ) {
+				remove_filter( 'upload_dir', [ $this, 'custom_upload_dir_for_camps' ] );
 				return;
 			}
 			
@@ -343,6 +354,9 @@ class Camp_Dashboard {
 			// Upload file
 			$upload_overrides = [ 'test_form' => false ];
 			$uploaded_file = wp_handle_upload( $file, $upload_overrides );
+			
+			// Remove custom upload directory filter
+			remove_filter( 'upload_dir', [ $this, 'custom_upload_dir_for_camps' ] );
 			
 			if ( ! isset( $uploaded_file['error'] ) && isset( $uploaded_file['url'] ) ) {
 				$wpdb->update(
@@ -372,6 +386,22 @@ class Camp_Dashboard {
 		if ( file_exists( $file_path ) ) {
 			@unlink( $file_path );
 		}
+	}
+
+	/**
+	 * Custom upload directory for camp files
+	 */
+	public function custom_upload_dir_for_camps( $dirs ) {
+		$dirs['path']   = $dirs['basedir'] . '/camps';
+		$dirs['url']    = $dirs['baseurl'] . '/camps';
+		$dirs['subdir'] = '/camps';
+		
+		// Create directory if it doesn't exist
+		if ( ! file_exists( $dirs['path'] ) ) {
+			wp_mkdir_p( $dirs['path'] );
+		}
+		
+		return $dirs;
 	}
 
 	/**
