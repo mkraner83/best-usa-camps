@@ -98,6 +98,12 @@ class Camp_Dashboard {
 			wp_die( 'No camp found for this user.' );
 		}
 
+		// Get current camp data for handlers
+		$camp = $wpdb->get_row( $wpdb->prepare(
+			"SELECT * FROM {$wpdb->prefix}camp_management WHERE id = %d",
+			$camp_id
+		), ARRAY_A );
+
 		// Update camp data
 		$camp_data = [
 			'camp_name'        => sanitize_text_field( $_POST['camp_name'] ?? '' ),
@@ -211,10 +217,6 @@ class Camp_Dashboard {
 		$existing_photos = array_filter( $existing_photos ); // Remove empty values
 		$existing_photos = array_values( $existing_photos ); // Re-index array
 		
-		error_log( 'CDBS Photo Debug - Original photos from DB: ' . print_r( $camp['photos'], true ) );
-		error_log( 'CDBS Photo Debug - Parsed existing photos: ' . print_r( $existing_photos, true ) );
-		error_log( 'CDBS Photo Debug - photos_to_remove POST: ' . print_r( $_POST['photos_to_remove'] ?? 'none', true ) );
-		
 		$photos_changed = false;
 		
 		// Handle photo removal
@@ -222,8 +224,6 @@ class Camp_Dashboard {
 			$photos_to_remove = explode( ',', $_POST['photos_to_remove'] );
 			$photos_to_remove = array_map( 'trim', $photos_to_remove );
 			$photos_to_remove = array_filter( $photos_to_remove );
-			
-			error_log( 'CDBS Photo Debug - Photos to remove: ' . print_r( $photos_to_remove, true ) );
 			
 			$existing_photos = array_diff( $existing_photos, $photos_to_remove );
 			$existing_photos = array_values( $existing_photos ); // Re-index
@@ -292,20 +292,13 @@ class Camp_Dashboard {
 					$existing_photos[] = $uploaded_file['url'];
 					$uploaded_count++;
 					$photos_changed = true;
-					
-					error_log( 'CDBS Photo Debug - Uploaded new photo: ' . $uploaded_file['url'] );
 				}
 			}
 		}
 		
-		error_log( 'CDBS Photo Debug - Final photos array: ' . print_r( $existing_photos, true ) );
-		error_log( 'CDBS Photo Debug - Photos changed: ' . ( $photos_changed ? 'YES' : 'NO' ) );
-		
 		// Update database with new photo list (only if there were changes)
 		if ( $photos_changed ) {
 			$photos_csv = implode( ', ', $existing_photos ); // Add space after comma for readability
-			
-			error_log( 'CDBS Photo Debug - Updating DB with: ' . $photos_csv );
 			
 			$wpdb->update(
 				"{$wpdb->prefix}camp_management",
@@ -314,8 +307,6 @@ class Camp_Dashboard {
 				[ '%s' ],
 				[ '%d' ]
 			);
-		} else {
-			error_log( 'CDBS Photo Debug - No changes detected, skipping DB update' );
 		}
 	}
 
