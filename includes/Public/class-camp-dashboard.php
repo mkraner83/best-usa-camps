@@ -342,7 +342,10 @@ class Camp_Dashboard {
 					// Assign to "Camps" category
 					$term = get_term_by( 'slug', 'camps', 'media_category' );
 					if ( $term ) {
-						wp_set_object_terms( $attach_id, (int) $term->term_id, 'media_category', false );
+						$result = wp_set_object_terms( $attach_id, (int) $term->term_id, 'media_category', false );
+						error_log( 'Camp photo upload - Attachment ID: ' . $attach_id . ', Term ID: ' . $term->term_id . ', Result: ' . print_r( $result, true ) );
+					} else {
+						error_log( 'Camp photo upload - Term "camps" not found in media_category taxonomy' );
 					}
 					
 					// Generate attachment metadata
@@ -429,7 +432,10 @@ class Camp_Dashboard {
 				// Assign to "Camps" category
 				$term = get_term_by( 'slug', 'camps', 'media_category' );
 				if ( $term ) {
-					wp_set_object_terms( $attach_id, (int) $term->term_id, 'media_category', false );
+					$result = wp_set_object_terms( $attach_id, (int) $term->term_id, 'media_category', false );
+					error_log( 'Camp logo upload - Attachment ID: ' . $attach_id . ', Term ID: ' . $term->term_id . ', Result: ' . print_r( $result, true ) );
+				} else {
+					error_log( 'Camp logo upload - Term "camps" not found in media_category taxonomy' );
 				}
 				
 				// Generate attachment metadata
@@ -1035,6 +1041,11 @@ class Camp_Dashboard {
 				const form = document.querySelector('.camp-edit-form');
 				
 				form.addEventListener('submit', function(e) {
+					// Check if files are being uploaded
+					const photosUpload = document.getElementById('photos_upload');
+					const logoUpload = document.getElementById('logo_upload');
+					const hasFiles = (photosUpload && photosUpload.files.length > 0) || (logoUpload && logoUpload.files.length > 0);
+					
 					// Check required text fields
 					const requiredFields = form.querySelectorAll('[required]');
 					let missingFields = [];
@@ -1067,6 +1078,15 @@ class Camp_Dashboard {
 						e.preventDefault();
 						alert('Please complete the following required fields:\n\n- ' + missingFields.join('\n- '));
 						return false;
+					}
+					
+					// Show loading overlay if files are being uploaded
+					if (hasFiles) {
+						const overlay = document.createElement('div');
+						overlay.id = 'upload-overlay';
+						overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;';
+						overlay.innerHTML = '<div style="background:white;padding:40px 60px;border-radius:8px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3);"><div style="font-size:18px;font-weight:600;color:#333;margin-bottom:15px;">Uploading Files...</div><div style="width:200px;height:4px;background:#e0e0e0;border-radius:2px;overflow:hidden;"><div style="width:100%;height:100%;background:#497C5E;animation:loading 1.5s ease-in-out infinite;"></div></div><style>@keyframes loading{0%{transform:translateX(-100%)}50%{transform:translateX(0)}100%{transform:translateX(100%)}}</style><div style="margin-top:15px;font-size:14px;color:#666;">Please wait while your files are being uploaded...</div></div>';
+						document.body.appendChild(overlay);
 					}
 				});
 			});
