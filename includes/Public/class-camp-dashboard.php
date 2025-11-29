@@ -208,18 +208,32 @@ class Camp_Dashboard {
 		// Get existing photos
 		$existing_photos = ! empty( $camp['photos'] ) ? explode( ',', $camp['photos'] ) : [];
 		$existing_photos = array_map( 'trim', $existing_photos );
-		$existing_photos = array_filter( $existing_photos );
+		$existing_photos = array_filter( $existing_photos ); // Remove empty values
+		$existing_photos = array_values( $existing_photos ); // Re-index array
+		
+		error_log( 'CDBS Photo Debug - Original photos from DB: ' . print_r( $camp['photos'], true ) );
+		error_log( 'CDBS Photo Debug - Parsed existing photos: ' . print_r( $existing_photos, true ) );
+		error_log( 'CDBS Photo Debug - photos_to_remove POST: ' . print_r( $_POST['photos_to_remove'] ?? 'none', true ) );
+		
+		$photos_changed = false;
 		
 		// Handle photo removal
 		if ( ! empty( $_POST['photos_to_remove'] ) ) {
 			$photos_to_remove = explode( ',', $_POST['photos_to_remove'] );
 			$photos_to_remove = array_map( 'trim', $photos_to_remove );
+			$photos_to_remove = array_filter( $photos_to_remove );
+			
+			error_log( 'CDBS Photo Debug - Photos to remove: ' . print_r( $photos_to_remove, true ) );
+			
 			$existing_photos = array_diff( $existing_photos, $photos_to_remove );
+			$existing_photos = array_values( $existing_photos ); // Re-index
 			
 			// Delete physical files
 			foreach ( $photos_to_remove as $photo_url ) {
 				$this->delete_uploaded_file( $photo_url );
 			}
+			
+			$photos_changed = true;
 		}
 		
 		// Handle new photo uploads
@@ -277,16 +291,22 @@ class Camp_Dashboard {
 				if ( ! isset( $uploaded_file['error'] ) && isset( $uploaded_file['url'] ) ) {
 					$existing_photos[] = $uploaded_file['url'];
 					$uploaded_count++;
+					$photos_changed = true;
+					
+					error_log( 'CDBS Photo Debug - Uploaded new photo: ' . $uploaded_file['url'] );
 				}
 			}
 		}
 		
-		// Update database with new photo list (only if there were changes)
-		$photos_csv = implode( ',', $existing_photos );
-		$original_photos_csv = ! empty( $camp['photos'] ) ? $camp['photos'] : '';
+		error_log( 'CDBS Photo Debug - Final photos array: ' . print_r( $existing_photos, true ) );
+		error_log( 'CDBS Photo Debug - Photos changed: ' . ( $photos_changed ? 'YES' : 'NO' ) );
 		
-		// Only update if photos changed
-		if ( $photos_csv !== $original_photos_csv ) {
+		// Update database with new photo list (only if there were changes)
+		if ( $photos_changed ) {
+			$photos_csv = implode( ', ', $existing_photos ); // Add space after comma for readability
+			
+			error_log( 'CDBS Photo Debug - Updating DB with: ' . $photos_csv );
+			
 			$wpdb->update(
 				"{$wpdb->prefix}camp_management",
 				[ 'photos' => $photos_csv ],
@@ -294,6 +314,8 @@ class Camp_Dashboard {
 				[ '%s' ],
 				[ '%d' ]
 			);
+		} else {
+			error_log( 'CDBS Photo Debug - No changes detected, skipping DB update' );
 		}
 	}
 
