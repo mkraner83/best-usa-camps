@@ -231,9 +231,13 @@ class Ninja_Forms_Integration {
 		// Create camp entry in camp_management table
 		$this->create_camp_entry( $user_id, $email, $camp_name, $first_name, $last_name, $entry_id, $form_data );
 
-		// Note: Credentials email sent via Ninja Forms Email Action using {user:username} and {user:password_reset_url} shortcodes
+		// Send welcome email with password setup link
+		$this->send_welcome_email( $user_id, $username, $email, $camp_name );
+
 		error_log( "CDBS Camp: User created successfully: {$username} (ID: {$user_id})" );
 	}
+	
+
 
 	/**
 	 * Create camp entry in camp_management table.
@@ -438,15 +442,16 @@ class Ninja_Forms_Integration {
 	/**
 	 * Send credentials email with password reset link.
 	 * 
-	 * NOTE: This is the second email sent (after Ninja Forms confirmation).
-	 * Contains username and password reset URL that only plugin can generate.
+	 * NOTE: This is the email sent with account credentials.
+	 * Contains username and password reset URL.
 	 *
-	 * @param int    $user_id  User ID.
-	 * @param string $username Username.
-	 * @param string $email    User email.
+	 * @param int    $user_id   User ID.
+	 * @param string $username  Username.
+	 * @param string $email     User email.
+	 * @param string $camp_name Camp name (optional).
 	 * @return bool Whether email was sent successfully.
 	 */
-	private function send_welcome_email( $user_id, $username, $email ) {
+	private function send_welcome_email( $user_id, $username, $email, $camp_name = '' ) {
 		// Generate password reset key
 		$user = get_userdata( $user_id );
 		if ( ! $user ) {
@@ -500,11 +505,12 @@ class Ninja_Forms_Integration {
 		<div class="content">
 			<h2>Your Camp Profile Has Been Created</h2>
 			<p>Hello!</p>
-			<p>We\'re excited to let you know that your camp profile has been successfully created on <strong>Best USA Summer Camps</strong>. You can now manage your camp information and connect with families searching for the perfect summer camp experience.</p>
+			<p>We\'re excited to let you know that your camp profile' . ( ! empty( $camp_name ) ? ' for <strong>' . esc_html( $camp_name ) . '</strong>' : '' ) . ' has been successfully created on <strong>Best USA Summer Camps</strong>. You can now manage your camp information and connect with families searching for the perfect summer camp experience.</p>
 			
 			<div class="credentials-box">
 				<p style="margin: 0;"><strong>Username:</strong> ' . esc_html( $username ) . '</p>
-				<p style="margin: 10px 0 0 0;"><strong>Email:</strong> ' . esc_html( $email ) . '</p>
+				<p style="margin: 10px 0 0 0;"><strong>Email:</strong> ' . esc_html( $email ) . '</p>' . 
+				( ! empty( $camp_name ) ? '<p style="margin: 10px 0 0 0;"><strong>Camp:</strong> ' . esc_html( $camp_name ) . '</p>' : '' ) . '
 			</div>
 			
 			<p><strong>Next Step: Set Your Password</strong></p>
