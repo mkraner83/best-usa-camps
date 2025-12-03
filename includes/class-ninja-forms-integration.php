@@ -229,7 +229,7 @@ class Ninja_Forms_Integration {
 		}
 
 		// Create camp entry in camp_management table
-		$this->create_camp_entry( $email, $camp_name, $first_name, $last_name, $entry_id, $form_data );
+		$this->create_camp_entry( $user_id, $email, $camp_name, $first_name, $last_name, $entry_id, $form_data );
 
 		// Note: Credentials email sent via Ninja Forms Email Action using {user:username} and {user:password_reset_url} shortcodes
 		error_log( "CDBS Camp: User created successfully: {$username} (ID: {$user_id})" );
@@ -238,6 +238,7 @@ class Ninja_Forms_Integration {
 	/**
 	 * Create camp entry in camp_management table.
 	 *
+	 * @param int    $user_id    WordPress user ID.
 	 * @param string $email      User email.
 	 * @param string $camp_name  Camp name.
 	 * @param string $first_name First name.
@@ -245,7 +246,7 @@ class Ninja_Forms_Integration {
 	 * @param int    $entry_id   Ninja Forms entry ID.
 	 * @param array  $form_data  Full form data for extracting additional fields.
 	 */
-	private function create_camp_entry( $email, $camp_name, $first_name, $last_name, $entry_id = null, $form_data = [] ) {
+	private function create_camp_entry( $user_id, $email, $camp_name, $first_name, $last_name, $entry_id = null, $form_data = [] ) {
 		global $wpdb;
 		$table = $wpdb->prefix . 'camp_management';
 

@@ -598,19 +598,29 @@ class Camp_Dashboard {
 		if ( ! $camp ) {
 			error_log( 'CDBS Camp Dashboard: No camp profile found for user ID ' . $user->ID );
 			
-			// Show diagnostic info
 			ob_start();
 			?>
 			<div class="camp-dashboard-error">
-				<p><strong>Debug Information:</strong></p>
-				<ul style="text-align: left; margin: 10px 0;">
-					<li>User ID: <?php echo $user->ID; ?></li>
-					<li>Username: <?php echo esc_html( $user->user_login ); ?></li>
-					<li>Email: <?php echo esc_html( $user->user_email ); ?></li>
-					<li>Roles: <?php echo esc_html( implode( ', ', $user->roles ) ); ?></li>
-					<li>Camp profile in database: Not found</li>
+				<h2>Camp Profile Not Found</h2>
+				<p>Your account has been created, but your camp profile is still being set up.</p>
+				<p>This usually happens when:</p>
+				<ul style="text-align: left; margin: 20px auto; max-width: 500px;">
+					<li>Your registration form submission is still being processed</li>
+					<li>An administrator needs to approve your camp listing</li>
+					<li>There was an issue syncing your camp data</li>
 				</ul>
-				<p>Please contact support with this information.</p>
+				<p><strong>What to do:</strong></p>
+				<p>Please contact the site administrator or try again in a few minutes.</p>
+				<details style="margin-top: 30px; padding: 15px; background: #f5f5f5; border-radius: 4px;">
+					<summary style="cursor: pointer; font-weight: 600;">Technical Details (for support)</summary>
+					<ul style="text-align: left; margin: 10px 0; font-size: 0.9em;">
+						<li>User ID: <?php echo $user->ID; ?></li>
+						<li>Username: <?php echo esc_html( $user->user_login ); ?></li>
+						<li>Email: <?php echo esc_html( $user->user_email ); ?></li>
+						<li>Roles: <?php echo esc_html( implode( ', ', $user->roles ) ); ?></li>
+						<li>Camp profile in database: Not found</li>
+					</ul>
+				</details>
 			</div>
 			<?php
 			return ob_get_clean();
@@ -689,7 +699,7 @@ class Camp_Dashboard {
 			<div class="login-wrapper">
 				<?php if ( ! empty( $message ) ) : ?>
 					<div class="login-error">
-						<p><?php echo esc_html( $message ); ?></p>
+						<p><?php echo wp_kses_post( $message ); ?></p>
 					</div>
 				<?php endif; ?>
 				<h2>Camp Login</h2>
