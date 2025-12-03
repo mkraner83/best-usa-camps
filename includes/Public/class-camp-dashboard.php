@@ -18,6 +18,7 @@ class Camp_Dashboard {
 		
 		// Handle form submissions
 		add_action( 'init', [ $this, 'handle_form_submission' ] );
+		add_action( 'init', [ $this, 'handle_custom_login' ] );
 		
 		// Enqueue front-end styles
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_styles' ] );
@@ -514,6 +515,42 @@ class Camp_Dashboard {
 			}
 		}
 	}
+	
+	/**
+	 * Handle custom login form submission
+	 */
+	public function handle_custom_login() {
+		if ( isset( $_POST['camp_login_submit'] ) && isset( $_POST['camp_login_nonce'] ) ) {
+			if ( ! wp_verify_nonce( $_POST['camp_login_nonce'], 'camp_login_action' ) ) {
+				return;
+			}
+			
+			$username = sanitize_text_field( $_POST['log'] );
+			$password = $_POST['pwd'];
+			$remember = isset( $_POST['rememberme'] );
+			
+			$creds = [
+				'user_login'    => $username,
+				'user_password' => $password,
+				'remember'      => $remember,
+			];
+			
+			$user = wp_signon( $creds, false );
+			
+			if ( is_wp_error( $user ) ) {
+				// Store error in session/transient
+				set_transient( 'camp_login_error_' . session_id(), $user->get_error_message(), 60 );
+				// Redirect back to same page with error parameter
+				$redirect_url = add_query_arg( 'login', 'failed', wp_get_referer() );
+				wp_safe_redirect( $redirect_url );
+				exit;
+			} else {
+				// Successful login - redirect to same page
+				wp_safe_redirect( remove_query_arg( 'login', wp_get_referer() ) );
+				exit;
+			}
+		}
+	}
 
 	/**
 	 * Render the dashboard shortcode
@@ -522,7 +559,18 @@ class Camp_Dashboard {
 		// Check if user is logged in
 		if ( ! is_user_logged_in() ) {
 			error_log( 'CDBS Camp Dashboard: User not logged in' );
-			return $this->render_login_form();
+			
+			// Check for login error
+			$error_message = '';
+			if ( isset( $_GET['login'] ) && $_GET['login'] === 'failed' ) {
+				$error_message = get_transient( 'camp_login_error_' . session_id() );
+				delete_transient( 'camp_login_error_' . session_id() );
+				if ( empty( $error_message ) ) {
+					$error_message = 'Invalid username or password.';
+				}
+			}
+			
+			return $this->render_login_form( $error_message );
 		}
 
 		$user = wp_get_current_user();
@@ -640,22 +688,31 @@ class Camp_Dashboard {
 		<div class="camp-dashboard-login">
 			<div class="login-wrapper">
 				<?php if ( ! empty( $message ) ) : ?>
-					<div class="login-message">
+					<div class="login-error">
 						<p><?php echo esc_html( $message ); ?></p>
 					</div>
 				<?php endif; ?>
 				<h2>Camp Login</h2>
 				<p>Please log in to access your camp dashboard.</p>
-				<?php
-				$current_url = ( is_ssl() ? 'https://' : 'http://' ) . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
-				wp_login_form( [
-					'redirect' => $current_url,
-					'label_username' => 'Username or Email',
-					'label_password' => 'Password',
-					'label_remember' => 'Remember Me',
-					'label_log_in' => 'Log In',
-				] );
-				?>
+				<form name="camp_login_form" id="camp_login_form" action="" method="post">
+					<?php wp_nonce_field( 'camp_login_action', 'camp_login_nonce' ); ?>
+					<p class="login-username">
+						<label for="user_login">Username or Email</label>
+						<input type="text" name="log" id="user_login" class="input" value="" size="20" autocapitalize="off" required>
+					</p>
+					<p class="login-password">
+						<label for="user_pass">Password</label>
+						<input type="password" name="pwd" id="user_pass" class="input" value="" size="20" required>
+					</p>
+					<p class="login-remember">
+						<label>
+							<input name="rememberme" type="checkbox" id="rememberme" value="forever"> Remember Me
+						</label>
+					</p>
+					<p class="login-submit">
+						<input type="submit" name="camp_login_submit" id="wp-submit" class="button button-primary" value="Log In">
+					</p>
+				</form>
 				<p class="login-links">
 					<a href="<?php echo wp_lostpassword_url( get_permalink() ); ?>">Forgot your password?</a>
 				</p>
