@@ -483,17 +483,17 @@ class Ninja_Forms_Integration {
 	<style>
 		body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
 		.container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-		.header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 30px 20px; text-align: center; }
+		.header { background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%); color: #ffffff; padding: 30px 20px; text-align: center; }
 		.header h1 { margin: 0; font-size: 28px; font-weight: bold; }
 		.content { padding: 30px 20px; }
-		.content h2 { color: #667eea; margin-top: 0; font-size: 22px; }
+		.content h2 { color: #497C5E; margin-top: 0; font-size: 22px; }
 		.content p { margin: 15px 0; font-size: 16px; }
-		.credentials-box { background: #f8f9fa; border-left: 4px solid #667eea; padding: 15px; margin: 20px 0; border-radius: 4px; }
-		.credentials-box strong { color: #667eea; }
-		.button { display: inline-block; padding: 14px 30px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff !important; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; text-align: center; }
+		.credentials-box { background: #f8f9fa; border-left: 4px solid #497C5E; padding: 15px; margin: 20px 0; border-radius: 4px; }
+		.credentials-box strong { color: #497C5E; }
+		.button { display: inline-block; padding: 14px 30px; background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%); color: #ffffff !important; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; text-align: center; }
 		.button:hover { opacity: 0.9; }
 		.footer { background: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #666; border-top: 1px solid #e9ecef; }
-		.footer a { color: #667eea; text-decoration: none; }
+		.footer a { color: #497C5E; text-decoration: none; }
 		.divider { height: 1px; background: #e9ecef; margin: 25px 0; }
 	</style>
 </head>
@@ -521,7 +521,7 @@ class Ninja_Forms_Integration {
 			</div>
 			
 			<p style="font-size: 14px; color: #666; margin-top: 25px;">If the button doesn\'t work, copy and paste this link into your browser:<br>
-			<a href="' . esc_url( $reset_url ) . '" style="color: #667eea; word-break: break-all;">' . esc_url( $reset_url ) . '</a></p>
+			<a href="' . esc_url( $reset_url ) . '" style="color: #497C5E; word-break: break-all;">' . esc_url( $reset_url ) . '</a></p>
 			
 			<div class="divider"></div>
 			
