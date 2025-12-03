@@ -482,7 +482,10 @@ class Ninja_Forms_Integration {
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<style>
 		body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0; }
-		.container { max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+		.container { max-width: 600px; margin: 20px 10px; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+		@media (min-width: 620px) {
+			.container { margin: 20px auto; }
+		}
 		.header { background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%); color: #ffffff; padding: 30px 20px; text-align: center; }
 		.header h1 { margin: 0; font-size: 28px; font-weight: bold; }
 		.content { padding: 30px 20px; }
