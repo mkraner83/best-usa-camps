@@ -168,7 +168,7 @@ get_header(); ?>
 						
 						<p>Please enter your username or email address. You will receive an email message with instructions on how to reset your password.</p>
 						
-						<form name="lostpasswordform" id="lostpasswordform" action="<?php echo esc_url( site_url( 'wp-login.php?action=lostpassword', 'login_post' ) ); ?>" method="post">
+						<form name="lostpasswordform" id="lostpasswordform" action="<?php echo esc_url( site_url( 'administrator/?action=lostpassword', 'login_post' ) ); ?>" method="post">
 							<p class="login-username">
 								<label for="user_login">Username or Email Address</label>
 								<input type="text" name="user_login" id="user_login" class="input" value="" size="20" />
@@ -183,6 +183,8 @@ get_header(); ?>
 						
 						<div class="camp-login-links">
 							<a href="<?php echo esc_url( home_url( '/camp-login/' ) ); ?>">← Back to Login</a>
+							<span style="margin: 0 10px;">|</span>
+							<a href="<?php echo esc_url( home_url( '/administrator/' ) ); ?>">WordPress Login</a>
 						</div>
 					</div>
 				</div>

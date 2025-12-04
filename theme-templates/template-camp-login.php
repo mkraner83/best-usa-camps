@@ -189,7 +189,7 @@ get_header(); ?>
 							?>
 							
 							<div class="camp-login-links">
-								<a href="<?php echo esc_url( wp_lostpassword_url() ); ?>">Lost your password?</a>
+								<a href="<?php echo esc_url( home_url( '/camp-lost-password/' ) ); ?>">Lost your password?</a>
 							</div>
 						</div>
 						<?php
