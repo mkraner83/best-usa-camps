@@ -70,149 +70,26 @@ class Camp_Dashboard {
 	}
 	
 	/**
-	 * Customize WordPress login page with camp branding
+	 * Customize WordPress password reset page backgrounds
 	 */
 	public function customize_login_page() {
+		// Only apply to password reset pages, not login page
+		$action = isset( $_REQUEST['action'] ) ? $_REQUEST['action'] : 'login';
+		
+		// Only style password reset/generate password pages
+		if ( ! in_array( $action, [ 'rp', 'resetpass', 'lostpassword' ] ) ) {
+			return;
+		}
 		?>
 		<style type="text/css">
-			/* Login page background */
+			/* Password reset page background */
 			body.login {
-				background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%);
+				background: #f5f5f5;
 			}
 			
-			/* Login form container */
-			#login {
-				padding: 8% 0 0;
-			}
-			
-			/* Form styling */
+			/* Form container background */
 			.login form {
 				background: #ffffff;
-				border: none;
-				border-radius: 8px;
-				box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-				padding: 30px;
-			}
-			
-			/* Logo */
-			.login h1 a {
-				background-image: none !important;
-				background-color: #497C5E;
-				width: 100%;
-				height: 80px;
-				border-radius: 8px 8px 0 0;
-				margin-bottom: 0;
-				display: flex;
-				align-items: center;
-				justify-content: center;
-				font-size: 24px;
-				font-weight: bold;
-				color: #ffffff;
-				text-indent: 0;
-			}
-			
-			.login h1 a::before {
-				content: "🏕️ Best USA Camps";
-			}
-			
-			/* Form title */
-			.login .message,
-			.login .success {
-				border-left: 4px solid #497C5E;
-				background: #f0f7f4;
-				padding: 12px;
-				margin-bottom: 20px;
-			}
-			
-			.login #login_error {
-				border-left: 4px solid #dc3545;
-				background: #f8d7da;
-				box-shadow: none;
-			}
-			
-			/* Input fields */
-			.login input[type="text"],
-			.login input[type="password"],
-			.login input[type="email"] {
-				background: #f8f9fa;
-				border: 1px solid #e0e0e0;
-				border-radius: 4px;
-				padding: 10px;
-				font-size: 16px;
-			}
-			
-			.login input[type="text"]:focus,
-			.login input[type="password"]:focus,
-			.login input[type="email"]:focus {
-				background: #ffffff;
-				border-color: #497C5E;
-				box-shadow: 0 0 0 1px #497C5E;
-				outline: none;
-			}
-			
-			/* Submit button */
-			.login .button-primary {
-				background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%);
-				border: none;
-				border-radius: 4px;
-				box-shadow: none;
-				text-shadow: none;
-				padding: 10px 20px;
-				font-size: 16px;
-				font-weight: 600;
-				width: 100%;
-				height: auto;
-				transition: opacity 0.2s;
-			}
-			
-			.login .button-primary:hover,
-			.login .button-primary:focus,
-			.login .button-primary:active {
-				background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%);
-				opacity: 0.9;
-				box-shadow: none;
-			}
-			
-			/* Links */
-			.login #nav a,
-			.login #backtoblog a {
-				color: #ffffff;
-				text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.2);
-			}
-			
-			.login #nav a:hover,
-			.login #backtoblog a:hover {
-				color: #f0f7f4;
-			}
-			
-			/* Checkbox */
-			.login .forgetmenot label {
-				font-size: 14px;
-				color: #666;
-			}
-			
-			/* Language switcher */
-			.login .language-switcher {
-				background: rgba(255, 255, 255, 0.9);
-				border-radius: 4px;
-				padding: 10px;
-			}
-			
-			/* Responsive */
-			@media (max-width: 768px) {
-				#login {
-					width: 90%;
-					padding: 5% 0 0;
-				}
-				
-				.login form {
-					padding: 20px;
-				}
-				
-				.login h1 a {
-					height: 60px;
-					font-size: 18px;
-				}
 			}
 		</style>
 		<?php
