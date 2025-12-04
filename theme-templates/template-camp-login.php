@@ -37,6 +37,12 @@ if ( isset( $_POST['camp_login_submit'] ) && isset( $_POST['camp_login_nonce'] )
 		}
 		// If error, store it to display after header
 		$login_error = $user->get_error_message();
+		// Replace old password reset URL with custom page URL
+		$login_error = str_replace(
+			'administrator/?action=lostpassword',
+			'camp-lost-password/',
+			$login_error
+		);
 	}
 }
 
