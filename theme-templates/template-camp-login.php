@@ -159,36 +159,63 @@ get_header(); ?>
 							<h2>Camp Login</h2>
 							
 							<?php
-							// Display login errors
-							if ( isset( $_GET['login'] ) && $_GET['login'] === 'failed' ) {
-								echo '<div class="camp-login-error">';
-								echo '<p><strong>Error:</strong> Invalid username or password.</p>';
-								echo '</div>';
+						// Handle login submission
+						if ( isset( $_POST['camp_login_submit'] ) && isset( $_POST['camp_login_nonce'] ) ) {
+							if ( wp_verify_nonce( $_POST['camp_login_nonce'], 'camp_login_action' ) ) {
+								$username = sanitize_text_field( $_POST['log'] );
+								$password = $_POST['pwd'];
+								$remember = isset( $_POST['rememberme'] );
+								
+								$creds = array(
+									'user_login'    => $username,
+									'user_password' => $password,
+									'remember'      => $remember,
+								);
+								
+								$user = wp_signon( $creds, false );
+								
+								if ( is_wp_error( $user ) ) {
+									echo '<div class="camp-login-error">';
+									echo '<p><strong>Error:</strong> ' . esc_html( $user->get_error_message() ) . '</p>';
+									echo '</div>';
+								} else {
+									// Successful login - redirect to dashboard
+									wp_safe_redirect( home_url( '/user-dashboard/' ) );
+									exit;
+								}
 							}
+						}
+						
+						// Display logged out message
+						if ( isset( $_GET['loggedout'] ) && $_GET['loggedout'] === 'true' ) {
+							echo '<div class="camp-login-message">';
+							echo '<p>You have been successfully logged out.</p>';
+							echo '</div>';
+						}
+						?>
+						
+						<form name="loginform" id="loginform" method="post" autocomplete="off">
+							<?php wp_nonce_field( 'camp_login_action', 'camp_login_nonce' ); ?>
 							
-							// Display logged out message
-							if ( isset( $_GET['loggedout'] ) && $_GET['loggedout'] === 'true' ) {
-								echo '<div class="camp-login-message">';
-								echo '<p>You have been successfully logged out.</p>';
-								echo '</div>';
-							}
+							<p class="login-username">
+								<label for="user_login">Username or Email Address</label>
+								<input type="text" name="log" id="user_login" class="input" value="" size="20" autocomplete="username" />
+							</p>
 							
-							// Display WordPress login form
-							$args = array(
-								'echo'           => true,
-								'redirect'       => home_url( '/user-dashboard/' ),
-								'form_id'        => 'camp-loginform',
-								'label_username' => 'Username or Email Address',
-								'label_password' => 'Password',
-								'label_remember' => 'Remember Me',
-								'label_log_in'   => 'LOG IN',
-								'remember'       => true,
-								'value_remember' => false,
-							);
-							wp_login_form( $args );
-							?>
+							<p class="login-password">
+								<label for="user_pass">Password</label>
+								<input type="password" name="pwd" id="user_pass" class="input" value="" size="20" autocomplete="current-password" />
+							</p>
 							
-							<div class="camp-login-links">
+							<p class="login-remember">
+								<input name="rememberme" type="checkbox" id="rememberme" value="forever" />
+								<label for="rememberme">Remember Me</label>
+							</p>
+							
+							<p class="login-submit">
+								<input type="submit" name="camp_login_submit" id="wp-submit" class="button button-primary" value="LOG IN" />
+							</p>
+						</form>							<div class="camp-login-links">
 								<a href="<?php echo esc_url( home_url( '/camp-lost-password/' ) ); ?>">Lost your password?</a>
 							</div>
 						</div>
