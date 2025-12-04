@@ -12,13 +12,11 @@ get_header(); ?>
 			<div class="entry-content">
 				
 				<style>
-					.camp-login-container {
-						max-width: 500px;
-						margin: 60px auto;
-						padding: 20px;
-					}
-					
-					.camp-login-form {
+				.camp-login-container {
+					max-width: 500px;
+					margin: 0 auto;
+					padding: 50px 20px;
+				}					.camp-login-form {
 						background: #ffffff;
 						border: none;
 						box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -132,13 +130,11 @@ get_header(); ?>
 						margin-bottom: 20px;
 					}
 					
-					@media screen and (max-width: 768px) {
-						.camp-login-container {
-							margin: 30px auto;
-							padding: 10px;
-						}
-						
-						.camp-login-form {
+				@media screen and (max-width: 768px) {
+					.camp-login-container {
+						margin: 0 auto;
+						padding: 50px 10px;
+					}						.camp-login-form {
 							padding: 35px 25px;
 						}
 						
