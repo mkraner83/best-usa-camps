@@ -22,7 +22,7 @@ get_header(); ?>
 						box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 						padding: 50px 40px;
 						border-radius: 8px;
-						margin-top: 90px;
+						margin-top: 110px;
 					}
 					
 					.camp-login-form h2 {
@@ -183,8 +183,6 @@ get_header(); ?>
 						
 						<div class="camp-login-links">
 							<a href="<?php echo esc_url( home_url( '/camp-login/' ) ); ?>">← Back to Login</a>
-							<span style="margin: 0 10px;">|</span>
-							<a href="<?php echo esc_url( home_url( '/administrator/' ) ); ?>">WordPress Login</a>
 						</div>
 					</div>
 				</div>

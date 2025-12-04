@@ -958,7 +958,7 @@ class Camp_Dashboard {
 					</p>
 				</form>
 				<p class="login-links">
-					<a href="<?php echo wp_lostpassword_url( get_permalink() ); ?>">Forgot your password?</a>
+					<a href="<?php echo home_url( '/camp-lost-password/' ); ?>">Forgot your password?</a>
 				</p>
 			</div>
 		</div>
