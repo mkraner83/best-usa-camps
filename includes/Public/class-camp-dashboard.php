@@ -151,23 +151,21 @@ class Camp_Dashboard {
 			.login form input[type="text"],
 			.login form input[type="password"],
 			.login form input[type="email"] {
-				background: #f5f5f5;
-				border: none;
-				border-radius: 4px;
-				padding: 12px 15px;
-				font-size: 14px;
-				color: #333333;
 				width: 100%;
+				padding: 12px;
+				border: 1px solid #ddd;
+				border-radius: 4px;
+				font-size: 16px;
+				margin-bottom: 15px;
 				box-sizing: border-box;
-				margin-bottom: 20px;
 				font-family: Arial, sans-serif;
+				color: #333333;
 			}
 			
 			.login form input[type="text"]:focus,
 			.login form input[type="password"]:focus,
 			.login form input[type="email"]:focus {
-				background: #f5f5f5;
-				border: none;
+				border: 1px solid #497C5E;
 				outline: none;
 				box-shadow: 0 0 0 2px rgba(73, 124, 94, 0.2);
 			}
@@ -250,12 +248,17 @@ class Camp_Dashboard {
 			}
 			
 			/* Success messages */
-			.login .message {
+			.login .message,
+			.login .notice,
+			.login .success {
 				border-left: 4px solid #497C5E;
-				background: #f0f7f3;
+				background: #ffffff;
 				color: #333333;
-				padding: 12px 15px;
+				padding: 12px;
+				margin-left: 0;
 				margin-bottom: 20px;
+				box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.1);
+				word-wrap: break-word;
 			}
 			
 			/* Error messages */
