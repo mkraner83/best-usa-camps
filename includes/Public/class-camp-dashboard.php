@@ -807,13 +807,14 @@ class Camp_Dashboard {
 	}
 
 	/**
-	 * Customize login error messages to use custom password reset URL
+	 * Customize login error messages to remove lost password link
 	 */
 	public function customize_login_errors( $errors ) {
-		// Replace old administrator URL with custom page URL
-		$errors = str_replace(
-			'administrator/?action=lostpassword',
-			'camp-lost-password/',
+		// Remove the "Lost your password?" link from error messages
+		// Pattern matches: <a href="...lostpassword...">Lost your password?</a>
+		$errors = preg_replace(
+			'/<a[^>]*href=["\'][^"\']*lostpassword[^"\']*["\'][^>]*>.*?Lost your password\?.*?<\/a>/i',
+			'',
 			$errors
 		);
 		return $errors;
