@@ -1,7 +1,7 @@
 # CreativeDBS Camp Management Plugin - Complete Documentation
 
-**Version:** 2.4.2  
-**Last Updated:** November 28, 2025
+**Version:** 2.5.0  
+**Last Updated:** December 4, 2025
 
 ---
 
@@ -42,6 +42,17 @@
 4. **Create Pages**
    - Create a page with slug `/user-dashboard/` for the camp dashboard
    - Add the `[camp_dashboard]` shortcode to the page content
+
+5. **Set Up Custom Login Pages (Astra Theme)**
+   - Copy files from `theme-templates/` to your Astra child theme folder
+   - Required template files:
+     - `template-camp-login.php` - Custom login page
+     - `template-camp-lost-password.php` - Password reset request
+     - `template-camp-reset-password.php` - New password generation
+   - Create WordPress pages:
+     - `/camp-login/` - Use "Camp Login" template
+     - `/camp-lost-password/` - Use "Camp Lost Password" template
+     - `/camp-reset-password/` - Use "Camp Reset Password" template
 
 ### Required Ninja Forms Fields
 
@@ -297,10 +308,21 @@ Users can:
 - Headings (h2, buttons): "Annie Use Your Telescope", sans-serif
 - Body: System default
 
-### Login Page
+### Login Page (WordPress Default)
 - Title: 32px, centered, "Annie Use Your Telescope" font
 - Max width: 450px
 - Centered on page
+- Used only for `/administrator/` URL (WordPress admin login)
+
+### Custom Login Pages (Astra Theme Templates)
+- Full site design with header, navigation, and footer
+- Font: "Annie Use Your Telescope" for headings
+- Colors: #497C5E (primary green), #679B7C (secondary green)
+- Templates include:
+  - Login form with error handling
+  - Password reset request form
+  - New password generation form
+- All forms process on same page (no WordPress redirects)
 
 ### Dashboard Layout
 - Max width: 1200px
@@ -344,7 +366,22 @@ Users can:
 
 ## Version History
 
-### v2.4.2 (2025-11-28) - Current
+### v2.5.0 (2025-12-04) - Current
+- **Feature:** Custom login page templates for Astra theme (login, lost password, reset password)
+- **Feature:** Full site design integration for authentication pages (header/footer/navigation)
+- **Feature:** Custom login form handling with wp_signon() - no WordPress redirects
+- **Feature:** Password reset flow processes entirely in custom pages
+- **Feature:** Storage tracking for photo uploads (25MB limit, up to 10 files)
+- **Feature:** Storage tracking for logo uploads (5MB limit)
+- **Feature:** Auto-redirect from /administrator/?action=rp to custom reset page
+- **Enhancement:** Upload overlay with full-width progress bar
+- **Enhancement:** "This might take a few minutes" message during file uploads
+- **Enhancement:** Logout button redirects to /camp-login/ instead of /administrator/
+- **Enhancement:** All authentication URLs updated to use custom pages
+- **Fix:** Password reset emails now use custom page URLs
+- **Fix:** Login errors display on same page without redirecting
+
+### v2.4.2 (2025-11-28)
 - **Feature:** Activities tag/chip input system (type and add activities dynamically)
 - **Enhancement:** Full-width activities input field
 - **Enhancement:** Centered h2 titles, left-aligned form labels
@@ -406,10 +443,16 @@ creativedbs-camp-mgmt/
 - **Owner:** mkraner83
 - **Repo:** best-usa-camps
 - **Branch:** main
-- **Tags:** v2.4.2 (latest restore point)
+- **Tags:** 
+  - v2.5.0 (latest restore point - December 4, 2025)
+  - v2.4.2 (November 28, 2025)
 
 ### Restore to Version
 ```bash
+# Latest version
+git checkout v2.5.0
+
+# Previous version
 git checkout v2.4.2
 ```
 
@@ -432,7 +475,7 @@ Search for: `CDBS Camp Dashboard:` in debug log
 
 ---
 
-**Document Version:** 1.0  
-**Plugin Version:** 2.4.2  
+**Document Version:** 1.1  
+**Plugin Version:** 2.5.0  
 **Maintained by:** CreativeDBS  
-**Last Review:** November 28, 2025
+**Last Review:** December 4, 2025
