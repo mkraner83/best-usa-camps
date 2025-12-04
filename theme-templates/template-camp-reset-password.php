@@ -169,7 +169,27 @@ get_header(); ?>
 						$rp_key   = isset( $_GET['key'] ) ? $_GET['key'] : '';
 						$rp_login = isset( $_GET['login'] ) ? $_GET['login'] : '';
 						
-						if ( empty( $rp_key ) || empty( $rp_login ) ) {
+						// Handle form submission
+						if ( isset( $_POST['pass1'] ) && isset( $_POST['rp_key'] ) ) {
+							$user = check_password_reset_key( $_POST['rp_key'], $_POST['rp_login'] );
+							
+							if ( ! is_wp_error( $user ) && ! empty( $_POST['pass1'] ) ) {
+								reset_password( $user, $_POST['pass1'] );
+								echo '<div class="camp-login-message">';
+								echo '<p><strong>Success!</strong> Your password has been changed.</p>';
+								echo '</div>';
+								echo '<div class="camp-login-links" style="text-align: center;">';
+								echo '<a href="' . esc_url( home_url( '/camp-login/' ) ) . '" class="button">Go to Login</a>';
+								echo '</div>';
+							} else {
+								echo '<div class="camp-login-error">';
+								echo '<p>Error: Unable to reset password. Please request a new link.</p>';
+								echo '</div>';
+								echo '<div class="camp-login-links">';
+								echo '<a href="' . esc_url( home_url( '/camp-lost-password/' ) ) . '">← Request New Reset Link</a>';
+								echo '</div>';
+							}
+						} elseif ( empty( $rp_key ) || empty( $rp_login ) ) {
 							// No valid reset link
 							echo '<div class="camp-login-error">';
 							echo '<p>Invalid password reset link. Please request a new one.</p>';
@@ -178,22 +198,23 @@ get_header(); ?>
 							echo '<a href="' . esc_url( home_url( '/camp-lost-password/' ) ) . '">← Request New Reset Link</a>';
 							echo '</div>';
 						} else {
-							// Check if password was successfully reset
-							if ( isset( $_GET['password'] ) && $_GET['password'] === 'changed' ) {
-								echo '<div class="camp-login-message">';
-								echo '<p><strong>Success!</strong> Your password has been changed.</p>';
+							// Verify the key is valid before showing form
+							$user = check_password_reset_key( $rp_key, $rp_login );
+							
+							if ( is_wp_error( $user ) ) {
+								echo '<div class="camp-login-error">';
+								echo '<p>Error: Your password reset link appears to be invalid or has expired. Please request a new link.</p>';
 								echo '</div>';
 								echo '<div class="camp-login-links">';
-								echo '<a href="' . esc_url( home_url( '/camp-login/' ) ) . '" class="button">Go to Login</a>';
+								echo '<a href="' . esc_url( home_url( '/camp-lost-password/' ) ) . '">← Request New Reset Link</a>';
 								echo '</div>';
 							} else {
 								// Show the password reset form
-								// WordPress will handle the actual reset via wp-login.php
 								?>
 								<p>Enter your new password below.</p>
 								
-								<form name="resetpassform" id="resetpassform" action="<?php echo esc_url( site_url( 'wp-login.php?action=resetpass', 'login_post' ) ); ?>" method="post" autocomplete="off">
-									<input type="hidden" id="user_login" name="rp_login" value="<?php echo esc_attr( $rp_login ); ?>" autocomplete="off" />
+								<form name="resetpassform" id="resetpassform" method="post" autocomplete="off">
+									<input type="hidden" name="rp_login" value="<?php echo esc_attr( $rp_login ); ?>" autocomplete="off" />
 									<input type="hidden" name="rp_key" value="<?php echo esc_attr( $rp_key ); ?>" />
 									
 									<p class="user-pass1-wrap">
