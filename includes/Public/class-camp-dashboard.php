@@ -19,6 +19,7 @@ class Camp_Dashboard {
 		// Handle form submissions
 		add_action( 'init', [ $this, 'handle_form_submission' ] );
 		add_action( 'init', [ $this, 'handle_custom_login' ] );
+		add_action( 'init', [ $this, 'redirect_password_reset_to_custom_page' ] );
 		
 		// Enqueue front-end styles
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_styles' ] );
@@ -781,6 +782,24 @@ class Camp_Dashboard {
 			} else {
 				// Successful login - redirect to same page
 				wp_safe_redirect( remove_query_arg( 'login', wp_get_referer() ) );
+				exit;
+			}
+		}
+	}
+
+	/**
+	 * Redirect password reset requests to custom page
+	 */
+	public function redirect_password_reset_to_custom_page() {
+		// Check if this is a password reset request (action=rp or action=resetpass)
+		if ( isset( $_GET['action'] ) && in_array( $_GET['action'], [ 'rp', 'resetpass' ] ) ) {
+			if ( isset( $_GET['key'] ) && isset( $_GET['login'] ) ) {
+				// Redirect to custom page with same parameters
+				$custom_url = home_url( '/camp-reset-password/' );
+				$custom_url = add_query_arg( 'key', $_GET['key'], $custom_url );
+				$custom_url = add_query_arg( 'login', $_GET['login'], $custom_url );
+				
+				wp_safe_redirect( $custom_url );
 				exit;
 			}
 		}

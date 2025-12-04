@@ -12,6 +12,7 @@ These custom page templates will display the WordPress login forms within your A
 3. **Upload these files:**
    - `template-camp-login.php`
    - `template-camp-lost-password.php`
+   - `template-camp-reset-password.php`
 
 ### Step 2: Create WordPress Pages
 
@@ -28,6 +29,12 @@ These custom page templates will display the WordPress login forms within your A
 - **Title:** Camp Lost Password
 - **Permalink:** `/camp-lost-password/`
 - **Template:** Select "Camp Lost Password" from the Template dropdown
+- **Publish** the page
+
+#### Create Reset Password Page:
+- **Title:** Camp Reset Password
+- **Permalink:** `/camp-reset-password/`
+- **Template:** Select "Camp Reset Password" from the Template dropdown
 - **Publish** the page
 
 ### Step 3: Update Links in Your Site
@@ -68,6 +75,12 @@ Go to Appearance → Customize → Additional CSS and add:
 - Matches login page design
 - Email instructions sent via WordPress
 - Success/error messages with green styling
+
+### Reset Password Page (`/camp-reset-password/`)
+- Custom styled password generation form
+- Users land here from email reset link
+- Automatically redirects from `/administrator/?action=rp`
+- Matches overall design with site header/footer
 
 ## Customization
 
