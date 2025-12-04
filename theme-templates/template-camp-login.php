@@ -123,15 +123,19 @@ get_header(); ?>
 						box-shadow: 0 1px 1px 0 rgba(0, 0, 0, 0.1);
 					}
 					
-					.camp-login-error {
-						border-left: 4px solid #dc3545;
-						background: #f8d7da;
-						color: #721c24;
-						padding: 12px;
-						margin-bottom: 20px;
-					}
-					
-				@media screen and (max-width: 768px) {
+				.camp-login-error {
+					border-left: 4px solid #dc3545 !important;
+					background: #f8d7da !important;
+					color: #721c24 !important;
+					padding: 12px !important;
+					margin-bottom: 20px !important;
+					display: block !important;
+				}
+				
+				.camp-login-error p {
+					margin: 0 !important;
+					color: #721c24 !important;
+				}				@media screen and (max-width: 768px) {
 					.camp-login-container {
 						margin: 0 auto;
 						padding: 50px 10px;
