@@ -192,7 +192,7 @@ get_header(); ?>
 								?>
 								<p>Enter your new password below.</p>
 								
-								<form name="resetpassform" id="resetpassform" action="<?php echo esc_url( site_url( 'administrator/?action=resetpass', 'login_post' ) ); ?>" method="post" autocomplete="off">
+								<form name="resetpassform" id="resetpassform" action="<?php echo esc_url( site_url( 'wp-login.php?action=resetpass', 'login_post' ) ); ?>" method="post" autocomplete="off">
 									<input type="hidden" id="user_login" name="rp_login" value="<?php echo esc_attr( $rp_login ); ?>" autocomplete="off" />
 									<input type="hidden" name="rp_key" value="<?php echo esc_attr( $rp_key ); ?>" />
 									

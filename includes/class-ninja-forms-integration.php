@@ -465,8 +465,8 @@ class Ninja_Forms_Integration {
 			return false;
 		}
 
-		// Build reset link
-		$reset_url = network_site_url( "administrator/?action=rp&key={$key}&login=" . rawurlencode( $username ), 'login' );
+		// Build reset link - use custom page
+		$reset_url = home_url( "/camp-reset-password/?key={$key}&login=" . rawurlencode( $username ) );
 		$site_url  = 'https://bestusacamps.com';
 		$site_name = 'Best USA Summer Camps';
 
