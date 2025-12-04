@@ -31,6 +31,7 @@ class Camp_Dashboard {
 		add_action( 'login_enqueue_scripts', [ $this, 'customize_login_page' ] );
 		add_filter( 'login_headerurl', [ $this, 'login_logo_url' ] );
 		add_filter( 'login_headertext', [ $this, 'login_logo_url_title' ] );
+		add_filter( 'login_errors', [ $this, 'customize_login_errors' ] );
 	}
 	
 	/**
@@ -803,6 +804,19 @@ class Camp_Dashboard {
 				exit;
 			}
 		}
+	}
+
+	/**
+	 * Customize login error messages to use custom password reset URL
+	 */
+	public function customize_login_errors( $errors ) {
+		// Replace old administrator URL with custom page URL
+		$errors = str_replace(
+			'administrator/?action=lostpassword',
+			'camp-lost-password/',
+			$errors
+		);
+		return $errors;
 	}
 
 	/**
