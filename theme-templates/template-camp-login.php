@@ -20,8 +20,13 @@ if ( isset( $_POST['camp_login_submit'] ) && isset( $_POST['camp_login_nonce'] )
 		$user = wp_signon( $creds, false );
 		
 		if ( ! is_wp_error( $user ) ) {
-			// Successful login - redirect to dashboard
-			wp_safe_redirect( home_url( '/user-dashboard/' ) );
+			// Successful login - set authentication cookie and redirect
+			wp_set_current_user( $user->ID );
+			wp_set_auth_cookie( $user->ID, $remember );
+			do_action( 'wp_login', $user->user_login, $user );
+			
+			// Redirect to dashboard
+			wp_redirect( home_url( '/user-dashboard/' ) );
 			exit;
 		}
 		// If error, store it to display after header
