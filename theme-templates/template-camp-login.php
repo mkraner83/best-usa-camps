@@ -4,6 +4,31 @@
  * Description: Custom login page template for camp directors
  */
 
+// Handle login submission BEFORE any output
+if ( isset( $_POST['camp_login_submit'] ) && isset( $_POST['camp_login_nonce'] ) ) {
+	if ( wp_verify_nonce( $_POST['camp_login_nonce'], 'camp_login_action' ) ) {
+		$username = sanitize_text_field( $_POST['log'] );
+		$password = $_POST['pwd'];
+		$remember = isset( $_POST['rememberme'] );
+		
+		$creds = array(
+			'user_login'    => $username,
+			'user_password' => $password,
+			'remember'      => $remember,
+		);
+		
+		$user = wp_signon( $creds, false );
+		
+		if ( ! is_wp_error( $user ) ) {
+			// Successful login - redirect to dashboard
+			wp_safe_redirect( home_url( '/user-dashboard/' ) );
+			exit;
+		}
+		// If error, store it to display after header
+		$login_error = $user->get_error_message();
+	}
+}
+
 get_header(); ?>
 
 <div id="primary" class="content-area">
@@ -163,31 +188,11 @@ get_header(); ?>
 							<h2>Camp Login</h2>
 							
 							<?php
-						// Handle login submission
-						if ( isset( $_POST['camp_login_submit'] ) && isset( $_POST['camp_login_nonce'] ) ) {
-							if ( wp_verify_nonce( $_POST['camp_login_nonce'], 'camp_login_action' ) ) {
-								$username = sanitize_text_field( $_POST['log'] );
-								$password = $_POST['pwd'];
-								$remember = isset( $_POST['rememberme'] );
-								
-								$creds = array(
-									'user_login'    => $username,
-									'user_password' => $password,
-									'remember'      => $remember,
-								);
-								
-								$user = wp_signon( $creds, false );
-								
-								if ( is_wp_error( $user ) ) {
-									echo '<div class="camp-login-error">';
-									echo '<p><strong>Error:</strong> ' . esc_html( $user->get_error_message() ) . '</p>';
-									echo '</div>';
-								} else {
-									// Successful login - redirect to dashboard
-									wp_safe_redirect( home_url( '/user-dashboard/' ) );
-									exit;
-								}
-							}
+						// Display login error if exists
+						if ( isset( $login_error ) ) {
+							echo '<div class="camp-login-error">';
+							echo '<p><strong>Error:</strong> ' . esc_html( $login_error ) . '</p>';
+							echo '</div>';
 						}
 						
 						// Display logged out message
