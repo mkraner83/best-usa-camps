@@ -1001,7 +1001,7 @@ class Camp_Dashboard {
 				<h1>Welcome, <?php echo esc_html( $camp['camp_directors'] ); ?>!</h1>
 				<p class="dashboard-subtitle">Manage your camp profile and information</p>
 				<div class="dashboard-actions">
-					<a href="<?php echo wp_logout_url( get_permalink() ); ?>" class="btn-logout">Logout</a>
+					<a href="<?php echo wp_logout_url( home_url( '/camp-login/' ) ); ?>" class="btn-logout">Logout</a>
 				</div>
 			</div>
 
@@ -1246,7 +1246,28 @@ class Camp_Dashboard {
 		<!-- Photos Upload Section -->
 		<div class="form-section">
 			<h2 class="section-title">Photos</h2>
+			<?php
+			// Calculate total size of uploaded photos
+			$photos = ! empty( $camp['photos'] ) ? explode( ',', $camp['photos'] ) : [];
+			$total_size = 0;
+			foreach ( $photos as $photo_url ) {
+				if ( ! empty( trim( $photo_url ) ) ) {
+					$file_path = str_replace( home_url(), ABSPATH, trim( $photo_url ) );
+					if ( file_exists( $file_path ) ) {
+						$total_size += filesize( $file_path );
+					}
+				}
+			}
+			$max_size = 25 * 1024 * 1024; // 25MB in bytes
+			$remaining_size = $max_size - $total_size;
+			$used_mb = round( $total_size / 1024 / 1024, 2 );
+			$remaining_mb = round( $remaining_size / 1024 / 1024, 2 );
+			$percent_used = round( ( $total_size / $max_size ) * 100, 1 );
+			?>
 			<p class="section-description">Upload up to 10 camp photos (JPG/JPEG only, 25MB total for all photos)</p>
+			<p class="storage-info" style="color: #666; font-size: 14px; margin: 10px 0;">
+				<strong>Storage:</strong> <?php echo $used_mb; ?>MB used / <?php echo $remaining_mb; ?>MB remaining (<?php echo $percent_used; ?>%)
+			</p>
 			
 			<div class="photos-container">
 				<?php
@@ -1276,7 +1297,25 @@ class Camp_Dashboard {
 		<!-- Logo Upload Section -->
 		<div class="form-section">
 			<h2 class="section-title">Camp Logo</h2>
+			<?php
+			// Calculate logo file size
+			$logo_size = 0;
+			if ( ! empty( $camp['logo'] ) ) {
+				$logo_path = str_replace( home_url(), ABSPATH, $camp['logo'] );
+				if ( file_exists( $logo_path ) ) {
+					$logo_size = filesize( $logo_path );
+				}
+			}
+			$max_logo_size = 5 * 1024 * 1024; // 5MB in bytes
+			$remaining_logo_size = $max_logo_size - $logo_size;
+			$used_logo_mb = round( $logo_size / 1024 / 1024, 2 );
+			$remaining_logo_mb = round( $remaining_logo_size / 1024 / 1024, 2 );
+			$percent_logo_used = $logo_size > 0 ? round( ( $logo_size / $max_logo_size ) * 100, 1 ) : 0;
+			?>
 			<p class="section-description">Upload your camp logo (JPG/JPEG/PNG/PDF, max 5MB)</p>
+			<p class="storage-info" style="color: #666; font-size: 14px; margin: 10px 0;">
+				<strong>Storage:</strong> <?php echo $used_logo_mb; ?>MB used / <?php echo $remaining_logo_mb; ?>MB remaining (<?php echo $percent_logo_used; ?>%)
+			</p>
 			
 			<?php if ( ! empty( $camp['logo'] ) ) : ?>
 				<div class="logo-preview">
