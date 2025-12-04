@@ -4,6 +4,12 @@
  * Description: Custom login page template for camp directors
  */
 
+// Check if user is already logged in - redirect immediately
+if ( is_user_logged_in() && ! isset( $_POST['camp_login_submit'] ) ) {
+	wp_redirect( home_url( '/user-dashboard/' ) );
+	exit;
+}
+
 // Handle login submission BEFORE any output
 if ( isset( $_POST['camp_login_submit'] ) && isset( $_POST['camp_login_nonce'] ) ) {
 	if ( wp_verify_nonce( $_POST['camp_login_nonce'], 'camp_login_action' ) ) {
