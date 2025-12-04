@@ -76,39 +76,17 @@ class Camp_Dashboard {
 		?>
 		<style type="text/css">
 			/* Import Google Fonts */
-			@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+			@import url('https://fonts.googleapis.com/css2?family=Annie+Use+Your+Telescope&display=swap');
 			
 			/* Overall page styling */
 			body.login {
-				background: #f5f5f5;
-				font-family: 'Roboto', Arial, sans-serif;
+				background: #ffffff;
+				font-family: Arial, sans-serif;
 			}
 			
 			/* Hide default WordPress logo */
 			.login h1 {
 				display: none;
-			}
-			
-			/* Custom header */
-			body.login::before {
-				content: 'Camp Director Dashboard';
-				display: block;
-				text-align: center;
-				font-size: 42px;
-				font-weight: 300;
-				color: #666666;
-				margin: 60px auto 30px;
-				letter-spacing: 1px;
-			}
-			
-			body.login::after {
-				content: '';
-				display: block;
-				width: 140px;
-				height: 3px;
-				background: #333333;
-				margin: -10px auto 50px;
-				border-radius: 2px;
 			}
 			
 			/* Form container */
@@ -129,11 +107,11 @@ class Camp_Dashboard {
 				content: 'Camp Login';
 				display: block;
 				text-align: center;
+				color: #497C5E;
+				margin-top: 0;
+				margin-bottom: 10px;
 				font-size: 32px;
-				font-weight: 300;
-				color: #999999;
-				margin-bottom: 15px;
-				font-family: 'Handlee', cursive, 'Roboto', sans-serif;
+				font-family: "Annie Use Your Telescope", sans-serif !important;
 			}
 			
 			/* Lost password form title */
@@ -182,7 +160,7 @@ class Camp_Dashboard {
 				width: 100%;
 				box-sizing: border-box;
 				margin-bottom: 20px;
-				font-family: 'Roboto', Arial, sans-serif;
+				font-family: Arial, sans-serif;
 			}
 			
 			.login form input[type="text"]:focus,
@@ -211,18 +189,19 @@ class Camp_Dashboard {
 			
 			/* Submit button */
 			.login form .button-primary {
-				background: #497C5E;
-				border: none;
-				border-radius: 4px;
-				color: #ffffff;
-				font-size: 14px;
-				font-weight: 500;
-				text-transform: uppercase;
-				letter-spacing: 1px;
-				padding: 14px 20px;
 				width: 100%;
+				padding: 14px;
+				background: #497C5E;
+				color: #ffffff;
+				border: none;
+				border-radius: 5px;
+				font-family: "Annie Use Your Telescope", sans-serif !important;
+				font-weight: 800 !important;
+				font-size: 20px;
+				text-transform: uppercase;
+				letter-spacing: 1.5px;
 				cursor: pointer;
-				transition: background 0.3s ease;
+				transition: background 0.3s;
 				box-shadow: none;
 				text-shadow: none;
 			}
@@ -290,11 +269,6 @@ class Camp_Dashboard {
 			
 			/* Responsive design */
 			@media screen and (max-width: 768px) {
-				body.login::before {
-					font-size: 32px;
-					margin: 40px auto 20px;
-				}
-				
 				.login form {
 					padding: 35px 25px;
 				}
