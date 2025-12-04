@@ -31,7 +31,6 @@ class Camp_Dashboard {
 		add_action( 'login_enqueue_scripts', [ $this, 'customize_login_page' ] );
 		add_filter( 'login_headerurl', [ $this, 'login_logo_url' ] );
 		add_filter( 'login_headertext', [ $this, 'login_logo_url_title' ] );
-		add_filter( 'login_errors', [ $this, 'customize_login_errors' ] );
 	}
 	
 	/**
@@ -804,20 +803,6 @@ class Camp_Dashboard {
 				exit;
 			}
 		}
-	}
-
-	/**
-	 * Customize login error messages to remove lost password link
-	 */
-	public function customize_login_errors( $errors ) {
-		// Remove the "Lost your password?" link from error messages
-		// Pattern matches: <a href="...lostpassword...">Lost your password?</a>
-		$errors = preg_replace(
-			'/<a[^>]*href=["\'][^"\']*lostpassword[^"\']*["\'][^>]*>.*?Lost your password\?.*?<\/a>/i',
-			'',
-			$errors
-		);
-		return $errors;
 	}
 
 	/**
