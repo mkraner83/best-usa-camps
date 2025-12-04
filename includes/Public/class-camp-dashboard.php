@@ -73,23 +73,235 @@ class Camp_Dashboard {
 	 * Customize WordPress password reset page backgrounds
 	 */
 	public function customize_login_page() {
-		// Only apply to password reset pages, not login page
-		$action = isset( $_REQUEST['action'] ) ? $_REQUEST['action'] : 'login';
-		
-		// Only style password reset/generate password pages
-		if ( ! in_array( $action, [ 'rp', 'resetpass', 'lostpassword' ] ) ) {
-			return;
-		}
 		?>
 		<style type="text/css">
-			/* Password reset page background */
+			/* Import Google Fonts */
+			@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap');
+			
+			/* Overall page styling */
 			body.login {
 				background: #f5f5f5;
+				font-family: 'Roboto', Arial, sans-serif;
 			}
 			
-			/* Form container background */
+			/* Hide default WordPress logo */
+			.login h1 {
+				display: none;
+			}
+			
+			/* Custom header */
+			body.login::before {
+				content: 'Camp Director Dashboard';
+				display: block;
+				text-align: center;
+				font-size: 42px;
+				font-weight: 300;
+				color: #666666;
+				margin: 60px auto 30px;
+				letter-spacing: 1px;
+			}
+			
+			body.login::after {
+				content: '';
+				display: block;
+				width: 140px;
+				height: 3px;
+				background: #333333;
+				margin: -10px auto 50px;
+				border-radius: 2px;
+			}
+			
+			/* Form container */
+			#login {
+				padding: 0;
+			}
+			
 			.login form {
 				background: #ffffff;
+				border: none;
+				box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+				padding: 50px 40px;
+				border-radius: 8px;
+			}
+			
+			/* Form title */
+			.login form::before {
+				content: 'Camp Login';
+				display: block;
+				text-align: center;
+				font-size: 32px;
+				font-weight: 300;
+				color: #999999;
+				margin-bottom: 15px;
+				font-family: 'Handlee', cursive, 'Roboto', sans-serif;
+			}
+			
+			/* Lost password form title */
+			body.login.login-action-lostpassword form::before {
+				content: 'Reset Password';
+			}
+			
+			/* Reset password form title */
+			body.login.login-action-rp form::before,
+			body.login.login-action-resetpass form::before {
+				content: 'Generate Password';
+			}
+			
+			/* Form description */
+			.login form p.message,
+			.login #login_error {
+				font-size: 14px;
+				color: #666666;
+				text-align: center;
+				line-height: 1.6;
+				margin: 0 0 20px 0;
+				padding: 12px;
+				background: transparent;
+				border: none;
+			}
+			
+			/* Labels */
+			.login form label {
+				font-size: 14px;
+				font-weight: 700;
+				color: #333333;
+				display: block;
+				margin-bottom: 8px;
+			}
+			
+			/* Input fields */
+			.login form input[type="text"],
+			.login form input[type="password"],
+			.login form input[type="email"] {
+				background: #f5f5f5;
+				border: none;
+				border-radius: 4px;
+				padding: 12px 15px;
+				font-size: 14px;
+				color: #333333;
+				width: 100%;
+				box-sizing: border-box;
+				margin-bottom: 20px;
+				font-family: 'Roboto', Arial, sans-serif;
+			}
+			
+			.login form input[type="text"]:focus,
+			.login form input[type="password"]:focus,
+			.login form input[type="email"]:focus {
+				background: #f5f5f5;
+				border: none;
+				outline: none;
+				box-shadow: 0 0 0 2px rgba(73, 124, 94, 0.2);
+			}
+			
+			/* Remember Me checkbox */
+			.login .forgetmenot {
+				margin-bottom: 20px;
+			}
+			
+			.login .forgetmenot label {
+				font-weight: 400;
+				color: #666666;
+				font-size: 13px;
+			}
+			
+			.login form input[type="checkbox"] {
+				margin-right: 8px;
+			}
+			
+			/* Submit button */
+			.login form .button-primary {
+				background: #497C5E;
+				border: none;
+				border-radius: 4px;
+				color: #ffffff;
+				font-size: 14px;
+				font-weight: 500;
+				text-transform: uppercase;
+				letter-spacing: 1px;
+				padding: 14px 20px;
+				width: 100%;
+				cursor: pointer;
+				transition: background 0.3s ease;
+				box-shadow: none;
+				text-shadow: none;
+			}
+			
+			.login form .button-primary:hover {
+				background: #3d6a4f;
+			}
+			
+			/* Links below form */
+			.login #nav,
+			.login #backtoblog {
+				text-align: center;
+				margin-top: 20px;
+			}
+			
+			.login #nav a,
+			.login #backtoblog a {
+				color: #999999;
+				font-size: 13px;
+				text-decoration: none;
+				transition: color 0.2s ease;
+			}
+			
+			.login #nav a:hover,
+			.login #backtoblog a:hover {
+				color: #497C5E;
+			}
+			
+			/* "Forgot your password?" link styling */
+			.login #nav {
+				margin-top: 25px;
+			}
+			
+			/* Password strength meter */
+			.login form .pw-weak {
+				display: none;
+			}
+			
+			#pass-strength-result {
+				background: #f5f5f5;
+				border: none;
+				border-radius: 4px;
+				margin-top: 10px;
+				padding: 8px 12px;
+				font-size: 13px;
+			}
+			
+			/* Success messages */
+			.login .message {
+				border-left: 4px solid #497C5E;
+				background: #f0f7f3;
+				color: #333333;
+				padding: 12px 15px;
+				margin-bottom: 20px;
+			}
+			
+			/* Error messages */
+			.login #login_error {
+				border-left: 4px solid #dc3545;
+				background: #f8d7da;
+				color: #721c24;
+				padding: 12px 15px;
+				margin-bottom: 20px;
+			}
+			
+			/* Responsive design */
+			@media screen and (max-width: 768px) {
+				body.login::before {
+					font-size: 32px;
+					margin: 40px auto 20px;
+				}
+				
+				.login form {
+					padding: 35px 25px;
+				}
+				
+				.login form::before {
+					font-size: 26px;
+				}
 			}
 		</style>
 		<?php
