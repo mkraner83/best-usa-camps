@@ -1,0 +1,204 @@
+/**
+ * Camp Sign-Up Form Styles
+ * Matching the dashboard green theme
+ */
+
+.camp-signup-form {
+	max-width: 100%;
+	margin: 0;
+	padding: 0;
+	background: transparent;
+	border-radius: 0;
+	box-shadow: none;
+	font-family: Arial, sans-serif;
+	position: relative;
+	display: grid;
+	grid-template-columns: 1fr 1fr;
+	gap: 25px 30px;
+}
+
+.camp-signup-form::before {
+	content: "Fields with * are required.";
+	position: absolute;
+	top: 0;
+	right: 0;
+	font-size: 14px;
+	color: #999;
+	font-style: italic;
+	font-weight: normal;
+}
+
+.camp-signup-form > div {
+	margin-bottom: 0;
+}
+
+.camp-signup-form > div.full-width {
+	grid-column: 1 / -1;
+}
+
+.camp-signup-form > button[type="submit"] {
+	grid-column: 1 / -1;
+}
+
+.camp-signup-form label {
+	display: block;
+	font-size: 16px;
+	font-weight: 700;
+	color: #333333;
+	margin-bottom: 8px;
+}
+
+.camp-signup-form input[type="text"],
+.camp-signup-form input[type="email"],
+.camp-signup-form input[type="url"],
+.camp-signup-form input[type="date"],
+.camp-signup-form select,
+.camp-signup-form textarea {
+	width: 100%;
+	padding: 14px 16px;
+	font-size: 16px;
+	border: 1px solid #ddd;
+	border-radius: 5px;
+	box-sizing: border-box;
+	font-family: Arial, sans-serif;
+	transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.camp-signup-form input[type="text"]:focus,
+.camp-signup-form input[type="email"]:focus,
+.camp-signup-form input[type="url"]:focus,
+.camp-signup-form input[type="date"]:focus,
+.camp-signup-form select:focus,
+.camp-signup-form textarea:focus {
+	border-color: #497C5E;
+	outline: none;
+	box-shadow: 0 0 0 3px rgba(73, 124, 94, 0.1);
+}
+
+.camp-signup-form textarea {
+	min-height: 150px;
+	resize: vertical;
+	line-height: 1.6;
+}
+
+/* Checkbox groups */
+.camp-signup-form input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+	margin-right: 8px;
+	vertical-align: middle;
+	cursor: pointer;
+}
+
+.camp-signup-form label input[type="checkbox"] {
+	display: inline-block;
+	width: auto;
+}
+
+.camp-signup-form label:has(input[type="checkbox"]) {
+	display: inline-block;
+	font-weight: 400;
+	font-size: 15px;
+	margin-right: 20px;
+	margin-bottom: 10px;
+	cursor: pointer;
+}
+
+.camp-signup-form .checkbox-group {
+	margin-top: -10px;
+}
+
+/* Required field indicator */
+.camp-signup-form label:has(+ input[required])::after,
+.camp-signup-form label:has(+ textarea[required])::after,
+.camp-signup-form label.required-label::after {
+	content: " *";
+	color: #497C5E;
+	font-weight: bold;
+}
+.camp-signup-form input[type="file"] {
+	padding: 10px;
+	font-size: 15px;
+	border: 2px dashed #ddd;
+	border-radius: 5px;
+	width: 100%;
+	box-sizing: border-box;
+	cursor: pointer;
+	transition: border-color 0.3s ease;
+}
+
+.camp-signup-form input[type="file"]:hover {
+	border-color: #497C5E;
+}
+
+/* Submit button */
+.camp-signup-form button[type="submit"] {
+	width: 100%;
+	padding: 18px;
+	background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%);
+	color: #ffffff;
+	border: none;
+	border-radius: 5px;
+	font-size: 20px;
+	font-weight: bold;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	cursor: pointer;
+	transition: opacity 0.3s ease, transform 0.1s ease;
+	margin-top: 20px;
+	box-shadow: 0 4px 6px rgba(73, 124, 94, 0.3);
+}
+
+.camp-signup-form button[type="submit"]:hover {
+	opacity: 0.9;
+	transform: translateY(-1px);
+	box-shadow: 0 6px 8px rgba(73, 124, 94, 0.4);
+}
+
+.camp-signup-form button[type="submit"]:active {
+	transform: translateY(0);
+}
+ {
+		grid-template-columns: 1fr;
+		gap: 25px;
+	}
+	
+	.camp-signup-form
+/* Required field indicator */
+.camp-signup-form label:has(+ input[required])::after,
+.camp-signup-form label:has(+ textarea[required])::after {
+	content: " *";
+	color: #497C5E;
+	font-weight: bold;
+}
+
+/* Responsive design */
+@media screen and (max-width: 768px) {
+	.camp-signup-form::before {
+		position: static;
+		display: block;
+		margin-bottom: 20px;
+	}
+	
+	.camp-signup-form label:has(input[type="checkbox"]) {
+		display: block;
+		margin-right: 0;
+	}
+	
+	.camp-signup-form input[type="text"],
+	.camp-signup-form input[type="email"],
+	.camp-signup-form input[type="url"],
+	.camp-signup-form input[type="date"],
+	.camp-signup-form select,
+	.camp-signup-form textarea {
+		font-size: 16px; /* Prevent zoom on iOS */
+	}
+}
+
+/* Datalist suggestion styling */
+.camp-signup-form input[list] {
+	background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23497C5E' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+	background-repeat: no-repeat;
+	background-position: right 12px center;
+	padding-right: 32px;
+}

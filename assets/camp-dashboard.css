@@ -3,7 +3,7 @@
 .camp-dashboard {
 	max-width: 1200px;
 	margin: 0 auto;
-	padding: 20px;
+	padding: 0px 0px 0px 0px;
 }
 
 .camp-dashboard-login {
@@ -150,7 +150,7 @@
 	color: #ffffff;
 	padding: 40px;
 	border-radius: 8px;
-	margin-bottom: 40px;
+	margin-bottom: 10px;
 	position: relative;
 }
 
@@ -194,7 +194,7 @@
 }
 
 .form-section {
-	background: #ffffff;
+	background: #f5f5f5;
 	padding: 30px;
 	margin-bottom: 20px;
 	border-radius: 8px;
@@ -500,13 +500,19 @@
 	overflow: hidden;
 	border: 2px solid #ddd;
 	width: 100%;
-	display: inline-block;
+	height: 200px;
+	display: block;
 }
 
 .photo-item img {
 	width: 100%;
-	height: auto;
+	height: 100%;
+	min-width: 100%;
+	min-height: 100%;
+	max-width: none;
 	display: block;
+	object-fit: cover;
+	object-position: center;
 }
 
 .photo-item .remove-photo {
@@ -618,4 +624,148 @@ input[type="file"] {
 input[type="file"]:hover {
 	border-color: #497C5E;
 	background: #f5f5f5;
+}
+
+/* Dashboard Navigation Container (for Elementor) */
+.dashboard-sidenav-container {
+	display: flex;
+	flex-direction: column;
+	background: white;
+	border-radius: 8px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	overflow: hidden;
+	position: sticky;
+	top: 20px;
+	align-self: flex-start;
+}
+
+.dashboard-sidenav-container .sidenav-header {
+	background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%);
+	color: white;
+	padding: 20px;
+	font-size: 18px;
+	font-weight: 700;
+	text-align: left;
+	letter-spacing: 0.5px;
+}
+
+.dashboard-sidenav-container .sidenav-links {
+	background: #f5f5f5;
+	padding: 0;
+}
+
+.dashboard-sidenav-container .sidenav-link {
+	display: block;
+	padding: 14px 20px;
+	color: #333;
+	text-decoration: none;
+	border-bottom: 1px solid #e0e0e0;
+	transition: all 0.2s ease;
+	font-size: 14px;
+	background: transparent;
+}
+
+.dashboard-sidenav-container .sidenav-link:last-child {
+	border-bottom: none;
+}
+
+.dashboard-sidenav-container .sidenav-link:hover,
+.dashboard-sidenav-container .sidenav-link.active {
+	background: #e8e8e8;
+	color: #497C5E;
+	padding-left: 25px;
+}
+
+.dashboard-sidenav-container .sidenav-link:active {
+	background: #e0e0e0;
+}
+
+/* Side Navigation */
+.dashboard-sidenav {
+	position: fixed;
+	top: 120px;
+	right: 20px;
+	width: 220px;
+	background: white;
+	border: 1px solid #e0e0e0;
+	border-radius: 8px;
+	padding: 0;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	max-height: calc(100vh - 140px);
+	overflow-y: auto;
+	z-index: 100;
+}
+
+.sidenav-header {
+	background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%);
+	color: white;
+	padding: 15px;
+	font-weight: 700;
+	font-size: 14px;
+	text-transform: uppercase;
+	letter-spacing: 0.5px;
+	border-radius: 8px 8px 0 0;
+}
+
+.sidenav-link {
+	display: block;
+	padding: 12px 15px;
+	color: #333;
+	text-decoration: none;
+	font-size: 13px;
+	border-bottom: 1px solid #f0f0f0;
+	transition: all 0.2s;
+}
+
+.sidenav-link:last-child {
+	border-bottom: none;
+	border-radius: 0 0 8px 8px;
+}
+
+.sidenav-link:hover {
+	background: #f5f5f5;
+	color: #497C5E;
+	padding-left: 20px;
+}
+
+.sidenav-link:active {
+	background: #e8f4ed;
+	color: #3d6a4f;
+}
+
+/* Mobile responsive */
+@media (max-width: 1400px) {
+	.dashboard-sidenav {
+		position: static;
+		width: 100%;
+		margin: 20px 0;
+		top: auto;
+		right: auto;
+	}
+}
+
+/* Smooth scroll */
+html {
+	scroll-behavior: smooth;
+}
+
+/* Save All Changes Button */
+.btn-submit {
+	width: 100%;
+	padding: 14px;
+	background: #497C5E;
+	color: #ffffff;
+	border: none;
+	border-radius: 5px;
+	font-family: "Annie Use Your Telescope", sans-serif !important;
+	font-weight: 800;
+	font-size: 20px;
+	text-transform: uppercase;
+	letter-spacing: 1.5px;
+	transition: background 0.3s;
+	cursor: pointer;
+}
+
+.btn-submit:hover {
+	background: #3d6a4f;
 }

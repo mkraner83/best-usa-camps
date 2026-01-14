@@ -14,6 +14,9 @@ class DB {
     public static function table_camp_week_pivot() { global $wpdb; return $wpdb->prefix . 'camp_management_weeks_map'; }
     public static function table_activity_terms() { global $wpdb; return $wpdb->prefix . 'camp_activity_terms'; }
     public static function table_camp_activity_pivot() { global $wpdb; return $wpdb->prefix . 'camp_management_activities_map'; }
+    public static function table_accommodations() { global $wpdb; return $wpdb->prefix . 'camp_accommodations'; }
+    public static function table_faqs() { global $wpdb; return $wpdb->prefix . 'camp_faqs'; }
+    public static function table_sessions() { global $wpdb; return $wpdb->prefix . 'camp_sessions'; }
 
     public static function drop_tables() {
         global $wpdb;
@@ -25,6 +28,9 @@ class DB {
             self::table_camp_week_pivot(),
             self::table_activity_terms(),
             self::table_camp_activity_pivot(),
+            self::table_accommodations(),
+            self::table_faqs(),
+            self::table_sessions(),
         );
         foreach ( $tables as $tbl ) {
             // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared

@@ -2,12 +2,14 @@
 /*
 Plugin Name: CreativeDBS Camp Management
 Description: Ultimate US Summer Camp Management Application.
-Version: 2.5.0
+Version: 2.6.0
 Author: CreativeDBS
 Text Domain: creativedbs-camp-mgmt
+Requires at least: 5.8
+Requires PHP: 7.4
 */
 
-define('CDBS_CAMP_VERSION', '2.5.0');
+define('CDBS_CAMP_VERSION', '2.6.0');
 
 defined( 'ABSPATH' ) || exit;
 
@@ -23,10 +25,11 @@ $required_files = [
     __DIR__ . '/includes/class-db.php',
     __DIR__ . '/includes/class-helpers.php',
     __DIR__ . '/includes/migrations-phase7.php',
+    __DIR__ . '/includes/migrations-modules.php',
     __DIR__ . '/includes/Public/class-public-controller.php',
     __DIR__ . '/includes/Public/class-camp-dashboard.php',
+    __DIR__ . '/includes/Public/class-camp-signup-form.php',
     __DIR__ . '/includes/Admin/class-admin.php',
-    __DIR__ . '/includes/class-ninja-forms-integration.php',
 ];
 
 foreach ( $required_files as $file ) {
@@ -40,6 +43,7 @@ if ( is_admin() ) {
     add_action( 'admin_menu', [ '\\CreativeDBS\\CampMgmt\\Admin_Creds', 'register_menu' ], 99 );
 }
 add_action( 'admin_init', [ '\\CreativeDBS\\CampMgmt\\Migrations_Phase7', 'run' ] );
+add_action( 'admin_init', [ '\\CreativeDBS\\CampMgmt\\Migrations_Modules', 'run' ] );
 if ( function_exists( 'register_uninstall_hook' ) ) {
     if ( ! function_exists( 'creativedbs_campmgmt_uninstall_marker' ) ) {
         function creativedbs_campmgmt_uninstall_marker() {}
@@ -55,8 +59,8 @@ add_action( 'plugins_loaded', function() {
 	\CreativeDBS\CampMgmt\Plugin::instance();
 	new \CreativeDBS\CampMgmt\Admin\Admin();
 	new \CreativeDBS\CampMgmt\PublicArea\Public_Controller();
-	new \CreativeDBS\CampMgmt\Ninja_Forms_Integration();
 	new \CreativeDBS\CampMgmt\PublicArea\Camp_Dashboard();
+	new \CreativeDBS\CampMgmt\PublicArea\Camp_Signup_Form();
 }, 0);
 
 // === Legacy code below kept for backward-compatibility. ===

@@ -14,12 +14,27 @@ class Camp_Dashboard {
 	public function __construct() {
 		// Register shortcodes for front-end dashboard
 		add_shortcode( 'camp_dashboard', [ $this, 'render_dashboard' ] );
+		add_shortcode( 'camp_dashboard_navi', [ $this, 'render_dashboard_navi' ] );
+		add_shortcode( 'camp_dashboard_header', [ $this, 'render_dashboard_header' ] );
 		add_shortcode( 'camp_dashboard_title', [ $this, 'render_dashboard_title' ] );
 		
 		// Handle form submissions
 		add_action( 'init', [ $this, 'handle_form_submission' ] );
-		add_action( 'init', [ $this, 'handle_custom_login' ] );
-		add_action( 'init', [ $this, 'redirect_password_reset_to_custom_page' ] );
+		
+		// AJAX handlers for accommodations
+		add_action( 'wp_ajax_camp_save_accommodation', [ $this, 'ajax_save_accommodation' ] );
+		add_action( 'wp_ajax_camp_get_accommodation', [ $this, 'ajax_get_accommodation' ] );
+		add_action( 'wp_ajax_camp_delete_accommodation', [ $this, 'ajax_delete_accommodation' ] );
+		
+		// AJAX handlers for FAQs
+		add_action( 'wp_ajax_camp_save_faq', [ $this, 'ajax_save_faq' ] );
+		add_action( 'wp_ajax_camp_get_faq', [ $this, 'ajax_get_faq' ] );
+		add_action( 'wp_ajax_camp_delete_faq', [ $this, 'ajax_delete_faq' ] );
+		
+		// AJAX handlers for sessions
+		add_action( 'wp_ajax_camp_save_session', [ $this, 'ajax_save_session' ] );
+		add_action( 'wp_ajax_camp_get_session', [ $this, 'ajax_get_session' ] );
+		add_action( 'wp_ajax_camp_delete_session', [ $this, 'ajax_delete_session' ] );
 		
 		// Enqueue front-end styles
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_styles' ] );
@@ -27,10 +42,52 @@ class Camp_Dashboard {
 		// Register custom media category taxonomy
 		add_action( 'init', [ $this, 'register_media_category' ] );
 		
-		// Customize WordPress login page
+		// Customize WordPress login/password pages styling
 		add_action( 'login_enqueue_scripts', [ $this, 'customize_login_page' ] );
-		add_filter( 'login_headerurl', [ $this, 'login_logo_url' ] );
-		add_filter( 'login_headertext', [ $this, 'login_logo_url_title' ] );
+		
+		// Redirect camp users after login
+		add_filter( 'login_redirect', [ $this, 'camp_login_redirect' ], 10, 3 );
+		
+		// Block camp users from accessing wp-admin
+		add_action( 'admin_init', [ $this, 'block_camp_users_from_admin' ] );
+		
+		// Hide admin bar for camp users
+		add_action( 'after_setup_theme', [ $this, 'hide_admin_bar_for_camps' ] );
+	}
+	
+	/**
+	 * Hide admin bar for camp users
+	 */
+	public function hide_admin_bar_for_camps() {
+		if ( is_user_logged_in() ) {
+			$user = wp_get_current_user();
+			if ( in_array( 'camp', $user->roles ) ) {
+				show_admin_bar( false );
+			}
+		}
+	}
+	
+	/**
+	 * Redirect camp users to dashboard after login
+	 */
+	public function camp_login_redirect( $redirect_to, $request, $user ) {
+		if ( isset( $user->roles ) && is_array( $user->roles ) && in_array( 'camp', $user->roles ) ) {
+			return home_url( '/user-dashboard/' );
+		}
+		return $redirect_to;
+	}
+	
+	/**
+	 * Block camp users from accessing wp-admin
+	 */
+	public function block_camp_users_from_admin() {
+		if ( ! defined( 'DOING_AJAX' ) && is_user_logged_in() ) {
+			$user = wp_get_current_user();
+			if ( in_array( 'camp', $user->roles ) ) {
+				wp_redirect( home_url( '/user-dashboard/' ) );
+				exit;
+			}
+		}
 	}
 	
 	/**
@@ -71,7 +128,7 @@ class Camp_Dashboard {
 	}
 	
 	/**
-	 * Customize WordPress password reset page backgrounds
+	 * Customize WordPress login/password pages styling
 	 */
 	public function customize_login_page() {
 		?>
@@ -123,7 +180,7 @@ class Camp_Dashboard {
 			/* Reset password form title */
 			body.login.login-action-rp form::before,
 			body.login.login-action-resetpass form::before {
-				content: 'Generate Password';
+				content: 'Set Password';
 			}
 			
 			/* Form description */
@@ -229,11 +286,6 @@ class Camp_Dashboard {
 				color: #497C5E;
 			}
 			
-			/* "Forgot your password?" link styling */
-			.login #nav {
-				margin-top: 25px;
-			}
-			
 			/* Password strength meter */
 			.login form .pw-weak {
 				display: none;
@@ -286,20 +338,6 @@ class Camp_Dashboard {
 	}
 	
 	/**
-	 * Change login logo URL to homepage
-	 */
-	public function login_logo_url() {
-		return home_url();
-	}
-	
-	/**
-	 * Change login logo title
-	 */
-	public function login_logo_url_title() {
-		return 'Best USA Camps';
-	}
-
-	/**
 	 * Render the dashboard title shortcode
 	 * Returns "Camp [Camp Name]" if logged in, or "CAMP DASHBOARD" if not
 	 */
@@ -328,6 +366,118 @@ class Camp_Dashboard {
 		}
 
 		return 'Admin: ' . esc_html( $camp['camp_name'] );
+	}
+
+	/**
+	 * Render dashboard navigation shortcode
+	 */
+	public function render_dashboard_navi( $atts ) {
+		ob_start();
+		?>
+		<nav class="dashboard-sidenav-container">
+			<div class="sidenav-header">Camp Sections</div>
+			<div class="sidenav-links">
+				<a href="#basic-info" class="sidenav-link">Basic Information</a>
+				<a href="#contact-info" class="sidenav-link">Contact Information</a>
+				<a href="#camp-details" class="sidenav-link">Camp Details</a>
+				<a href="#camp-types" class="sidenav-link">Camp Types</a>
+				<a href="#available-weeks" class="sidenav-link">Available Weeks</a>
+				<a href="#activities" class="sidenav-link">Activities Offered</a>
+				<a href="#photos" class="sidenav-link">Camp Photos</a>
+				<a href="#logo" class="sidenav-link">Camp Logo</a>
+				<a href="#accommodations" class="sidenav-link">Accommodation Facilities</a>
+				<a href="#faqs" class="sidenav-link">FAQs</a>
+				<a href="#sessions" class="sidenav-link">Sessions (Rates & Dates)</a>
+			</div>
+		</nav>
+		<script>
+		document.addEventListener('DOMContentLoaded', function() {
+			const navLinks = document.querySelectorAll('.sidenav-link');
+			const offset = 80;
+			
+			// Smooth scroll with offset
+			navLinks.forEach(link => {
+				link.addEventListener('click', function(e) {
+					e.preventDefault();
+					const targetId = this.getAttribute('href').substring(1);
+					const targetElement = document.getElementById(targetId);
+					
+					if (targetElement) {
+						const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - offset;
+						
+						window.scrollTo({
+							top: targetPosition,
+							behavior: 'smooth'
+						});
+						
+						// Update active state
+						navLinks.forEach(l => l.classList.remove('active'));
+						this.classList.add('active');
+					}
+				});
+			});
+			
+			// Track scroll position and update active state
+			if (window.innerWidth >= 768) {
+				window.addEventListener('scroll', function() {
+					let current = '';
+					const sections = document.querySelectorAll('.form-section[id]');
+					
+					sections.forEach(section => {
+						const sectionTop = section.offsetTop - offset - 100;
+						if (window.pageYOffset >= sectionTop) {
+							current = section.getAttribute('id');
+						}
+					});
+					
+					navLinks.forEach(link => {
+						link.classList.remove('active');
+						if (link.getAttribute('href') === '#' + current) {
+							link.classList.add('active');
+						}
+					});
+				});
+			}
+		});
+		</script>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Render dashboard header shortcode
+	 */
+	public function render_dashboard_header( $atts ) {
+		if ( ! is_user_logged_in() ) {
+			return '';
+		}
+
+		$user = wp_get_current_user();
+		if ( ! in_array( 'camp', $user->roles ) ) {
+			return '';
+		}
+
+		global $wpdb;
+		$camp = $wpdb->get_row( $wpdb->prepare(
+			"SELECT camp_directors FROM {$wpdb->prefix}camp_management WHERE user_id = %d",
+			$user->ID
+		), ARRAY_A );
+
+		if ( ! $camp ) {
+			return '';
+		}
+
+		ob_start();
+		?>
+		<div class="dashboard-header">
+			<h1>Welcome, <?php echo esc_html( $camp['camp_directors'] ); ?>!</h1>
+			<p class="dashboard-subtitle">Manage your camp profile and information</p>
+			<div class="dashboard-actions">
+				<a href="<?php echo wp_logout_url( wp_login_url() ); ?>" class="btn-logout">Logout</a>
+			</div>
+		</div>
+		<?php
+		return ob_get_clean();
 	}
 
 	/**
@@ -420,6 +570,30 @@ class Camp_Dashboard {
 
 		// Handle logo upload
 		$this->handle_logo_upload( $camp_id, $camp );
+
+		// Debug: Check if section marker fields are present
+		error_log('CDBS: Section markers - Accommodations: ' . (isset($_POST['accommodations_section_present']) ? 'YES' : 'NO'));
+		error_log('CDBS: Section markers - FAQs: ' . (isset($_POST['faqs_section_present']) ? 'YES' : 'NO'));
+		error_log('CDBS: Section markers - Sessions: ' . (isset($_POST['sessions_section_present']) ? 'YES' : 'NO'));
+		error_log('CDBS: All POST keys: ' . implode(', ', array_keys($_POST)));
+
+		// NOTE: Accommodations, FAQs, and Sessions are now handled via AJAX
+		// The old POST-based handlers below are commented out to prevent data deletion
+		
+		// Handle accommodations
+		// error_log('CDBS: About to handle accommodations for camp ' . $camp_id);
+		// error_log('CDBS: Accommodations POST data: ' . print_r($_POST['accommodations'] ?? 'NONE', true));
+		// $this->handle_accommodations_submission( $camp_id );
+
+		// Handle FAQs
+		// error_log('CDBS: About to handle FAQs for camp ' . $camp_id);
+		// error_log('CDBS: FAQs POST data: ' . print_r($_POST['faqs'] ?? 'NONE', true));
+		// $this->handle_faqs_submission( $camp_id );
+
+		// Handle sessions
+		// error_log('CDBS: About to handle sessions for camp ' . $camp_id);
+		// error_log('CDBS: Sessions POST data: ' . print_r($_POST['sessions'] ?? 'NONE', true));
+		// $this->handle_sessions_submission( $camp_id );
 
 		// Redirect to avoid resubmission
 		wp_redirect( add_query_arg( 'updated', 'true', wp_get_referer() ) );
@@ -711,6 +885,214 @@ class Camp_Dashboard {
 	}
 
 	/**
+	 * Handle accommodations form submission
+	 */
+	private function handle_accommodations_submission( $camp_id ) {
+		global $wpdb;
+		$table = \CreativeDBS\CampMgmt\DB::table_accommodations();
+		error_log('CDBS: Accommodations table: ' . $table);
+		
+		// Get existing accommodation IDs
+		$existing_ids = $wpdb->get_col( $wpdb->prepare(
+			"SELECT id FROM {$table} WHERE camp_id = %d",
+			$camp_id
+		) );
+		error_log('CDBS: Existing accommodation IDs: ' . print_r($existing_ids, true));
+		
+		$submitted_ids = [];
+		
+		if ( ! empty( $_POST['accommodations'] ) && is_array( $_POST['accommodations'] ) ) {
+			error_log('CDBS: Processing ' . count($_POST['accommodations']) . ' accommodations');
+			foreach ( $_POST['accommodations'] as $index => $acc ) {
+				$id = intval( $acc['id'] ?? 0 );
+				$name = sanitize_text_field( $acc['name'] ?? '' );
+				$description = sanitize_textarea_field( $acc['description'] ?? '' );
+				$capacity = intval( $acc['capacity'] ?? 0 );
+				
+				if ( empty( $name ) ) {
+					continue; // Skip if name is empty
+				}
+				
+				$data = [
+					'camp_id' => $camp_id,
+					'name' => $name,
+					'description' => $description,
+					'capacity' => $capacity,
+					'sort_order' => $index,
+				];
+				
+				if ( $id > 0 && in_array( $id, $existing_ids ) ) {
+					// Update existing
+					$result = $wpdb->update(
+						$table,
+						$data,
+						[ 'id' => $id ],
+						[ '%d', '%s', '%s', '%d', '%d' ],
+						[ '%d' ]
+					);
+					error_log('CDBS: Updated accommodation ID ' . $id . ', Result: ' . $result . ', Error: ' . $wpdb->last_error);
+					$submitted_ids[] = $id;
+				} else {
+					// Insert new
+					$result = $wpdb->insert(
+						$table,
+						$data,
+						[ '%d', '%s', '%s', '%d', '%d' ]
+					);
+					error_log('CDBS: Inserted new accommodation, Insert ID: ' . $wpdb->insert_id . ', Error: ' . $wpdb->last_error);
+					$submitted_ids[] = $wpdb->insert_id;
+				}
+			}
+		}
+		
+		// Delete removed accommodations
+		foreach ( $existing_ids as $existing_id ) {
+			if ( ! in_array( $existing_id, $submitted_ids ) ) {
+				$wpdb->delete( $table, [ 'id' => $existing_id ], [ '%d' ] );
+			}
+		}
+	}
+
+	/**
+	 * Handle FAQs form submission
+	 */
+	private function handle_faqs_submission( $camp_id ) {
+		global $wpdb;
+		$table = \CreativeDBS\CampMgmt\DB::table_faqs();
+		
+		// Get existing FAQ IDs
+		$existing_ids = $wpdb->get_col( $wpdb->prepare(
+			"SELECT id FROM {$table} WHERE camp_id = %d",
+			$camp_id
+		) );
+		
+		$submitted_ids = [];
+		
+		if ( ! empty( $_POST['faqs'] ) && is_array( $_POST['faqs'] ) ) {
+			$count = 0;
+			foreach ( $_POST['faqs'] as $index => $faq ) {
+				if ( $count >= 12 ) {
+					break; // Limit to 12 FAQs
+				}
+				
+				$id = intval( $faq['id'] ?? 0 );
+				$question = sanitize_text_field( $faq['question'] ?? '' );
+				$answer = sanitize_textarea_field( $faq['answer'] ?? '' );
+				
+				if ( empty( $question ) || empty( $answer ) ) {
+					continue; // Skip if either is empty
+				}
+				
+				$data = [
+					'camp_id' => $camp_id,
+					'question' => $question,
+					'answer' => $answer,
+					'sort_order' => $count,
+				];
+				
+				if ( $id > 0 && in_array( $id, $existing_ids ) ) {
+					// Update existing
+					$wpdb->update(
+						$table,
+						$data,
+						[ 'id' => $id ],
+						[ '%d', '%s', '%s', '%d' ],
+						[ '%d' ]
+					);
+					$submitted_ids[] = $id;
+				} else {
+					// Insert new
+					$wpdb->insert(
+						$table,
+						$data,
+						[ '%d', '%s', '%s', '%d' ]
+					);
+					$submitted_ids[] = $wpdb->insert_id;
+				}
+				
+				$count++;
+			}
+		}
+		
+		// Delete removed FAQs
+		foreach ( $existing_ids as $existing_id ) {
+			if ( ! in_array( $existing_id, $submitted_ids ) ) {
+				$wpdb->delete( $table, [ 'id' => $existing_id ], [ '%d' ] );
+			}
+		}
+	}
+
+	/**
+	 * Handle sessions form submission
+	 */
+	private function handle_sessions_submission( $camp_id ) {
+		global $wpdb;
+		$table = \CreativeDBS\CampMgmt\DB::table_sessions();
+		
+		// Get existing session IDs
+		$existing_ids = $wpdb->get_col( $wpdb->prepare(
+			"SELECT id FROM {$table} WHERE camp_id = %d",
+			$camp_id
+		) );
+		
+		$submitted_ids = [];
+		
+		if ( ! empty( $_POST['sessions'] ) && is_array( $_POST['sessions'] ) ) {
+			foreach ( $_POST['sessions'] as $index => $session ) {
+				$id = intval( $session['id'] ?? 0 );
+				$session_name = sanitize_text_field( $session['session_name'] ?? '' );
+				$start_date = sanitize_text_field( $session['start_date'] ?? '' );
+				$end_date = sanitize_text_field( $session['end_date'] ?? '' );
+				$price = floatval( $session['price'] ?? 0 );
+				$notes = sanitize_text_field( $session['notes'] ?? '' );
+				$description = sanitize_textarea_field( $session['description'] ?? '' );
+				
+				if ( empty( $session_name ) ) {
+					continue; // Skip if name is empty
+				}
+				
+				$data = [
+					'camp_id' => $camp_id,
+					'session_name' => $session_name,
+					'start_date' => ! empty( $start_date ) ? $start_date : null,
+					'end_date' => ! empty( $end_date ) ? $end_date : null,
+					'price' => $price,
+					'notes' => $notes,
+					'description' => $description,
+					'sort_order' => $index,
+				];
+				
+				if ( $id > 0 && in_array( $id, $existing_ids ) ) {
+					// Update existing
+					$wpdb->update(
+						$table,
+						$data,
+						[ 'id' => $id ],
+						[ '%d', '%s', '%s', '%s', '%f', '%s', '%s', '%d' ],
+						[ '%d' ]
+					);
+					$submitted_ids[] = $id;
+				} else {
+					// Insert new
+					$wpdb->insert(
+						$table,
+						$data,
+						[ '%d', '%s', '%s', '%s', '%f', '%s', '%s', '%d' ]
+					);
+					$submitted_ids[] = $wpdb->insert_id;
+				}
+			}
+		}
+		
+		// Delete removed sessions
+		foreach ( $existing_ids as $existing_id ) {
+			if ( ! in_array( $existing_id, $submitted_ids ) ) {
+				$wpdb->delete( $table, [ 'id' => $existing_id ], [ '%d' ] );
+			}
+		}
+	}
+
+	/**
 	 * Custom upload directory for camp files
 	 */
 	public function custom_upload_dir_for_camps( $dirs ) {
@@ -752,78 +1134,14 @@ class Camp_Dashboard {
 	}
 	
 	/**
-	 * Handle custom login form submission
-	 */
-	public function handle_custom_login() {
-		if ( isset( $_POST['camp_login_submit'] ) && isset( $_POST['camp_login_nonce'] ) ) {
-			if ( ! wp_verify_nonce( $_POST['camp_login_nonce'], 'camp_login_action' ) ) {
-				return;
-			}
-			
-			$username = sanitize_text_field( $_POST['log'] );
-			$password = $_POST['pwd'];
-			$remember = isset( $_POST['rememberme'] );
-			
-			$creds = [
-				'user_login'    => $username,
-				'user_password' => $password,
-				'remember'      => $remember,
-			];
-			
-			$user = wp_signon( $creds, false );
-			
-			if ( is_wp_error( $user ) ) {
-				// Store error in session/transient
-				set_transient( 'camp_login_error_' . session_id(), $user->get_error_message(), 60 );
-				// Redirect back to same page with error parameter
-				$redirect_url = add_query_arg( 'login', 'failed', wp_get_referer() );
-				wp_safe_redirect( $redirect_url );
-				exit;
-			} else {
-				// Successful login - redirect to same page
-				wp_safe_redirect( remove_query_arg( 'login', wp_get_referer() ) );
-				exit;
-			}
-		}
-	}
-
-	/**
-	 * Redirect password reset requests to custom page
-	 */
-	public function redirect_password_reset_to_custom_page() {
-		// Check if this is a password reset request (action=rp or action=resetpass)
-		if ( isset( $_GET['action'] ) && in_array( $_GET['action'], [ 'rp', 'resetpass' ] ) ) {
-			if ( isset( $_GET['key'] ) && isset( $_GET['login'] ) ) {
-				// Redirect to custom page with same parameters
-				$custom_url = home_url( '/camp-reset-password/' );
-				$custom_url = add_query_arg( 'key', $_GET['key'], $custom_url );
-				$custom_url = add_query_arg( 'login', $_GET['login'], $custom_url );
-				
-				wp_safe_redirect( $custom_url );
-				exit;
-			}
-		}
-	}
-
-	/**
 	 * Render the dashboard shortcode
 	 */
 	public function render_dashboard( $atts ) {
 		// Check if user is logged in
 		if ( ! is_user_logged_in() ) {
-			error_log( 'CDBS Camp Dashboard: User not logged in' );
-			
-			// Check for login error
-			$error_message = '';
-			if ( isset( $_GET['login'] ) && $_GET['login'] === 'failed' ) {
-				$error_message = get_transient( 'camp_login_error_' . session_id() );
-				delete_transient( 'camp_login_error_' . session_id() );
-				if ( empty( $error_message ) ) {
-					$error_message = 'Invalid username or password.';
-				}
-			}
-			
-			return $this->render_login_form( $error_message );
+			// Redirect to WordPress login page
+			wp_redirect( wp_login_url( get_permalink() ) );
+			exit;
 		}
 
 		$user = wp_get_current_user();
@@ -945,46 +1263,6 @@ class Camp_Dashboard {
 	 * 
 	 * @param string $message Optional message to display above login form
 	 */
-	private function render_login_form( $message = '' ) {
-		ob_start();
-		?>
-		<div class="camp-dashboard-login">
-			<div class="login-wrapper">
-				<?php if ( ! empty( $message ) ) : ?>
-					<div class="login-error">
-						<p><?php echo wp_kses_post( $message ); ?></p>
-					</div>
-				<?php endif; ?>
-				<h2>Camp Login</h2>
-				<p>Please log in to access your camp dashboard.</p>
-				<form name="camp_login_form" id="camp_login_form" action="" method="post">
-					<?php wp_nonce_field( 'camp_login_action', 'camp_login_nonce' ); ?>
-					<p class="login-username">
-						<label for="user_login">Username or Email</label>
-						<input type="text" name="log" id="user_login" class="input" value="" size="20" autocapitalize="off" required>
-					</p>
-					<p class="login-password">
-						<label for="user_pass">Password</label>
-						<input type="password" name="pwd" id="user_pass" class="input" value="" size="20" required>
-					</p>
-					<p class="login-remember">
-						<label>
-							<input name="rememberme" type="checkbox" id="rememberme" value="forever"> Remember Me
-						</label>
-					</p>
-					<p class="login-submit">
-						<input type="submit" name="camp_login_submit" id="wp-submit" class="button button-primary" value="Log In">
-					</p>
-				</form>
-				<p class="login-links">
-					<a href="<?php echo home_url( '/camp-lost-password/' ); ?>">Forgot your password?</a>
-				</p>
-			</div>
-		</div>
-		<?php
-		return ob_get_clean();
-	}
-
 	/**
 	 * Render the dashboard edit form
 	 */
@@ -997,18 +1275,10 @@ class Camp_Dashboard {
 				</div>
 			<?php endif; ?>
 
-			<div class="dashboard-header">
-				<h1>Welcome, <?php echo esc_html( $camp['camp_directors'] ); ?>!</h1>
-				<p class="dashboard-subtitle">Manage your camp profile and information</p>
-				<div class="dashboard-actions">
-					<a href="<?php echo wp_logout_url( home_url( '/camp-login/' ) ); ?>" class="btn-logout">Logout</a>
-				</div>
-			</div>
-
 			<form method="post" action="" class="camp-edit-form" enctype="multipart/form-data">
 				<?php wp_nonce_field( 'update_camp_data', 'camp_dashboard_nonce' ); ?>
 
-				<div class="form-section">
+				<div class="form-section" id="basic-info">
 					<h2 class="section-title">Basic Information</h2>
 					
 					<div class="form-row">
@@ -1033,7 +1303,7 @@ class Camp_Dashboard {
 					</div>
 				</div>
 
-				<div class="form-section">
+				<div class="form-section" id="contact-info">
 					<h2 class="section-title">Contact Information</h2>
 					
 					<div class="form-row">
@@ -1101,7 +1371,7 @@ class Camp_Dashboard {
 					</div>
 				</div>
 
-				<div class="form-section">
+				<div class="form-section" id="camp-details">
 					<h2 class="section-title">Camp Details</h2>
 					
 
@@ -1135,7 +1405,7 @@ class Camp_Dashboard {
 				</div>
 				</div>
 
-			<div class="form-section">
+			<div class="form-section" id="camp-types">
 				<h2 class="section-title">Camp Types <span class="required">*</span></h2>
 				<p class="field-note">Select at least one camp type</p>
 				<div class="checkbox-inline-list">
@@ -1148,7 +1418,7 @@ class Camp_Dashboard {
 						</label>
 					<?php endforeach; ?>
 				</div>
-			</div>			<div class="form-section">
+			</div>			<div class="form-section" id="available-weeks">
 				<h2 class="section-title">Available Weeks / Session Length <span class="required">*</span></h2>
 				<p class="field-note">Select at least one week/session</p>
 				<div class="checkbox-inline-list">
@@ -1161,7 +1431,7 @@ class Camp_Dashboard {
 						</label>
 					<?php endforeach; ?>
 				</div>
-			</div>			<div class="form-section">
+			</div>			<div class="form-section" id="activities">
 				<h2 class="section-title">Activities Offered <span class="required">*</span></h2>
 				<p class="field-note">Type an activity and press Enter or comma to add it</p>
 				<ul id="activities-list" class="chip-list">
@@ -1211,7 +1481,7 @@ class Camp_Dashboard {
 					const li = document.createElement('li');
 					li.setAttribute('data-val', label);
 					li.className = 'chip';
-					li.innerHTML = '<span>' + label + '</span><button type="button" aria-label="Remove">×</button>';
+					li.innerHTML = '<span>' + label + '</span><button type="button" aria-label="Remove">&times;</button>';
 					li.querySelector('button').addEventListener('click', function() {
 						li.remove();
 						syncHidden();
@@ -1244,27 +1514,28 @@ class Camp_Dashboard {
 		</div>
 
 		<!-- Photos Upload Section -->
-		<div class="form-section">
-			<h2 class="section-title">Photos</h2>
-			<?php
-			// Calculate total size of uploaded photos
-			$photos = ! empty( $camp['photos'] ) ? explode( ',', $camp['photos'] ) : [];
-			$total_size = 0;
-			foreach ( $photos as $photo_url ) {
-				if ( ! empty( trim( $photo_url ) ) ) {
-					$file_path = str_replace( home_url(), ABSPATH, trim( $photo_url ) );
-					if ( file_exists( $file_path ) ) {
-						$total_size += filesize( $file_path );
-					}
+		<?php
+		// Calculate total size of uploaded photos
+		$photos = ! empty( $camp['photos'] ) ? explode( ',', $camp['photos'] ) : [];
+		$total_size = 0;
+		foreach ( $photos as $photo_url ) {
+			if ( ! empty( trim( $photo_url ) ) ) {
+				$file_path = str_replace( home_url(), ABSPATH, trim( $photo_url ) );
+				if ( file_exists( $file_path ) ) {
+					$total_size += filesize( $file_path );
 				}
 			}
-			$max_size = 25 * 1024 * 1024; // 25MB in bytes
-			$remaining_size = $max_size - $total_size;
-			$used_mb = round( $total_size / 1024 / 1024, 2 );
-			$remaining_mb = round( $remaining_size / 1024 / 1024, 2 );
-			$percent_used = round( ( $total_size / $max_size ) * 100, 1 );
-			?>
-			<p class="section-description">Upload up to 10 camp photos (JPG/JPEG only, 25MB total for all photos)</p>
+		}
+		$max_size = 25 * 1024 * 1024; // 25MB in bytes
+		$remaining_size = $max_size - $total_size;
+		$used_mb = round( $total_size / 1024 / 1024, 2 );
+		$remaining_mb = round( $remaining_size / 1024 / 1024, 2 );
+		$percent_used = round( ( $total_size / $max_size ) * 100, 1 );
+		?>
+
+	<div class="form-section" id="photos">
+		<h2 class="section-title">Camp Photos</h2>
+		<p class="section-description">Upload up to 10 camp photos (JPG/JPEG only, 25MB total for all photos)</p>
 			<p class="storage-info" style="color: #666; font-size: 14px; margin: 10px 0;">
 				<strong>Storage:</strong> <?php echo $used_mb; ?>MB used / <?php echo $remaining_mb; ?>MB remaining (<?php echo $percent_used; ?>%)
 			</p>
@@ -1339,11 +1610,205 @@ class Camp_Dashboard {
 			<input type="hidden" id="logo_to_remove" name="logo_to_remove" value="">
 		</div>
 
-		<div class="form-section">
-			<button type="submit" class="btn-submit">Update Camp Information</button>
+		<!-- Accommodations Section - AJAX Based -->
+		<div class="form-section" id="accommodations-section">
+			<h2 class="section-title">Accommodation Facilities</h2>
+			<p class="section-description">Click "Add New Facility" to add cabins and other facilities</p>
+			
+			<div id="accommodations-list" class="ajax-list">
+				<?php
+				global $wpdb;
+				$accommodations = $wpdb->get_results( $wpdb->prepare(
+					"SELECT * FROM " . \CreativeDBS\CampMgmt\DB::table_accommodations() . " WHERE camp_id = %d ORDER BY sort_order ASC",
+					$camp['id']
+				), ARRAY_A );
+				
+				if ( empty( $accommodations ) ) {
+					echo '<p class="no-items">No accommodations added yet.</p>';
+				} else {
+					foreach ( $accommodations as $acc ) :
+				?>
+					<div class="list-item" data-id="<?php echo esc_attr( $acc['id'] ); ?>">
+						<div class="item-content">
+							<strong><?php echo esc_html( $acc['name'] ); ?></strong>
+							<span class="item-meta">Capacity: <?php echo esc_html( $acc['capacity'] ); ?></span>
+							<p><?php echo esc_html( $acc['description'] ); ?></p>
+						</div>
+						<div class="item-actions">
+							<button type="button" class="btn-edit-sm" onclick="editAccommodation(<?php echo $acc['id']; ?>)">Edit</button>
+							<button type="button" class="btn-delete-sm" onclick="deleteAccommodation(<?php echo $acc['id']; ?>)">Delete</button>
+						</div>
+					</div>
+				<?php
+					endforeach;
+				}
+				?>
+			</div>
+			
+			<button type="button" class="btn-add-item" onclick="showAccommodationForm()">+ Add New Facility</button>
+			
+			<!-- Add/Edit Form (hidden by default) -->
+			<div id="accommodation-form" style="display:none; margin-top:20px; padding:20px; background:#f9f9f9; border-radius:8px;">
+				<h3 id="accommodation-form-title">Add New Facility</h3>
+				<input type="hidden" id="accommodation-id" value="0">
+				<div class="form-group">
+					<label>Facility Name *</label>
+					<input type="text" id="accommodation-name" placeholder="e.g., Cabin A, Main Lodge">
+				</div>
+				<div class="form-group">
+					<label>Capacity *</label>
+					<input type="number" id="accommodation-capacity" placeholder="Number of guests" min="0">
+				</div>
+				<div class="form-group">
+					<label>Description</label>
+					<textarea id="accommodation-description" rows="3" placeholder="Describe the facilities and amenities"></textarea>
+				</div>
+				<div style="margin-top:15px;">
+					<button type="button" class="btn-save" onclick="saveAccommodation()">Save</button>
+					<button type="button" class="btn-cancel" onclick="cancelAccommodationForm()">Cancel</button>
+				</div>
+			</div>
 		</div>
 
-		<script>
+		<!-- FAQs Section - AJAX Based -->
+		<div class="form-section" id="faqs-section">
+			<h2 class="section-title">Frequently Asked Questions (FAQs)</h2>
+			<p class="section-description">Add up to 12 frequently asked questions</p>
+			
+			<div id="faqs-list" class="ajax-list">
+				<?php
+				$faqs = $wpdb->get_results( $wpdb->prepare(
+					"SELECT * FROM " . \CreativeDBS\CampMgmt\DB::table_faqs() . " WHERE camp_id = %d ORDER BY sort_order ASC LIMIT 12",
+					$camp['id']
+				), ARRAY_A );
+				
+				if ( empty( $faqs ) ) {
+					echo '<p class="no-items">No FAQs added yet.</p>';
+				} else {
+					foreach ( $faqs as $faq ) :
+				?>
+					<div class="list-item" data-id="<?php echo esc_attr( $faq['id'] ); ?>">
+						<div class="item-content">
+							<strong><?php echo esc_html( $faq['question'] ); ?></strong>
+							<p><?php echo esc_html( $faq['answer'] ); ?></p>
+						</div>
+						<div class="item-actions">
+							<button type="button" class="btn-edit-sm" onclick="editFaq(<?php echo $faq['id']; ?>)">Edit</button>
+							<button type="button" class="btn-delete-sm" onclick="deleteFaq(<?php echo $faq['id']; ?>)">Delete</button>
+						</div>
+					</div>
+				<?php
+					endforeach;
+				}
+				?>
+			</div>
+			
+			<button type="button" class="btn-add-item" onclick="showFaqForm()" <?php echo count( $faqs ) >= 12 ? 'disabled title="Maximum 12 FAQs"' : ''; ?>>+ Add New FAQ</button>
+			
+			<!-- Add/Edit Form -->
+			<div id="faq-form" style="display:none; margin-top:20px; padding:20px; background:#f9f9f9; border-radius:8px;">
+				<h3 id="faq-form-title">Add New FAQ</h3>
+				<input type="hidden" id="faq-id" value="0">
+				<div class="form-group">
+					<label>Question *</label>
+					<input type="text" id="faq-question" placeholder="Enter your question">
+				</div>
+				<div class="form-group">
+					<label>Answer *</label>
+					<textarea id="faq-answer" rows="4" placeholder="Enter the answer"></textarea>
+				</div>
+				<div style="margin-top:15px;">
+					<button type="button" class="btn-save" onclick="saveFaq()">Save</button>
+					<button type="button" class="btn-cancel" onclick="cancelFaqForm()">Cancel</button>
+				</div>
+			</div>
+		</div>
+
+		<!-- Sessions Section - AJAX Based -->
+		<div class="form-section" id="sessions-section">
+			<h2 class="section-title">Sessions (Rates & Dates)</h2>
+			<p class="section-description">Add session cards with dates, prices, and details</p>
+			
+			<div id="sessions-list" class="ajax-list">
+				<?php
+				$sessions = $wpdb->get_results( $wpdb->prepare(
+					"SELECT * FROM " . \CreativeDBS\CampMgmt\DB::table_sessions() . " WHERE camp_id = %d ORDER BY sort_order ASC",
+					$camp['id']
+				), ARRAY_A );
+				
+				if ( empty( $sessions ) ) {
+					echo '<p class="no-items">No sessions added yet.</p>';
+				} else {
+					foreach ( $sessions as $session ) :
+				?>
+					<div class="list-item" data-id="<?php echo esc_attr( $session['id'] ); ?>">
+						<div class="item-content">
+							<strong><?php echo esc_html( $session['session_name'] ); ?></strong>
+							<span class="item-meta">
+								<?php echo esc_html( $session['start_date'] ); ?> - <?php echo esc_html( $session['end_date'] ); ?> | 
+								$<?php echo esc_html( number_format( $session['price'], 2 ) ); ?>
+							</span>
+							<?php if ( ! empty( $session['notes'] ) ) : ?>
+								<p><em><?php echo esc_html( $session['notes'] ); ?></em></p>
+							<?php endif; ?>
+							<?php if ( ! empty( $session['description'] ) ) : ?>
+								<p><?php echo esc_html( $session['description'] ); ?></p>
+							<?php endif; ?>
+						</div>
+						<div class="item-actions">
+							<button type="button" class="btn-edit-sm" onclick="editSession(<?php echo $session['id']; ?>)">Edit</button>
+							<button type="button" class="btn-delete-sm" onclick="deleteSession(<?php echo $session['id']; ?>)">Delete</button>
+						</div>
+					</div>
+				<?php
+					endforeach;
+				}
+				?>
+			</div>
+			
+			<button type="button" class="btn-add-item" onclick="showSessionForm()">+ Add New Session</button>
+			
+			<!-- Add/Edit Form -->
+			<div id="session-form" style="display:none; margin-top:20px; padding:20px; background:#f9f9f9; border-radius:8px;">
+				<h3 id="session-form-title">Add New Session</h3>
+				<input type="hidden" id="session-id" value="0">
+				<div class="form-row">
+					<div class="form-group half">
+						<label>Session Name *</label>
+						<input type="text" id="session-name" placeholder="e.g., Week 1 - Adventure">
+					</div>
+					<div class="form-group half">
+						<label>Price *</label>
+						<input type="number" id="session-price" step="0.01" min="0" placeholder="0.00">
+					</div>
+				</div>
+				<div class="form-row">
+					<div class="form-group half">
+						<label>Start Date *</label>
+						<input type="date" id="session-start-date">
+					</div>
+					<div class="form-group half">
+						<label>End Date *</label>
+						<input type="date" id="session-end-date">
+					</div>
+				</div>
+				<div class="form-group">
+					<label>Notes</label>
+					<input type="text" id="session-notes" placeholder="Brief note">
+				</div>
+				<div class="form-group">
+					<label>Description</label>
+					<textarea id="session-description" rows="3" placeholder="Session details"></textarea>
+				</div>
+				<div style="margin-top:15px;">
+					<button type="button" class="btn-save" onclick="saveSession()">Save</button>
+					<button type="button" class="btn-cancel" onclick="cancelSessionForm()">Cancel</button>
+				</div>
+			</div>
+		</div>
+
+		<script type="text/javascript">
+		/* <![CDATA[ */
 		document.addEventListener('DOMContentLoaded', function() {
 			// File validation for photos
 			document.getElementById('photos_upload').addEventListener('change', function(e) {
@@ -1358,10 +1823,12 @@ class Camp_Dashboard {
 				for (let i = 0; i < files.length; i++) {
 					const file = files[i];
 					// Check file type
-					if (!file.type.match('image/jpeg') && !file.type.match('image/jpg')) {
-						alert('Photos must be in JPG or JPEG format only.');
-						this.value = '';
-						return;
+					if (!file.type.match('image/jpeg')) {
+						if (!file.type.match('image/jpg')) {
+							alert('Photos must be in JPG or JPEG format only.');
+							this.value = '';
+							return;
+						}
 					}
 					totalSize += file.size;
 				}
@@ -1396,9 +1863,11 @@ class Camp_Dashboard {
 				}
 			});
 		});
+		/* ]]> */
 		</script>
 
-			<script>
+			<script type="text/javascript">
+			/* <![CDATA[ */
 			document.addEventListener('DOMContentLoaded', function() {
 				const form = document.querySelector('.camp-edit-form');
 				
@@ -1406,20 +1875,28 @@ class Camp_Dashboard {
 					// Check if files are being uploaded
 					const photosUpload = document.getElementById('photos_upload');
 					const logoUpload = document.getElementById('logo_upload');
-					const hasFiles = (photosUpload && photosUpload.files.length > 0) || (logoUpload && logoUpload.files.length > 0);
+					let hasPhotos = false;
+					let hasLogo = false;
+					if (photosUpload) {
+						if (photosUpload.files.length > 0) hasPhotos = true;
+					}
+					if (logoUpload) {
+						if (logoUpload.files.length > 0) hasLogo = true;
+					}
+					const hasFiles = hasPhotos || hasLogo;
 					
 					// Check required text fields
+					const missingFields = [];
 					const requiredFields = form.querySelectorAll('[required]');
-					let missingFields = [];
-					
-					requiredFields.forEach(function(field) {
-						if (!field.value.trim()) {
-							missingFields.push(field.previousElementSibling.textContent.replace('*', '').trim());
-						}
-					});
+						
+						requiredFields.forEach(function(field) {
+							if (!field.value.trim()) {
+								missingFields.push(field.previousElementSibling.textContent.replace('*', '').trim());
+							}
+						});
 
-					// Check camp types (at least one)
-					const campTypes = form.querySelectorAll('input[name="camp_types[]"]:checked');
+						// Check camp types (at least one)
+						const campTypes = form.querySelectorAll('input[name="camp_types[]"]:checked');
 					if (campTypes.length === 0) {
 						missingFields.push('Camp Types (select at least one)');
 					}
@@ -1429,8 +1906,6 @@ class Camp_Dashboard {
 					if (campWeeks.length === 0) {
 						missingFields.push('Available Weeks (select at least one)');
 					}
-
-					// Check activities (at least one)
 					const activitiesHidden = document.getElementById('activities-hidden');
 					if (!activitiesHidden.value.trim()) {
 						missingFields.push('Activities Offered (add at least one)');
@@ -1446,14 +1921,66 @@ class Camp_Dashboard {
 					if (hasFiles) {
 						const overlay = document.createElement('div');
 						overlay.id = 'upload-overlay';
-						overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;';
-						overlay.innerHTML = '<div style="background:white;padding:40px 60px;border-radius:8px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.3);max-width:500px;"><div style="font-size:18px;font-weight:600;color:#333;margin-bottom:15px;">Uploading Files...</div><div style="width:100%;height:4px;background:#e0e0e0;border-radius:2px;overflow:hidden;"><div style="width:100%;height:100%;background:#497C5E;animation:loading 1.5s ease-in-out infinite;"></div></div><style>@keyframes loading{0%{transform:translateX(-100%)}50%{transform:translateX(0)}100%{transform:translateX(100%)}}</style><div style="margin-top:15px;font-size:14px;color:#666;">Please wait while your files are being uploaded...<br>This might take a few minutes.</div></div>';
+						overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;';
+						
+						const box = document.createElement('div');
+						box.style.cssText = 'background:white;padding:50px 70px;border-radius:12px;text-align:center;box-shadow:0 8px 30px rgba(0,0,0,0.4);max-width:600px;';
+						
+						const title = document.createElement('div');
+						title.style.cssText = 'font-size:24px;font-weight:700;color:#497C5E;margin-bottom:20px;';
+						title.textContent = 'Uploading Files...';
+						
+						const barContainer = document.createElement('div');
+						barContainer.style.cssText = 'width:100%;height:8px;background:#e0e0e0;border-radius:4px;overflow:hidden;margin-bottom:20px;';
+						
+						const progressBar = document.createElement('div');
+						progressBar.id = 'upload-progress-bar';
+						progressBar.style.cssText = 'width:0%;height:100%;background:#497C5E;transition:width 0.3s ease;';
+						barContainer.appendChild(progressBar);
+						
+						const progressText = document.createElement('div');
+						progressText.id = 'upload-percentage';
+						progressText.style.cssText = 'font-size:32px;font-weight:700;color:#497C5E;margin-bottom:15px;';
+						progressText.textContent = '0%';
+						
+						const warning = document.createElement('div');
+						warning.style.cssText = 'font-size:16px;color:#333;font-weight:600;margin-bottom:10px;';
+						warning.textContent = 'Please Keep This Window Open';
+						
+						const details = document.createElement('div');
+						details.style.cssText = 'font-size:14px;color:#666;line-height:1.6;';
+						details.textContent = 'Your photos are being uploaded. This might take a few minutes depending on file sizes. Do not close or refresh this page.';
+						
+						box.appendChild(title);
+						box.appendChild(barContainer);
+						box.appendChild(progressText);
+						box.appendChild(warning);
+						box.appendChild(details);
+						overlay.appendChild(box);
 						document.body.appendChild(overlay);
+						
+						// Simulate upload progress
+						let progress = 0;
+						const progressInterval = setInterval(function() {
+							if (progress < 90) {
+								progress += Math.random() * 15;
+								if (progress > 90) progress = 90;
+								progressBar.style.width = progress + '%';
+								progressText.textContent = Math.round(progress) + '%';
+							}
+						}, 500);
 					}
 				});
 			});
+			/* ]]> */
 			</script>
+
+			<!-- Submit Button -->
+			<div class="form-section" style="text-align: center; padding: 40px 0 20px; border: none; background: transparent; box-shadow: none;">
+				<button type="submit" class="btn-submit">Save All Changes</button>
+			</div>
 		</form>
+	</div>
 		
 		<script>
 		// Photo removal functionality
@@ -1473,8 +2000,673 @@ class Camp_Dashboard {
 				});
 			});
 		});
+
+		//  ===========================================
+		// AJAX FUNCTIONS FOR ACCOMMODATIONS
+		// ===========================================
+		function showAccommodationForm() {
+			document.getElementById('accommodation-form').style.display = 'block';
+			document.getElementById('accommodation-form-title').textContent = 'Add New Facility';
+			document.getElementById('accommodation-id').value = '0';
+			document.getElementById('accommodation-name').value = '';
+			document.getElementById('accommodation-capacity').value = '';
+			document.getElementById('accommodation-description').value = '';
+		}
+
+		function cancelAccommodationForm() {
+			document.getElementById('accommodation-form').style.display = 'none';
+		}
+
+		function saveAccommodation() {
+			const id = document.getElementById('accommodation-id').value;
+			const name = document.getElementById('accommodation-name').value.trim();
+			const capacity = document.getElementById('accommodation-capacity').value;
+			const description = document.getElementById('accommodation-description').value.trim();
+
+			if (!name || !capacity) {
+				alert('Please fill in all required fields');
+				return;
+			}
+
+			const formData = new FormData();
+			formData.append('action', 'camp_save_accommodation');
+			formData.append('nonce', '<?php echo wp_create_nonce( 'camp_ajax_nonce' ); ?>');
+			formData.append('id', id);
+			formData.append('name', name);
+			formData.append('capacity', capacity);
+			formData.append('description', description);
+
+			fetch('<?php echo admin_url( 'admin-ajax.php' ); ?>', {
+				method: 'POST',
+				body: formData
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					location.reload(); // Reload to show the new item
+				} else {
+					alert('Error: ' + (data.message || 'Failed to save'));
+				}
+			})
+			.catch(error => {
+				alert('Error: ' + error.message);
+			});
+		}
+
+		function editAccommodation(id) {
+			// Fetch the accommodation data and populate the form
+			const formData = new FormData();
+			formData.append('action', 'camp_get_accommodation');
+			formData.append('nonce', '<?php echo wp_create_nonce( 'camp_ajax_nonce' ); ?>');
+			formData.append('id', id);
+
+			fetch('<?php echo admin_url( 'admin-ajax.php' ); ?>', {
+				method: 'POST',
+				body: formData
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					document.getElementById('accommodation-form').style.display = 'block';
+					document.getElementById('accommodation-form-title').textContent = 'Edit Facility';
+					document.getElementById('accommodation-id').value = data.data.id;
+					document.getElementById('accommodation-name').value = data.data.name;
+					document.getElementById('accommodation-capacity').value = data.data.capacity;
+					document.getElementById('accommodation-description').value = data.data.description || '';
+				}
+			});
+		}
+
+		function deleteAccommodation(id) {
+			if (!confirm('Are you sure you want to delete this facility?')) return;
+
+			const formData = new FormData();
+			formData.append('action', 'camp_delete_accommodation');
+			formData.append('nonce', '<?php echo wp_create_nonce( 'camp_ajax_nonce' ); ?>');
+			formData.append('id', id);
+
+			fetch('<?php echo admin_url( 'admin-ajax.php' ); ?>', {
+				method: 'POST',
+				body: formData
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					location.reload();
+				} else {
+					alert('Error: ' + (data.message || 'Failed to delete'));
+				}
+			});
+		}
+
+		// ===========================================
+		// AJAX FUNCTIONS FOR FAQs
+		// ===========================================
+		function showFaqForm() {
+			document.getElementById('faq-form').style.display = 'block';
+			document.getElementById('faq-form-title').textContent = 'Add New FAQ';
+			document.getElementById('faq-id').value = '0';
+			document.getElementById('faq-question').value = '';
+			document.getElementById('faq-answer').value = '';
+		}
+
+		function cancelFaqForm() {
+			document.getElementById('faq-form').style.display = 'none';
+		}
+
+		function saveFaq() {
+			const id = document.getElementById('faq-id').value;
+			const question = document.getElementById('faq-question').value.trim();
+			const answer = document.getElementById('faq-answer').value.trim();
+
+			if (!question || !answer) {
+				alert('Please fill in all required fields');
+				return;
+			}
+
+			const formData = new FormData();
+			formData.append('action', 'camp_save_faq');
+			formData.append('nonce', '<?php echo wp_create_nonce( 'camp_ajax_nonce' ); ?>');
+			formData.append('id', id);
+			formData.append('question', question);
+			formData.append('answer', answer);
+
+			fetch('<?php echo admin_url( 'admin-ajax.php' ); ?>', {
+				method: 'POST',
+				body: formData
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					location.reload();
+				} else {
+					alert('Error: ' + (data.message || 'Failed to save'));
+				}
+			});
+		}
+
+		function editFaq(id) {
+			const formData = new FormData();
+			formData.append('action', 'camp_get_faq');
+			formData.append('nonce', '<?php echo wp_create_nonce( 'camp_ajax_nonce' ); ?>');
+			formData.append('id', id);
+
+			fetch('<?php echo admin_url( 'admin-ajax.php' ); ?>', {
+				method: 'POST',
+				body: formData
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					document.getElementById('faq-form').style.display = 'block';
+					document.getElementById('faq-form-title').textContent = 'Edit FAQ';
+					document.getElementById('faq-id').value = data.data.id;
+					document.getElementById('faq-question').value = data.data.question;
+					document.getElementById('faq-answer').value = data.data.answer || '';
+				}
+			});
+		}
+
+		function deleteFaq(id) {
+			if (!confirm('Are you sure you want to delete this FAQ?')) return;
+
+			const formData = new FormData();
+			formData.append('action', 'camp_delete_faq');
+			formData.append('nonce', '<?php echo wp_create_nonce( 'camp_ajax_nonce' ); ?>');
+			formData.append('id', id);
+
+			fetch('<?php echo admin_url( 'admin-ajax.php' ); ?>', {
+				method: 'POST',
+				body: formData
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					location.reload();
+				} else {
+					alert('Error: ' + (data.message || 'Failed to delete'));
+				}
+			});
+		}
+
+		// ===========================================
+		// AJAX FUNCTIONS FOR SESSIONS
+		// ===========================================
+		function showSessionForm() {
+			document.getElementById('session-form').style.display = 'block';
+			document.getElementById('session-form-title').textContent = 'Add New Session';
+			document.getElementById('session-id').value = '0';
+			document.getElementById('session-name').value = '';
+			document.getElementById('session-price').value = '';
+			document.getElementById('session-start-date').value = '';
+			document.getElementById('session-end-date').value = '';
+			document.getElementById('session-notes').value = '';
+			document.getElementById('session-description').value = '';
+		}
+
+		function cancelSessionForm() {
+			document.getElementById('session-form').style.display = 'none';
+		}
+
+		function saveSession() {
+			const id = document.getElementById('session-id').value;
+			const name = document.getElementById('session-name').value.trim();
+			const price = document.getElementById('session-price').value;
+			const startDate = document.getElementById('session-start-date').value;
+			const endDate = document.getElementById('session-end-date').value;
+			const notes = document.getElementById('session-notes').value.trim();
+			const description = document.getElementById('session-description').value.trim();
+
+			if (!name || !price || !startDate || !endDate) {
+				alert('Please fill in all required fields');
+				return;
+			}
+
+			const formData = new FormData();
+			formData.append('action', 'camp_save_session');
+			formData.append('nonce', '<?php echo wp_create_nonce( 'camp_ajax_nonce' ); ?>');
+			formData.append('id', id);
+			formData.append('session_name', name);
+			formData.append('price', price);
+			formData.append('start_date', startDate);
+			formData.append('end_date', endDate);
+			formData.append('notes', notes);
+			formData.append('description', description);
+
+			fetch('<?php echo admin_url( 'admin-ajax.php' ); ?>', {
+				method: 'POST',
+				body: formData
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					location.reload();
+				} else {
+					alert('Error: ' + (data.message || 'Failed to save'));
+				}
+			});
+		}
+
+		function editSession(id) {
+			const formData = new FormData();
+			formData.append('action', 'camp_get_session');
+			formData.append('nonce', '<?php echo wp_create_nonce( 'camp_ajax_nonce' ); ?>');
+			formData.append('id', id);
+
+			fetch('<?php echo admin_url( 'admin-ajax.php' ); ?>', {
+				method: 'POST',
+				body: formData
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					document.getElementById('session-form').style.display = 'block';
+					document.getElementById('session-form-title').textContent = 'Edit Session';
+					document.getElementById('session-id').value = data.data.id;
+					document.getElementById('session-name').value = data.data.session_name;
+					document.getElementById('session-price').value = data.data.price;
+					document.getElementById('session-start-date').value = data.data.start_date;
+					document.getElementById('session-end-date').value = data.data.end_date;
+					document.getElementById('session-notes').value = data.data.notes || '';
+					document.getElementById('session-description').value = data.data.description || '';
+				}
+			});
+		}
+
+		function deleteSession(id) {
+			if (!confirm('Are you sure you want to delete this session?')) return;
+
+			const formData = new FormData();
+			formData.append('action', 'camp_delete_session');
+			formData.append('nonce', '<?php echo wp_create_nonce( 'camp_ajax_nonce' ); ?>');
+			formData.append('id', id);
+
+			fetch('<?php echo admin_url( 'admin-ajax.php' ); ?>', {
+				method: 'POST',
+				body: formData
+			})
+			.then(response => response.json())
+			.then(data => {
+				if (data.success) {
+					location.reload();
+				} else {
+					alert('Error: ' + (data.message || 'Failed to delete'));
+				}
+			});
+		}
+		/* ]]> */
 		</script>
+
+		<style>
+		.ajax-list {
+			margin: 20px 0;
+		}
+		.list-item {
+			background: #fff;
+			border: 1px solid #ddd;
+			border-radius: 8px;
+			padding: 15px;
+			margin-bottom: 15px;
+			display: flex;
+			justify-content: space-between;
+			align-items: flex-start;
+		}
+		.item-content {
+			flex: 1;
+		}
+		.item-content strong {
+			display: block;
+			font-size: 16px;
+			margin-bottom: 5px;
+			color: #333;
+		}
+		.item-meta {
+			display: block;
+			font-size: 14px;
+			color: #666;
+			margin-bottom: 8px;
+		}
+		.item-content p {
+			margin: 5px 0;
+			color: #555;
+			font-size: 14px;
+		}
+		.item-actions {
+			display: flex;
+			gap: 10px;
+		}
+		.btn-edit-sm, .btn-delete-sm {
+			padding: 6px 12px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 13px;
+			font-weight: 500;
+		}
+		.btn-edit-sm {
+			background: #497C5E;
+			color: white;
+		}
+		.btn-edit-sm:hover {
+			background: #3d6a4f;
+		}
+		.btn-delete-sm {
+			background: #dc3545;
+			color: white;
+		}
+		.btn-delete-sm:hover {
+			background: #c82333;
+		}
+		.btn-save, .btn-cancel {
+			padding: 10px 20px;
+			border: none;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 14px;
+			font-weight: 600;
+			margin-right: 10px;
+		}
+		.btn-save {
+			background: #497C5E;
+			color: white;
+		}
+		.btn-save:hover {
+			background: #3d6a4f;
+		}
+		.btn-cancel {
+			background: #6c757d;
+			color: white;
+		}
+		.btn-cancel:hover {
+			background: #5a6268;
+		}
+		.no-items {
+			color: #999;
+			font-style: italic;
+			padding: 20px;
+			text-align: center;
+		}
+		.btn-add-item {
+			background: #497C5E;
+			color: white;
+			border: none;
+			padding: 12px 24px;
+			border-radius: 4px;
+			cursor: pointer;
+			font-size: 15px;
+			font-weight: 600;
+		}
+		.btn-add-item:hover {
+			background: #3d6a4f;
+		}
+		.btn-add-item:disabled {
+			background: #ccc;
+			cursor: not-allowed;
+		}
+		</style>
 
 		<?php
 	}
+
+	// ===========================================
+	// AJAX HANDLERS FOR ACCOMMODATIONS
+	// ===========================================
+	
+	public function ajax_save_accommodation() {
+		check_ajax_referer( 'camp_ajax_nonce', 'nonce' );
+		
+		$user = wp_get_current_user();
+		if ( ! in_array( 'camp', $user->roles ) ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
+		}
+
+		// Get camp_id for current user
+		global $wpdb;
+		$camp_id = $wpdb->get_var( $wpdb->prepare(
+			"SELECT id FROM {$wpdb->prefix}camp_management WHERE user_id = %d",
+			$user->ID
+		) );
+
+		if ( ! $camp_id ) {
+			wp_send_json_error( array( 'message' => 'Camp not found' ) );
+		}
+
+		$id = intval( $_POST['id'] );
+		$name = sanitize_text_field( $_POST['name'] );
+		$capacity = intval( $_POST['capacity'] );
+		$description = sanitize_textarea_field( $_POST['description'] );
+
+		$table = \CreativeDBS\CampMgmt\DB::table_accommodations();
+		
+		if ( $id > 0 ) {
+			// Update
+			$wpdb->update(
+				$table,
+				array(
+					'name' => $name,
+					'capacity' => $capacity,
+					'description' => $description,
+				),
+				array( 'id' => $id, 'camp_id' => $camp_id )
+			);
+		} else {
+			// Insert
+			$wpdb->insert(
+				$table,
+				array(
+					'camp_id' => $camp_id,
+					'name' => $name,
+					'capacity' => $capacity,
+					'description' => $description,
+					'sort_order' => 0,
+				)
+			);
+		}
+
+		wp_send_json_success();
+	}
+
+	public function ajax_get_accommodation() {
+		check_ajax_referer( 'camp_ajax_nonce', 'nonce' );
+		
+		global $wpdb;
+		$id = intval( $_POST['id'] );
+		
+		$accommodation = $wpdb->get_row( $wpdb->prepare(
+			"SELECT * FROM " . \CreativeDBS\CampMgmt\DB::table_accommodations() . " WHERE id = %d",
+			$id
+		), ARRAY_A );
+
+		if ( $accommodation ) {
+			wp_send_json_success( $accommodation );
+		} else {
+			wp_send_json_error( array( 'message' => 'Not found' ) );
+		}
+	}
+
+	public function ajax_delete_accommodation() {
+		check_ajax_referer( 'camp_ajax_nonce', 'nonce' );
+		
+		global $wpdb;
+		$id = intval( $_POST['id'] );
+		
+		$wpdb->delete( \CreativeDBS\CampMgmt\DB::table_accommodations(), array( 'id' => $id ) );
+		
+		wp_send_json_success();
+	}
+
+	// ===========================================
+	// AJAX HANDLERS FOR FAQs
+	// ===========================================
+	
+	public function ajax_save_faq() {
+		check_ajax_referer( 'camp_ajax_nonce', 'nonce' );
+		
+		$user = wp_get_current_user();
+		if ( ! in_array( 'camp', $user->roles ) ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
+		}
+
+		global $wpdb;
+		$camp_id = $wpdb->get_var( $wpdb->prepare(
+			"SELECT id FROM {$wpdb->prefix}camp_management WHERE user_id = %d",
+			$user->ID
+		) );
+
+		if ( ! $camp_id ) {
+			wp_send_json_error( array( 'message' => 'Camp not found' ) );
+		}
+
+		$id = intval( $_POST['id'] );
+		$question = sanitize_text_field( $_POST['question'] );
+		$answer = sanitize_textarea_field( $_POST['answer'] );
+
+		$table = \CreativeDBS\CampMgmt\DB::table_faqs();
+		
+		if ( $id > 0 ) {
+			$wpdb->update(
+				$table,
+				array(
+					'question' => $question,
+					'answer' => $answer,
+				),
+				array( 'id' => $id, 'camp_id' => $camp_id )
+			);
+		} else {
+			$wpdb->insert(
+				$table,
+				array(
+					'camp_id' => $camp_id,
+					'question' => $question,
+					'answer' => $answer,
+					'sort_order' => 0,
+				)
+			);
+		}
+
+		wp_send_json_success();
+	}
+
+	public function ajax_get_faq() {
+		check_ajax_referer( 'camp_ajax_nonce', 'nonce' );
+		
+		global $wpdb;
+		$id = intval( $_POST['id'] );
+		
+		$faq = $wpdb->get_row( $wpdb->prepare(
+			"SELECT * FROM " . \CreativeDBS\CampMgmt\DB::table_faqs() . " WHERE id = %d",
+			$id
+		), ARRAY_A );
+
+		if ( $faq ) {
+			wp_send_json_success( $faq );
+		} else {
+			wp_send_json_error( array( 'message' => 'Not found' ) );
+		}
+	}
+
+	public function ajax_delete_faq() {
+		check_ajax_referer( 'camp_ajax_nonce', 'nonce' );
+		
+		global $wpdb;
+		$id = intval( $_POST['id'] );
+		
+		$wpdb->delete( \CreativeDBS\CampMgmt\DB::table_faqs(), array( 'id' => $id ) );
+		
+		wp_send_json_success();
+	}
+
+	// ===========================================
+	// AJAX HANDLERS FOR SESSIONS
+	// ===========================================
+	
+	public function ajax_save_session() {
+		check_ajax_referer( 'camp_ajax_nonce', 'nonce' );
+		
+		$user = wp_get_current_user();
+		if ( ! in_array( 'camp', $user->roles ) ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized' ) );
+		}
+
+		global $wpdb;
+		$camp_id = $wpdb->get_var( $wpdb->prepare(
+			"SELECT id FROM {$wpdb->prefix}camp_management WHERE user_id = %d",
+			$user->ID
+		) );
+
+		if ( ! $camp_id ) {
+			wp_send_json_error( array( 'message' => 'Camp not found' ) );
+		}
+
+		$id = intval( $_POST['id'] );
+		$session_name = sanitize_text_field( $_POST['session_name'] );
+		$price = floatval( $_POST['price'] );
+		$start_date = sanitize_text_field( $_POST['start_date'] );
+		$end_date = sanitize_text_field( $_POST['end_date'] );
+		$notes = sanitize_text_field( $_POST['notes'] );
+		$description = sanitize_textarea_field( $_POST['description'] );
+
+		$table = \CreativeDBS\CampMgmt\DB::table_sessions();
+		
+		if ( $id > 0 ) {
+			$wpdb->update(
+				$table,
+				array(
+					'session_name' => $session_name,
+					'price' => $price,
+					'start_date' => $start_date,
+					'end_date' => $end_date,
+					'notes' => $notes,
+					'description' => $description,
+				),
+				array( 'id' => $id, 'camp_id' => $camp_id )
+			);
+		} else {
+			$wpdb->insert(
+				$table,
+				array(
+					'camp_id' => $camp_id,
+					'session_name' => $session_name,
+					'price' => $price,
+					'start_date' => $start_date,
+					'end_date' => $end_date,
+					'notes' => $notes,
+					'description' => $description,
+					'sort_order' => 0,
+				)
+			);
+		}
+
+		wp_send_json_success();
+	}
+
+	public function ajax_get_session() {
+		check_ajax_referer( 'camp_ajax_nonce', 'nonce' );
+		
+		global $wpdb;
+		$id = intval( $_POST['id'] );
+		
+		$session = $wpdb->get_row( $wpdb->prepare(
+			"SELECT * FROM " . \CreativeDBS\CampMgmt\DB::table_sessions() . " WHERE id = %d",
+			$id
+		), ARRAY_A );
+
+		if ( $session ) {
+			wp_send_json_success( $session );
+		} else {
+			wp_send_json_error( array( 'message' => 'Not found' ) );
+		}
+	}
+
+	public function ajax_delete_session() {
+		check_ajax_referer( 'camp_ajax_nonce', 'nonce' );
+		
+		global $wpdb;
+		$id = intval( $_POST['id'] );
+		
+		$wpdb->delete( \CreativeDBS\CampMgmt\DB::table_sessions(), array( 'id' => $id ) );
+		
+		wp_send_json_success();
+	}
+
 }

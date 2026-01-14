@@ -1,5 +1,38 @@
 # Changelog
 
+## v2.6.0 (2026-01-14) - AJAX Rebuild & Upload Overlay
+
+### Major Changes
+- **Complete AJAX Rebuild**: Replaced broken POST-based save system for Accommodations, FAQs, and Sessions modules
+- **Upload Progress Overlay**: Added visual feedback during photo/logo uploads with animated progress bar
+- **Independent Module Saves**: Each module (Accommodations, FAQs, Sessions) now saves independently via AJAX without page refresh
+
+### Technical Improvements
+- Converted all three dashboard modules to AJAX architecture using wp_ajax_ hooks
+- Implemented 9 new AJAX endpoints (save/get/delete for each module)
+- Fixed namespace issues: Updated all database calls to use `\CreativeDBS\CampMgmt\DB::`
+- Replaced innerHTML-based overlay with DOM createElement methods to eliminate syntax errors
+- Removed form validation conflicts by removing `required` attributes from AJAX-managed fields
+
+### Bug Fixes
+- **Critical**: Fixed data deletion bug where "Save All Changes" would delete all Accommodations, FAQs, and Sessions records
+- Fixed JavaScript syntax errors caused by emoji characters (⏳, ⚠️) in inline scripts
+- Fixed special character encoding issues (× replaced with &times; HTML entity)
+- Fixed missing if statement in camp types validation
+- Fixed form auto-close issues caused by `<script>` tags inside `<form>` elements
+
+### UI/UX Enhancements
+- Enhanced "Save All Changes" button styling (full width, custom font, green background)
+- Cleaned up Photos section (removed duplicate nested boxes)
+- Fixed photo display consistency (200px height, object-fit: cover, fills container properly)
+- Updated dashboard padding to 0px for cleaner edge-to-edge layout
+- Added animated progress bar overlay (0-90%) during file uploads with clear warnings
+
+### Database
+- Commented out old POST-based handlers for Accommodations, FAQs, and Sessions to prevent data loss
+- All AJAX operations use proper nonce validation and user role checks
+- Database operations maintain backward compatibility
+
 ## v2.5.0 (2025-12-04)
 - Added custom login, lost password, and reset password templates for Astra theme
 - Integrated full site design for authentication pages
