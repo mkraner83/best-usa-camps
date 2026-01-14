@@ -2,14 +2,14 @@
 /*
 Plugin Name: CreativeDBS Camp Management
 Description: Ultimate US Summer Camp Management Application.
-Version: 2.7.1
+Version: 2.6.9
 Author: CreativeDBS
 Text Domain: creativedbs-camp-mgmt
 Requires at least: 5.8
 Requires PHP: 7.4
 */
 
-define('CDBS_CAMP_VERSION', '2.7.1');
+define('CDBS_CAMP_VERSION', '2.6.9');
 
 defined( 'ABSPATH' ) || exit;
 
@@ -607,6 +607,18 @@ class CreativeDBS_Camp_Management {
                             </td>
                         </tr>
 
+                        <tr><th><?php esc_html_e('Camp Rating (0-5 stars)'); ?></th>
+                            <td>
+                                <select name="rating">
+                                    <?php for ( $i = 0; $i <= 5; $i++ ) : ?>
+                                        <option value="<?php echo $i; ?>" <?php selected( floatval( $camp->rating ?? 0 ), $i ); ?>>
+                                            <?php echo $i; ?> <?php echo $i == 1 ? 'Star' : 'Stars'; ?>
+                                        </option>
+                                    <?php endfor; ?>
+                                </select>
+                                <p class="description">This rating will be displayed on the public camp page</p>
+                            </td>
+                        </tr>
 
                         <tr><th><?php esc_html_e('Camp Rating (0-5 stars)'); ?></th>
                             <td>

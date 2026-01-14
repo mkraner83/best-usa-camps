@@ -21,7 +21,6 @@ class Camp_Frontend {
 		add_shortcode( 'camp_subtitle', [ $this, 'render_subtitle' ] );
 		add_shortcode( 'camp_contact_bar', [ $this, 'render_contact_bar' ] );
 		add_shortcode( 'camp_rating', [ $this, 'render_rating' ] );
-		add_shortcode( 'camp_photo_carousel', [ $this, 'render_photo_carousel' ] );
 		
 		// Content shortcodes
 		add_shortcode( 'camp_description', [ $this, 'render_description' ] );
@@ -189,28 +188,28 @@ class Camp_Frontend {
 		<div class="camp-contact-bar<?php echo $custom_class; ?>">
 			<?php if ( ! empty( $camp['address'] ) ) : ?>
 				<div class="contact-item">
-					<span class="contact-icon">📍</span>
+					<i aria-hidden="true" class="icon icon-map-marker"></i>
 					<span class="contact-text"><?php echo esc_html( $camp['address'] . ', ' . $camp['city'] . ', ' . $camp['state'] . ' ' . $camp['zip'] ); ?></span>
 				</div>
 			<?php endif; ?>
 			
 			<?php if ( ! empty( $camp['email'] ) ) : ?>
 				<div class="contact-item">
-					<span class="contact-icon">✉️</span>
+					<i aria-hidden="true" class="icon icon-envelope2"></i>
 					<a href="mailto:<?php echo esc_attr( $camp['email'] ); ?>" class="contact-text"><?php echo esc_html( $camp['email'] ); ?></a>
 				</div>
 			<?php endif; ?>
 			
 			<?php if ( ! empty( $camp['phone'] ) ) : ?>
 				<div class="contact-item">
-					<span class="contact-icon">📞</span>
+					<i aria-hidden="true" class="icon icon-phone-handset"></i>
 					<a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9]/', '', $camp['phone'] ) ); ?>" class="contact-text"><?php echo esc_html( $camp['phone'] ); ?></a>
 				</div>
 			<?php endif; ?>
 			
 			<?php if ( ! empty( $camp['website'] ) ) : ?>
 				<div class="contact-item">
-					<span class="contact-icon">🔗</span>
+					<i aria-hidden="true" class="icon icon-phone-handset"></i>
 					<a href="<?php echo esc_url( $camp['website'] ); ?>" target="_blank" rel="noopener" class="contact-text">Website</a>
 				</div>
 			<?php endif; ?>
@@ -245,107 +244,6 @@ class Camp_Frontend {
 				<?php endfor; ?>
 			</div>
 		</div>
-		<?php
-		return ob_get_clean();
-	}
-
-	/**
-	 * Render photo carousel
-	 */
-	public function render_photo_carousel( $atts ) {
-		$atts = shortcode_atts( [
-			'class' => '',
-			'height' => '500px',
-		], $atts );
-		
-		$camp = $this->get_camp_data();
-		if ( ! $camp || empty( $camp['photos'] ) ) {
-			return '';
-		}
-		
-		$photos = array_filter( array_map( 'trim', explode( ',', $camp['photos'] ) ) );
-		if ( empty( $photos ) ) {
-			return '';
-		}
-		
-		$custom_class = ! empty( $atts['class'] ) ? ' ' . esc_attr( $atts['class'] ) : '';
-		$height = esc_attr( $atts['height'] );
-		
-		ob_start();
-		?>
-		<div class="camp-photo-carousel<?php echo $custom_class; ?>" style="height: <?php echo $height; ?>;">
-			<div class="carousel-track">
-				<?php foreach ( $photos as $index => $photo_url ) : ?>
-					<div class="carousel-slide <?php echo $index === 0 ? 'active' : ''; ?>" data-index="<?php echo $index; ?>">
-						<img src="<?php echo esc_url( $photo_url ); ?>" alt="<?php echo esc_attr( $camp['camp_name'] ); ?> Photo <?php echo $index + 1; ?>" loading="lazy">
-					</div>
-				<?php endforeach; ?>
-			</div>
-			
-			<?php if ( count( $photos ) > 1 ) : ?>
-				<button class="carousel-prev" aria-label="Previous">❮</button>
-				<button class="carousel-next" aria-label="Next">❯</button>
-				
-				<div class="carousel-dots">
-					<?php foreach ( $photos as $index => $photo_url ) : ?>
-						<span class="carousel-dot <?php echo $index === 0 ? 'active' : ''; ?>" data-index="<?php echo $index; ?>"></span>
-					<?php endforeach; ?>
-				</div>
-			<?php endif; ?>
-		</div>
-		
-		<script>
-		(function() {
-			const carousel = document.querySelector('.camp-photo-carousel');
-			if (!carousel) return;
-			
-			const slides = carousel.querySelectorAll('.carousel-slide');
-			const dots = carousel.querySelectorAll('.carousel-dot');
-			const prevBtn = carousel.querySelector('.carousel-prev');
-			const nextBtn = carousel.querySelector('.carousel-next');
-			let currentIndex = 0;
-			
-			function showSlide(index) {
-				slides.forEach(s => s.classList.remove('active'));
-				dots.forEach(d => d.classList.remove('active'));
-				
-				if (slides[index]) {
-					slides[index].classList.add('active');
-					if (dots[index]) dots[index].classList.add('active');
-					currentIndex = index;
-				}
-			}
-			
-			if (prevBtn) {
-				prevBtn.addEventListener('click', function() {
-					let newIndex = currentIndex - 1;
-					if (newIndex < 0) newIndex = slides.length - 1;
-					showSlide(newIndex);
-				});
-			}
-			
-			if (nextBtn) {
-				nextBtn.addEventListener('click', function() {
-					let newIndex = currentIndex + 1;
-					if (newIndex >= slides.length) newIndex = 0;
-					showSlide(newIndex);
-				});
-			}
-			
-			dots.forEach(dot => {
-				dot.addEventListener('click', function() {
-					showSlide(parseInt(this.dataset.index));
-				});
-			});
-			
-			// Auto-advance every 5 seconds
-			setInterval(function() {
-				let newIndex = currentIndex + 1;
-				if (newIndex >= slides.length) newIndex = 0;
-				showSlide(newIndex);
-			}, 5000);
-		})();
-		</script>
 		<?php
 		return ob_get_clean();
 	}

@@ -1327,6 +1327,26 @@ class Camp_Dashboard {
 					</div>
 					</div>
 
+					<div class="form-row">
+					<div class="form-group">
+						<label>Camp Rating (0-5 stars)</label>
+						<div class="rating-selector">
+							<?php
+							$current_rating = isset( $camp['rating'] ) ? floatval( $camp['rating'] ) : 0;
+							for ( $i = 0; $i <= 5; $i++ ) :
+								$checked = ( $current_rating == $i ) ? 'checked' : '';
+								?>
+								<label class="rating-option">
+									<input type="radio" name="rating" value="<?php echo $i; ?>" <?php echo $checked; ?>>
+									<span class="rating-label"><?php echo $i; ?> <?php echo $i == 1 ? 'Star' : 'Stars'; ?></span>
+								</label>
+							<?php endfor; ?>
+						</div>
+						<p class="field-note">This rating will be displayed on your public camp page</p>
+					</div>
+					</div>
+				</div>
+
 				<div class="form-section" id="contact-info">
 					<h2 class="section-title">Contact Information</h2>
 					
