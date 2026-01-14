@@ -374,7 +374,7 @@ class Camp_Dashboard {
 	public function render_dashboard_navi( $atts ) {
 		ob_start();
 		?>
-		<nav class="dashboard-sidenav-container">
+		<nav class="dashboard-sidenav-container" id="camp-sidenav">
 			<div class="sidenav-header">Camp Sections</div>
 			<div class="sidenav-links">
 				<a href="#basic-info" class="sidenav-link">Basic Information</a>
@@ -392,8 +392,34 @@ class Camp_Dashboard {
 		</nav>
 		<script>
 		document.addEventListener('DOMContentLoaded', function() {
+			const nav = document.getElementById('camp-sidenav');
 			const navLinks = document.querySelectorAll('.sidenav-link');
 			const offset = 80;
+			
+			// Make navigation sticky on scroll (desktop only)
+			function handleStickyNav() {
+				if (window.innerWidth <= 768) {
+					nav.classList.remove('is-sticky');
+					return;
+				}
+				
+				const navContainer = nav.parentElement;
+				const navTop = navContainer.getBoundingClientRect().top + window.pageYOffset;
+				const scrollTop = window.pageYOffset;
+				
+				if (scrollTop > navTop - 100) {
+					nav.classList.add('is-sticky');
+				} else {
+					nav.classList.remove('is-sticky');
+				}
+			}
+			
+			// Initial check
+			handleStickyNav();
+			
+			// Update on scroll and resize
+			window.addEventListener('scroll', handleStickyNav);
+			window.addEventListener('resize', handleStickyNav);
 			
 			// Smooth scroll with offset
 			navLinks.forEach(link => {
@@ -418,26 +444,24 @@ class Camp_Dashboard {
 			});
 			
 			// Track scroll position and update active state
-			if (window.innerWidth >= 768) {
-				window.addEventListener('scroll', function() {
-					let current = '';
-					const sections = document.querySelectorAll('.form-section[id]');
-					
-					sections.forEach(section => {
-						const sectionTop = section.offsetTop - offset - 100;
-						if (window.pageYOffset >= sectionTop) {
-							current = section.getAttribute('id');
-						}
-					});
-					
-					navLinks.forEach(link => {
-						link.classList.remove('active');
-						if (link.getAttribute('href') === '#' + current) {
-							link.classList.add('active');
-						}
-					});
+			window.addEventListener('scroll', function() {
+				let current = '';
+				const sections = document.querySelectorAll('.form-section[id]');
+				
+				sections.forEach(section => {
+					const sectionTop = section.offsetTop - offset - 100;
+					if (window.pageYOffset >= sectionTop) {
+						current = section.getAttribute('id');
+					}
 				});
-			}
+				
+				navLinks.forEach(link => {
+					link.classList.remove('active');
+					if (link.getAttribute('href') === '#' + current) {
+						link.classList.add('active');
+					}
+				});
+			});
 		});
 		</script>
 		<?php
@@ -542,6 +566,7 @@ class Camp_Dashboard {
 			'email'            => sanitize_email( $_POST['email'] ?? '' ),
 			'website'          => esc_url_raw( $_POST['website'] ?? '' ),
 			'about_camp'       => wp_kses_post( $_POST['about_camp'] ?? '' ),
+			'rating'           => floatval( $_POST['rating'] ?? 0 ),
 			'opening_day'      => sanitize_text_field( $_POST['opening_day'] ?? '' ),
 			'closing_day'      => sanitize_text_field( $_POST['closing_day'] ?? '' ),
 			'minprice_2026'    => floatval( $_POST['minprice_2026'] ?? 0 ),
@@ -553,7 +578,7 @@ class Camp_Dashboard {
 			$camp_data,
 			[ 'id' => $camp_id ],
 			[
-				'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f'
+				'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%s', '%s', '%f', '%f'
 			],
 			[ '%d' ]
 		);
@@ -1301,6 +1326,25 @@ class Camp_Dashboard {
 						<textarea id="about_camp" name="about_camp" rows="6" required><?php echo esc_textarea( $camp['about_camp'] ); ?></textarea>
 					</div>
 					</div>
+
+					<div class="form-row">
+					<div class="form-group">
+						<label>Camp Rating (0-5 stars)</label>
+						<div class="rating-selector">
+							<?php
+							$current_rating = isset( $camp['rating'] ) ? floatval( $camp['rating'] ) : 0;
+							for ( $i = 0; $i <= 5; $i++ ) :
+								$checked = ( $current_rating == $i ) ? 'checked' : '';
+								?>
+								<label class="rating-option">
+									<input type="radio" name="rating" value="<?php echo $i; ?>" <?php echo $checked; ?>>
+									<span class="rating-label"><?php echo $i; ?> <?php echo $i == 1 ? 'Star' : 'Stars'; ?></span>
+								</label>
+							<?php endfor; ?>
+						</div>
+						<p class="field-note">This rating will be displayed on your public camp page</p>
+					</div>
+					</div>
 				</div>
 
 				<div class="form-section" id="contact-info">
@@ -1566,7 +1610,7 @@ class Camp_Dashboard {
 		</div>
 
 		<!-- Logo Upload Section -->
-		<div class="form-section">
+		<div class="form-section" id="logo">
 			<h2 class="section-title">Camp Logo</h2>
 			<?php
 			// Calculate logo file size
@@ -1611,7 +1655,7 @@ class Camp_Dashboard {
 		</div>
 
 		<!-- Accommodations Section - AJAX Based -->
-		<div class="form-section" id="accommodations-section">
+		<div class="form-section" id="accommodations">
 			<h2 class="section-title">Accommodation Facilities</h2>
 			<p class="section-description">Click "Add New Facility" to add cabins and other facilities</p>
 			
@@ -1671,7 +1715,7 @@ class Camp_Dashboard {
 		</div>
 
 		<!-- FAQs Section - AJAX Based -->
-		<div class="form-section" id="faqs-section">
+		<div class="form-section" id="faqs">
 			<h2 class="section-title">Frequently Asked Questions (FAQs)</h2>
 			<p class="section-description">Add up to 12 frequently asked questions</p>
 			
@@ -1725,7 +1769,7 @@ class Camp_Dashboard {
 		</div>
 
 		<!-- Sessions Section - AJAX Based -->
-		<div class="form-section" id="sessions-section">
+		<div class="form-section" id="sessions">
 			<h2 class="section-title">Sessions (Rates & Dates)</h2>
 			<p class="section-description">Add session cards with dates, prices, and details</p>
 			

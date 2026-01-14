@@ -17,7 +17,7 @@ class Migrations_Phase7 {
         if ( ! is_admin() ) {
             return;
         }
-        if ( get_option( 'creativedbs_campmgmt_phase7_migrated' ) >= 2 ) {
+        if ( get_option( 'creativedbs_campmgmt_phase7_migrated' ) >= 3 ) {
             return;
         }
 
@@ -71,6 +71,14 @@ class Migrations_Phase7 {
             }
         }
 
-        update_option( 'creativedbs_campmgmt_phase7_migrated', 2 );
+        // 4) Add rating column to camp_management table if missing
+        $rating_col = $wpdb->get_var( $wpdb->prepare( "SHOW COLUMNS FROM {$camps} LIKE %s", 'rating' ) );
+        if ( ! $rating_col ) {
+            // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared
+            $wpdb->query( "ALTER TABLE {$camps} ADD COLUMN rating DECIMAL(2,1) DEFAULT 0.0 AFTER about_camp" );
+            error_log( 'CDBS Camp: Added rating column to camp_management table' );
+        }
+
+        update_option( 'creativedbs_campmgmt_phase7_migrated', 3 );
     }
 }

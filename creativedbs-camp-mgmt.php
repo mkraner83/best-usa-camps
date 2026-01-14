@@ -29,6 +29,7 @@ $required_files = [
     __DIR__ . '/includes/Public/class-public-controller.php',
     __DIR__ . '/includes/Public/class-camp-dashboard.php',
     __DIR__ . '/includes/Public/class-camp-signup-form.php',
+    __DIR__ . '/includes/Public/class-camp-frontend.php',
     __DIR__ . '/includes/Admin/class-admin.php',
 ];
 
