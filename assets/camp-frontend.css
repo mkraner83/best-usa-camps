@@ -4,6 +4,205 @@
  */
 
 /* ====================
+   COMBINED CAMP HEADER
+   ==================== */
+/* Force Elementor widget and container to be full width */
+.elementor-widget:has(.camp-header-wrapper) {
+	width: 100% !important;
+	max-width: 100% !important;
+}
+
+.elementor-widget-container:has(.camp-header-wrapper) {
+	padding: 0 !important;
+	width: 100% !important;
+}
+
+.camp-header-wrapper {
+	background: #343434;
+	padding: 20px 0px;
+	color: white;
+	width: 100%;
+	max-width: 100%;
+	box-sizing: border-box;
+}
+
+.camp-header-top {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 40px;
+	margin-bottom: 25px;
+}
+
+.camp-header-info {
+	flex: 1;
+}
+
+.camp-header-name {
+	font-family: "Abel", Sans-serif;
+	font-size: 42px;
+	font-weight: 700;
+	color: white;
+	margin: 0 0 8px 0;
+	line-height: 1.2;
+	text-transform: capitalize;
+	letter-spacing: 2px;
+	text-align: left;
+}
+
+.camp-header-subtitle {
+	font-family: "Lato", Sans-serif;
+	font-size: 18px;
+	color: #e0e0e0;
+	margin: 0;
+	font-weight: 400;
+	text-align: left;
+}
+
+.camp-header-logo {
+	flex-shrink: 0;
+	max-width: 200px;
+	text-align: right;
+}
+
+.camp-header-logo img {
+	max-width: 100%;
+	max-height: 100px;
+	height: auto;
+	display: block;
+	margin-left: auto;
+}
+
+.camp-header-bottom {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	gap: 30px;
+	padding-top: 15px;
+	border-top: 1px solid #555;
+}
+
+.camp-header-contact {
+	display: flex;
+	align-items: center;
+	gap: 20px;
+	flex-wrap: wrap;
+	flex: 1;
+}
+
+.camp-header-contact-item {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	font-family: "Lato", Sans-serif;
+	font-size: 12px;
+}
+
+.camp-header-contact-item i {
+	font-size: 13px;
+	color: white;
+}
+
+.camp-header-contact-item a {
+	color: white;
+	text-decoration: none;
+	transition: opacity 0.3s ease;
+}
+
+.camp-header-contact-item a:hover {
+	opacity: 0.8;
+}
+
+.camp-header-rating {
+	flex-shrink: 0;
+	text-align: right;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+}
+
+.camp-header-rating-label {
+	font-family: "Lato", Sans-serif;
+	font-size: 12px;
+	color: white;
+	display: inline-block;
+	margin: 0;
+	font-weight: 600;
+}
+
+.camp-header-rating-circles {
+	display: flex;
+	justify-content: flex-end;
+	gap: 6px;
+}
+
+.camp-header-rating-circles .rating-circle {
+	width: 16px;
+	height: 16px;
+}
+
+@media (max-width: 768px) {
+	.camp-header-wrapper {
+		padding: 15px 0px;
+	}
+	
+	.camp-header-top {
+		flex-direction: column;
+		text-align: center;
+		gap: 12px;
+	}
+	
+	.camp-header-logo {
+		max-width: 200px;
+		margin: 0 auto;
+		text-align: center;
+	}
+	
+	.camp-header-logo img {
+		margin: 0 auto;
+		max-height: 70px;
+	}
+	
+	.camp-header-info {
+		text-align: center;
+	}
+	
+	.camp-header-name {
+		font-size: 32px;
+		text-align: center;
+	}
+	
+	.camp-header-subtitle {
+		font-size: 16px;
+		text-align: center;
+	}
+	
+	.camp-header-bottom {
+		flex-direction: column;
+		gap: 12px;
+		padding-top: 12px;
+	}
+	
+	.camp-header-contact {
+		flex-direction: column;
+		gap: 2px;
+		width: 100%;
+	}
+	
+	.camp-header-contact-item {
+		justify-content: center;
+	}
+	
+	.camp-header-rating {
+		text-align: center;
+	}
+	
+	.camp-header-rating-circles {
+		justify-content: center;
+	}
+}
+
+/* ====================
    CAMP LOGO
    ==================== */
 .camp-logo-wrapper {
@@ -311,38 +510,60 @@
 	grid-template-columns: repeat(3, 1fr);
 }
 
-.accommodation-item {
-	padding: 30px;
-	background: linear-gradient(to bottom, #F5F5F5 0%, #D0D0D0 100%);
+.accommodation-card {
+	padding: 25px;
+	background: #E6E6E6;
 	border: 2px solid #497C5E;
-	border-radius: 5px;
+	border-radius: 10px;
 	transition: all 0.3s ease;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
 
-.accommodation-item:hover {
-	box-shadow: 0 6px 20px rgba(73, 124, 94, 0.15);
-	transform: translateY(-2px);
+.accommodation-card:hover {
+	box-shadow: 0 6px 20px rgba(73, 124, 94, 0.2);
+	transform: translateY(-3px);
+	border-color: #3d6449;
 }
 
-.accommodation-item h3 {
-	margin-top: 0;
+.accommodation-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 15px;
+	padding-bottom: 12px;
+	border-bottom: 2px solid #f0f0f0;
+}
+
+.accommodation-card h3 {
+	margin: 0;
 	color: #497C5E;
 	font-family: "Amaranth", Sans-serif;
+	font-weight: 700;
+	font-size: 22px;
+	line-height: 1.3em;
+}
+
+.capacity-badge {
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	padding: 6px 14px;
+	background: #497C5E;
+	color: white;
+	border-radius: 20px;
+	font-size: 13px;
 	font-weight: 600;
-	font-size: 26px;
-	line-height: 1.6em;
+	white-space: nowrap;
 }
 
-.accommodation-item .capacity {
-	color: #497C5E;
-	font-size: 15px;
-	margin: 10px 0;
+.capacity-badge i {
+	font-size: 12px;
 }
 
-.accommodation-item .description {
+.accommodation-description {
 	color: #666;
 	font-size: 14px;
-	line-height: 1.6;
+	line-height: 1.7;
 	margin: 0;
 }
 
@@ -455,54 +676,75 @@
 }
 
 .session-card {
-	padding: 30px;
-	background: linear-gradient(to bottom, #F5F5F5 0%, #D0D0D0 100%);
+	padding: 25px;
+	background: #E6E6E6;
 	border: 2px solid #497C5E;
-	border-radius: 5px;
+	border-radius: 10px;
 	transition: all 0.3s ease;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+	position: relative;
 }
 
 .session-card:hover {
-	box-shadow: 0 6px 20px rgba(73, 124, 94, 0.15);
-	transform: translateY(-2px);
+	box-shadow: 0 6px 20px rgba(73, 124, 94, 0.2);
+	transform: translateY(-3px);
+	border-color: #3d6449;
+}
+
+.session-header {
+	margin-bottom: 15px;
+	padding-bottom: 12px;
+	border-bottom: 2px solid #f0f0f0;
 }
 
 .session-card h3 {
-	margin-top: 0;
+	margin: 0;
 	color: #497C5E;
 	font-family: "Amaranth", Sans-serif;
-	font-weight: 600;
-	font-size: 26px;
-	line-height: 1.6em;
+	font-weight: 700;
+	font-size: 22px;
+	line-height: 1.3em;
 }
 
 .session-dates {
-	font-size: 15px;
-	color: #999;
-	margin: 10px 0;
-	font-weight: 400;
-	font-style: italic;
+	display: inline-flex;
+	align-items: center;
+	gap: 6px;
+	font-size: 14px;
+	color: #666;
+	margin: 12px 0;
+	font-weight: 500;
+}
+
+.session-dates i {
+	color: #497C5E;
+	font-size: 13px;
 }
 
 .session-price {
-	font-size: 28px;
+	font-size: 32px;
 	font-weight: 700;
 	color: #497C5E;
 	margin: 15px 0;
+	line-height: 1;
 }
 
 .session-description {
 	font-size: 14px;
-	color: #555;
-	line-height: 1.6;
+	color: #666;
+	line-height: 1.7;
 	margin: 15px 0;
 }
 
-.session-notes {
-	font-size: 13px;
-	color: #999;
+.session-note-badge {
+	display: inline-block;
+	padding: 6px 14px;
+	background: #f0f0f0;
+	color: #666;
+	border-radius: 20px;
+	font-size: 12px;
 	font-style: italic;
-	margin: 10px 0 0 0;
+	margin-top: 10px;
 }
 
 /* ====================
@@ -519,6 +761,12 @@
 	grid-template-columns: repeat(5, 1fr);
 	gap: 24px;
 	margin-top: 30px;
+}
+
+/* 4-column grid for contact info */
+.info-grid-4 {
+	grid-template-columns: repeat(4, 1fr);
+	gap: 24px;
 }
 
 .info-item {
@@ -596,52 +844,67 @@
 	border-radius: 5px;
 }
 
-.contact-info-item {
-	margin-bottom: 20px;
-	padding-bottom: 20px;
-	border-bottom: 1px solid #e0e0e0;
+.contact-list {
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
 }
 
-.contact-info-item:last-child {
-	margin-bottom: 0;
-	padding-bottom: 0;
-	border-bottom: none;
+.contact-list-item {
+	display: flex;
+	align-items: flex-start;
+	gap: 15px;
+	padding: 15px;
+	background: #497C5E;
+	border-radius: 8px;
 }
 
-.contact-info-item.contact-name h3 {
-	margin: 0;
+.contact-icon {
+	flex-shrink: 0;
+	width: 40px;
+	height: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	background: rgba(255, 255, 255, 0.2);
+	border-radius: 50%;
+}
+
+.contact-icon i {
 	font-size: 18px;
-	font-family: "Amaranth", Sans-serif;
+	color: #ffffff;
+}
+
+.contact-content {
+	flex: 1;
+}
+
+.contact-label {
+	font-family: "Abel", Sans-serif;
+	font-size: 11px;
 	font-weight: 700;
-	color: #333;
-	line-height: 1.3;
-}
-
-.contact-info-label {
-	font-size: 16px;
-	font-family: "Amaranth", Sans-serif;
-	font-weight: 600;
-	color: #777;
+	color: #ffffff;
 	text-transform: uppercase;
-	letter-spacing: 1px;
-	margin-bottom: 8px;
+	letter-spacing: 1.5px;
+	margin-bottom: 4px;
 }
 
-.contact-info-value {
-	font-size: 15px;
-	color: #333;
-	line-height: 1.6;
+.contact-value {
+	font-family: "Abel", Sans-serif;
+	font-size: 16px;
+	color: #ffffff;
+	font-weight: 400;
+	line-height: 1.4;
 }
 
-.contact-info-value a {
-	color: #497C5E;
+.contact-value a {
+	color: #ffffff;
 	text-decoration: none;
-	transition: color 0.3s ease;
+	transition: opacity 0.3s ease;
 }
 
-.contact-info-value a:hover {
-	color: #3a6249;
-	text-decoration: underline;
+.contact-value a:hover {
+	opacity: 0.8;
 }
 
 /* ====================
@@ -693,11 +956,32 @@
 	
 	.info-grid-5 {
 		grid-template-columns: 1fr;
-		gap: 16px;
+		gap: 12px;
 	}
 	
 	.info-card {
-		padding: 24px 16px;
+		padding: 20px 15px;
+	}
+	
+	.info-icon {
+		width: 32px;
+		height: 32px;
+		margin: 0 auto 12px auto;
+	}
+	
+	.info-icon i,
+	.info-icon i.fa-solid,
+	.info-icon i.fa-regular {
+		font-size: 28px;
+	}
+	
+	.info-label {
+		font-size: 11px;
+		margin-bottom: 6px;
+	}
+	
+	.info-value {
+		font-size: 16px;
 	}
 	
 	.info-icon {
@@ -719,3 +1003,156 @@
 		grid-template-columns: repeat(3, 1fr);
 	}
 }
+
+/* ====================
+   GALLERY
+   ==================== */
+.camp-gallery-container {
+	width: 100%;
+	margin: 30px 0;
+}
+
+.camp-gallery {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 15px;
+	width: 100%;
+	justify-content: center;
+}
+
+/* Single row layout (1-4 images) */
+.camp-gallery-single-row .camp-gallery-item {
+	flex: 0 0 auto;
+}
+
+.camp-gallery-single-row[data-photo-count="1"] .camp-gallery-item {
+	width: calc(25% - 11.25px);
+}
+
+.camp-gallery-single-row[data-photo-count="2"] .camp-gallery-item {
+	width: calc(25% - 11.25px);
+}
+
+.camp-gallery-single-row[data-photo-count="3"] .camp-gallery-item {
+	width: calc(33.333% - 10px);
+}
+
+.camp-gallery-single-row[data-photo-count="4"] .camp-gallery-item {
+	width: calc(25% - 11.25px);
+}
+
+/* Two rows layout (5-10 images) */
+.camp-gallery-two-rows .camp-gallery-item {
+	flex: 0 0 auto;
+}
+
+/* 5 images: 3-2 */
+.camp-gallery-two-rows[data-photo-count="5"] .first-row {
+	width: calc(33.333% - 10px);
+}
+.camp-gallery-two-rows[data-photo-count="5"] .second-row {
+	width: calc(50% - 7.5px);
+}
+
+/* 6 images: 3-3 */
+.camp-gallery-two-rows[data-photo-count="6"] .camp-gallery-item {
+	width: calc(33.333% - 10px);
+}
+
+/* 7 images: 4-3 */
+.camp-gallery-two-rows[data-photo-count="7"] .first-row {
+	width: calc(25% - 11.25px);
+}
+.camp-gallery-two-rows[data-photo-count="7"] .second-row {
+	width: calc(33.333% - 10px);
+}
+
+/* 8 images: 4-4 */
+.camp-gallery-two-rows[data-photo-count="8"] .camp-gallery-item {
+	width: calc(25% - 11.25px);
+}
+
+/* 9 images: 5-4 */
+.camp-gallery-two-rows[data-photo-count="9"] .first-row {
+	width: calc(20% - 12px);
+}
+.camp-gallery-two-rows[data-photo-count="9"] .second-row {
+	width: calc(25% - 11.25px);
+}
+
+/* 10 images: 5-5 */
+.camp-gallery-two-rows[data-photo-count="10"] .camp-gallery-item {
+	width: calc(20% - 12px);
+}
+
+.camp-gallery-item {
+	position: relative;
+	overflow: hidden;
+	border-radius: 5px;
+	border: 2px solid #CCCCCC;
+	background: #E6E6E6;
+	aspect-ratio: 4/3;
+	height: 200px;
+	display: block;
+}
+
+.camp-gallery-link {
+	display: block;
+	position: relative;
+	width: 100%;
+	height: 100%;
+	text-decoration: none;
+	cursor: pointer;
+}
+
+.camp-gallery-img {
+	width: 100%;
+	height: 100%;
+	min-width: 100%;
+	min-height: 100%;
+	max-width: none;
+	display: block;
+	object-fit: cover;
+	object-position: center;
+	transition: transform 0.3s ease;
+}
+
+.camp-gallery-link:hover .camp-gallery-img {
+	transform: scale(1.05);
+}
+
+.camp-gallery-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	background: rgba(52, 52, 52, 0.7);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	opacity: 0;
+	transition: opacity 0.3s ease;
+}
+
+.camp-gallery-link:hover .camp-gallery-overlay {
+	opacity: 1;
+}
+
+.camp-gallery-overlay i {
+	color: white;
+	font-size: 32px;
+}
+
+/* Responsive Gallery - Always 2 columns on mobile */
+@media (max-width: 768px) {
+	.camp-gallery-single-row .camp-gallery-item,
+	.camp-gallery-two-rows .camp-gallery-item {
+		width: calc(50% - 7.5px) !important;
+	}
+	
+	.camp-gallery {
+		gap: 10px;
+	}
+}
+

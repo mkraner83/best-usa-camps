@@ -15,7 +15,10 @@ class Camp_Frontend {
 	 * Register shortcodes
 	 */
 	public function __construct() {
-		// Header shortcodes
+		// Combined header shortcode
+		add_shortcode( 'camp_header', [ $this, 'render_header' ] );
+		
+		// Individual header shortcodes (for flexibility)
 		add_shortcode( 'camp_logo', [ $this, 'render_logo' ] );
 		add_shortcode( 'camp_name', [ $this, 'render_name' ] );
 		add_shortcode( 'camp_name_text', [ $this, 'render_name_text' ] );
@@ -34,6 +37,7 @@ class Camp_Frontend {
 		add_shortcode( 'camp_sessions', [ $this, 'render_sessions' ] );
 		add_shortcode( 'camp_additional_info', [ $this, 'render_additional_info' ] );
 		add_shortcode( 'camp_contact_info', [ $this, 'render_contact_info' ] );
+		add_shortcode( 'camp_gallery', [ $this, 'render_gallery' ] );
 		
 		// Debug shortcode
 		add_shortcode( 'camp_debug', [ $this, 'render_debug' ] );
@@ -106,6 +110,110 @@ class Camp_Frontend {
 			// Direct stylesheet link as fallback
 			echo '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />' . "\n";
 		}
+	}
+
+	/**
+	 * Render complete camp header (logo, name, subtitle, contact bar, rating)
+	 */
+	public function render_header( $atts ) {
+		$atts = shortcode_atts( [
+			'class' => '',
+		], $atts );
+		
+		$camp = $this->get_camp_data();
+		if ( ! $camp ) {
+			return '';
+		}
+		
+		global $wpdb;
+		
+		// Get camp types for subtitle
+		$camp_types = $wpdb->get_col( $wpdb->prepare(
+			"SELECT ct.name 
+			FROM {$wpdb->prefix}camp_type_terms ct
+			INNER JOIN {$wpdb->prefix}camp_management_types_map cmt ON ct.id = cmt.type_id
+			WHERE cmt.camp_id = %d
+			ORDER BY ct.sort_order ASC",
+			$camp['id']
+		) );
+		
+		$types_text = ! empty( $camp_types ) ? implode( ' ', $camp_types ) : 'Summer Camp';
+		$location = sprintf( '%s, %s', $camp['city'], $camp['state'] );
+		$rating = isset( $camp['rating'] ) ? floatval( $camp['rating'] ) : 0;
+		$full_address = $camp['address'] . ', ' . $camp['city'] . ', ' . $camp['state'] . ' ' . $camp['zip'];
+		$maps_url = 'https://www.google.com/maps/search/?api=1&query=' . urlencode( $full_address );
+		
+		$custom_class = ! empty( $atts['class'] ) ? ' ' . esc_attr( $atts['class'] ) : '';
+		
+		ob_start();
+		?>
+		<div class="camp-header-wrapper<?php echo $custom_class; ?>">
+			<div class="camp-header-top">
+				<!-- Camp Name & Subtitle -->
+				<div class="camp-header-info">
+					<h1 class="camp-header-name"><?php echo esc_html( $camp['camp_name'] ); ?></h1>
+					<div class="camp-header-subtitle"><?php echo esc_html( $types_text ); ?> - <?php echo esc_html( $location ); ?></div>
+				</div>
+				
+				<!-- Logo -->
+				<div class="camp-header-logo">
+					<?php if ( ! empty( $camp['logo'] ) ) : ?>
+						<?php if ( pathinfo( $camp['logo'], PATHINFO_EXTENSION ) === 'pdf' ) : ?>
+							<a href="<?php echo esc_url( $camp['logo'] ); ?>" target="_blank" class="camp-logo-pdf">
+								<span>📄 View Logo (PDF)</span>
+							</a>
+						<?php else : ?>
+							<img src="<?php echo esc_url( $camp['logo'] ); ?>" alt="<?php echo esc_attr( $camp['camp_name'] ); ?> Logo" class="camp-header-logo-img">
+						<?php endif; ?>
+					<?php endif; ?>
+				</div>
+			</div>
+			
+			<!-- Contact Bar & Rating -->
+			<div class="camp-header-bottom">
+				<div class="camp-header-contact">
+					<?php if ( ! empty( $camp['address'] ) ) : ?>
+						<div class="camp-header-contact-item">
+							<i aria-hidden="true" class="icon icon-map-marker"></i>
+							<a href="<?php echo esc_url( $maps_url ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $full_address ); ?></a>
+						</div>
+					<?php endif; ?>
+					
+					<?php if ( ! empty( $camp['email'] ) ) : ?>
+						<div class="camp-header-contact-item">
+							<i aria-hidden="true" class="icon icon-envelope2"></i>
+							<a href="mailto:<?php echo esc_attr( $camp['email'] ); ?>"><?php echo esc_html( $camp['email'] ); ?></a>
+						</div>
+					<?php endif; ?>
+					
+					<?php if ( ! empty( $camp['phone'] ) ) : ?>
+						<div class="camp-header-contact-item">
+							<i aria-hidden="true" class="icon icon-phone-handset"></i>
+							<a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9]/', '', $camp['phone'] ) ); ?>"><?php echo esc_html( $camp['phone'] ); ?></a>
+						</div>
+					<?php endif; ?>
+					
+					<?php if ( ! empty( $camp['website'] ) ) : ?>
+						<div class="camp-header-contact-item">
+							<i aria-hidden="true" class="fa-solid fa-globe"></i>
+							<a href="<?php echo esc_url( $camp['website'] ); ?>" target="_blank" rel="noopener">Website</a>
+						</div>
+					<?php endif; ?>
+				</div>
+				
+				<!-- Rating -->
+				<div class="camp-header-rating">
+					<span class="camp-header-rating-label">Rating:</span>
+					<div class="camp-header-rating-circles">
+						<?php for ( $i = 1; $i <= 5; $i++ ) : ?>
+							<span class="rating-circle <?php echo $i <= $rating ? 'filled' : 'empty'; ?>"></span>
+						<?php endfor; ?>
+					</div>
+				</div>
+			</div>
+		</div>
+		<?php
+		return ob_get_clean();
 	}
 
 	/**
@@ -555,19 +663,23 @@ class Camp_Frontend {
 		<div class="camp-section camp-accommodations">
 			<div class="accommodations-container <?php echo $layout_class . ' ' . $columns_class . $custom_class; ?>">
 				<?php foreach ( $accommodations as $acc ) : ?>
-					<div class="accommodation-item">
-						<h3><?php echo esc_html( $acc['name'] ); ?></h3>
-						<?php if ( ! empty( $acc['capacity'] ) ) : ?>
-							<p class="capacity">Capacity: <strong><?php echo esc_html( $acc['capacity'] ); ?></strong></p>
-						<?php endif; ?>
+					<div class="accommodation-card">
+						<div class="accommodation-header">
+							<h3><?php echo esc_html( $acc['name'] ); ?></h3>
+							<?php if ( ! empty( $acc['capacity'] ) ) : ?>
+								<div class="capacity-badge">
+									<i class="fa fa-users"></i> <?php echo esc_html( $acc['capacity'] ); ?>
+								</div>
+							<?php endif; ?>
+						</div>
 					<?php if ( ! empty( $acc['description'] ) ) : 
 						$description = esc_html( $acc['description'] );
 						$words = explode( ' ', $description );
-						if ( count( $words ) > 90 ) {
-							$description = implode( ' ', array_slice( $words, 0, 90 ) ) . '...';
+						if ( count( $words ) > 50 ) {
+							$description = implode( ' ', array_slice( $words, 0, 50 ) ) . '...';
 						}
 					?>
-						<p class="description"><?php echo $description; ?></p>
+						<p class="accommodation-description"><?php echo $description; ?></p>
 						<?php endif; ?>
 					</div>
 				<?php endforeach; ?>
@@ -583,7 +695,7 @@ class Camp_Frontend {
 	public function render_faqs( $atts ) {
 		$atts = shortcode_atts( [
 			'style' => 'accordion', // accordion, list
-			'open_first' => 'false',
+			'open_first' => 'true',
 			'class' => '',
 		], $atts );
 		
@@ -698,10 +810,13 @@ class Camp_Frontend {
 			<div class="sessions-container <?php echo $layout_class . ' ' . $columns_class . $custom_class; ?>">
 				<?php foreach ( $sessions as $session ) : ?>
 					<div class="session-card">
-						<h3><?php echo esc_html( $session['session_name'] ); ?></h3>
+						<div class="session-header">
+							<h3><?php echo esc_html( $session['session_name'] ); ?></h3>
+						</div>
 						
 						<?php if ( ! empty( $session['start_date'] ) || ! empty( $session['end_date'] ) ) : ?>
 							<div class="session-dates">
+								<i class="fa fa-calendar"></i> 
 								<?php
 								if ( ! empty( $session['start_date'] ) && ! empty( $session['end_date'] ) ) {
 									echo esc_html( date( 'M d', strtotime( $session['start_date'] ) ) ) . ' - ' . esc_html( date( 'M d, Y', strtotime( $session['end_date'] ) ) );
@@ -713,21 +828,23 @@ class Camp_Frontend {
 						<?php endif; ?>
 						
 						<?php if ( ! empty( $session['price'] ) && $session['price'] > 0 ) : ?>
-							<div class="session-price">$<?php echo number_format( $session['price'], 2 ); ?></div>
+							<div class="session-price">
+								$<?php echo number_format( $session['price'], 2 ); ?>
+							</div>
 						<?php endif; ?>
 						
 <?php if ( ! empty( $session['description'] ) ) : 
 					$description = esc_html( $session['description'] );
 					$words = explode( ' ', $description );
-					if ( count( $words ) > 90 ) {
-						$description = implode( ' ', array_slice( $words, 0, 90 ) ) . '...';
+					if ( count( $words ) > 50 ) {
+						$description = implode( ' ', array_slice( $words, 0, 50 ) ) . '...';
 					}
 				?>
 					<p class="session-description"><?php echo $description; ?></p>
 						<?php endif; ?>
 						
 						<?php if ( ! empty( $session['notes'] ) ) : ?>
-							<p class="session-notes"><?php echo esc_html( $session['notes'] ); ?></p>
+							<div class="session-note-badge"><?php echo esc_html( $session['notes'] ); ?></div>
 						<?php endif; ?>
 					</div>
 				<?php endforeach; ?>
@@ -829,57 +946,75 @@ class Camp_Frontend {
 		ob_start();
 		?>
 		<div class="camp-section camp-contact-info<?php echo $custom_class; ?>">
-			<?php if ( ! empty( $camp['address'] ) || ! empty( $camp['city'] ) || ! empty( $camp['state'] ) || ! empty( $camp['zip'] ) ) : 
-				$address_parts = array_filter( [ $camp['address'], $camp['city'], $camp['state'], $camp['zip'] ] );
-				$full_address = implode( ', ', $address_parts );
-				$maps_url = 'https://www.google.com/maps/search/?api=1&query=' . urlencode( $full_address );
-			?>
-				<div class="contact-info-item contact-address">
-					<div class="contact-info-label">Address</div>
-					<?php if ( ! empty( $camp['address'] ) ) : ?>
-						<div class="contact-info-value">
-							<a href="<?php echo esc_url( $maps_url ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $camp['address'] ); ?></a>
+			<div class="contact-list">
+				<?php if ( ! empty( $camp['address'] ) || ! empty( $camp['city'] ) || ! empty( $camp['state'] ) || ! empty( $camp['zip'] ) ) : 
+					$address_parts = array_filter( [ $camp['address'], $camp['city'], $camp['state'], $camp['zip'] ] );
+					$full_address = implode( ', ', $address_parts );
+					$maps_url = 'https://www.google.com/maps/search/?api=1&query=' . urlencode( $full_address );
+				?>
+					<div class="contact-list-item">
+						<div class="contact-icon">
+							<i class="fa-solid fa-location-dot"></i>
 						</div>
-					<?php endif; ?>
-					<?php if ( ! empty( $camp['city'] ) || ! empty( $camp['state'] ) || ! empty( $camp['zip'] ) ) : ?>
-						<div class="contact-info-value">
-							<a href="<?php echo esc_url( $maps_url ); ?>" target="_blank" rel="noopener">
-								<?php 
-								$location_parts = array_filter( [ $camp['city'], $camp['state'], $camp['zip'] ] );
-								echo esc_html( implode( ', ', $location_parts ) );
-								?>
-							</a>
+						<div class="contact-content">
+							<div class="contact-label">ADDRESS</div>
+							<div class="contact-value">
+								<a href="<?php echo esc_url( $maps_url ); ?>" target="_blank" rel="noopener">
+									<?php echo esc_html( $full_address ); ?>
+								</a>
+							</div>
 						</div>
-					<?php endif; ?>
-				</div>
-			<?php endif; ?>
-			
-			<?php if ( ! empty( $camp['email'] ) ) : ?>
-				<div class="contact-info-item contact-email">
-					<div class="contact-info-label">Email</div>
-					<div class="contact-info-value">
-						<a href="mailto:<?php echo esc_attr( $camp['email'] ); ?>"><?php echo esc_html( $camp['email'] ); ?></a>
 					</div>
-				</div>
-			<?php endif; ?>
-			
-			<?php if ( ! empty( $camp['phone'] ) ) : ?>
-				<div class="contact-info-item contact-phone">
-					<div class="contact-info-label">Phone</div>
-					<div class="contact-info-value">
-						<a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9]/', '', $camp['phone'] ) ); ?>"><?php echo esc_html( $camp['phone'] ); ?></a>
+				<?php endif; ?>
+				
+				<?php if ( ! empty( $camp['email'] ) ) : ?>
+					<div class="contact-list-item">
+						<div class="contact-icon">
+							<i class="fa-solid fa-envelope"></i>
+						</div>
+						<div class="contact-content">
+							<div class="contact-label">EMAIL</div>
+							<div class="contact-value">
+								<a href="mailto:<?php echo esc_attr( $camp['email'] ); ?>">
+									<?php echo esc_html( $camp['email'] ); ?>
+								</a>
+							</div>
+						</div>
 					</div>
-				</div>
-			<?php endif; ?>
-			
-			<?php if ( ! empty( $camp['website'] ) ) : ?>
-				<div class="contact-info-item contact-website">
-					<div class="contact-info-label">Website</div>
-					<div class="contact-info-value">
-						<a href="<?php echo esc_url( $camp['website'] ); ?>" target="_blank" rel="noopener"><?php echo esc_html( preg_replace( '#^https?://(www\.)?#', '', $camp['website'] ) ); ?></a>
+				<?php endif; ?>
+				
+				<?php if ( ! empty( $camp['phone'] ) ) : ?>
+					<div class="contact-list-item">
+						<div class="contact-icon">
+							<i class="fa-solid fa-phone"></i>
+						</div>
+						<div class="contact-content">
+							<div class="contact-label">PHONE</div>
+							<div class="contact-value">
+								<a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9]/', '', $camp['phone'] ) ); ?>">
+									<?php echo esc_html( $camp['phone'] ); ?>
+								</a>
+							</div>
+						</div>
 					</div>
-				</div>
-			<?php endif; ?>
+				<?php endif; ?>
+				
+				<?php if ( ! empty( $camp['website'] ) ) : ?>
+					<div class="contact-list-item">
+						<div class="contact-icon">
+							<i class="fa-solid fa-globe"></i>
+						</div>
+						<div class="contact-content">
+							<div class="contact-label">WEBSITE</div>
+							<div class="contact-value">
+								<a href="<?php echo esc_url( $camp['website'] ); ?>" target="_blank" rel="noopener">
+									<?php echo esc_html( preg_replace( '#^https?://(www\.)?#', '', $camp['website'] ) ); ?>
+								</a>
+							</div>
+						</div>
+					</div>
+				<?php endif; ?>
+			</div>
 		</div>
 		<?php
 		return ob_get_clean();
@@ -957,7 +1092,98 @@ class Camp_Frontend {
 		<?php
 		return ob_get_clean();
 	}
+
+	/**
+	 * Gallery Shortcode
+	 * Displays camp photos in a responsive gallery with lightbox
+	 * 
+	 * @param array $atts Shortcode attributes
+	 * @return string Gallery HTML
+	 */
+	public function render_gallery( $atts ) {
+		$atts = shortcode_atts( [
+			'columns' => 'auto', // auto (1-5 based on count), or specific number 1-5
+		], $atts );
+		
+		$camp = $this->get_camp_data();
+		if ( ! $camp || empty( $camp['photos'] ) ) {
+			return '';
+		}
+		
+		// Parse photos (comma-separated URLs)
+		$photos = explode( ',', $camp['photos'] );
+		$photos = array_map( 'trim', $photos );
+		$photos = array_filter( $photos );
+		
+		if ( empty( $photos ) ) {
+			return '';
+		}
+		
+		// Determine grid layout based on photo count
+		$photo_count = count( $photos );
+		
+		// Custom grid logic
+		// 1-4: single row
+		// 5: 3 first, 2 second
+		// 6: 3 first, 3 second
+		// 7: 4 first, 3 second
+		// 8: 4 first, 4 second
+		// 9: 5 first, 4 second
+		// 10: 5 first, 5 second
+		if ( $photo_count <= 4 ) {
+			$grid_class = 'single-row';
+			$first_row = $photo_count;
+		} elseif ( $photo_count === 5 ) {
+			$grid_class = 'two-rows';
+			$first_row = 3;
+		} elseif ( $photo_count === 6 ) {
+			$grid_class = 'two-rows';
+			$first_row = 3;
+		} elseif ( $photo_count === 7 ) {
+			$grid_class = 'two-rows';
+			$first_row = 4;
+		} elseif ( $photo_count === 8 ) {
+			$grid_class = 'two-rows';
+			$first_row = 4;
+		} elseif ( $photo_count === 9 ) {
+			$grid_class = 'two-rows';
+			$first_row = 5;
+		} else { // 10
+			$grid_class = 'two-rows';
+			$first_row = 5;
+		}
+		
+		$gallery_id = 'camp-gallery-' . $camp['id'];
+		
+		ob_start();
+		?>
+		<div class="camp-gallery-container">
+			<div class="camp-gallery camp-gallery-<?php echo $grid_class; ?>" data-photo-count="<?php echo $photo_count; ?>">
+				<?php foreach ( $photos as $index => $photo_url ) : ?>
+					<div class="camp-gallery-item <?php echo $index < $first_row ? 'first-row' : 'second-row'; ?>">
+						<a href="<?php echo esc_url( $photo_url ); ?>" 
+						   class="camp-gallery-link" 
+						   data-elementor-open-lightbox="yes"
+						   data-elementor-lightbox-slideshow="<?php echo esc_attr( $gallery_id ); ?>"
+						   data-elementor-lightbox-title="<?php echo esc_attr( $camp['camp_name'] ); ?>">
+							<img src="<?php echo esc_url( $photo_url ); ?>" 
+							     alt="<?php echo esc_attr( $camp['camp_name'] ); ?> Photo <?php echo $index + 1; ?>" 
+							     class="camp-gallery-img">
+							<div class="camp-gallery-overlay">
+								<i class="fa-solid fa-search-plus"></i>
+							</div>
+						</a>
+					</div>
+				<?php endforeach; ?>
+			</div>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
 }
 
-// Initialize
-new Camp_Frontend();
+// Initialize - safe for plugin updates
+if ( ! isset( $GLOBALS['camp_frontend_initialized'] ) ) {
+	$GLOBALS['camp_frontend_initialized'] = true;
+	new Camp_Frontend();
+}

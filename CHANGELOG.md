@@ -1,5 +1,31 @@
 # Changelog
 
+## v2.8.5 (2026-01-16) - Photo Gallery & Header Consolidation
+
+### Added
+- **NEW:** `[camp_header]` combined shortcode with all header elements in one
+- **NEW:** `[camp_gallery]` shortcode with smart grid layout (1-10 photos)
+- Elementor lightbox integration for gallery (keyboard navigation, slideshow)
+- Safe plugin update mechanism with global initialization flag
+- Smart gallery layouts based on photo count (1-4 single row, 5-10 two rows)
+- Mobile gallery optimization: always 2 columns to prevent long pages
+
+### Changed
+- Header layout: two rows (name/logo top, contact/rating bottom)
+- Header background: #343434 dark gray, full-width in Elementor containers
+- Mobile header: 15px padding, 12px gaps, 2px contact gap, 70px logo max-height
+- Sessions/accommodations: #E6E6E6 background with white cards
+- FAQ: first item opens by default (improved UX)
+- Gallery thumbnails use object-fit: cover for consistent display
+- Responsive breakpoint: 768px for mobile
+
+### Technical
+- Removed custom lightbox in favor of Elementor's native solution
+- CSS targeting for Elementor widget width constraints
+- Dashboard-style thumbnail filling technique
+- Flexbox grid with data-photo-count targeting
+- Plugin version: 2.8.5
+
 ## v2.8.3 (2026-01-15) - FAQ Styling & UX Polish
 
 ### Changed
