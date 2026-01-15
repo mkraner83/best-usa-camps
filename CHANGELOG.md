@@ -1,5 +1,123 @@
 # Changelog
 
+## v2.8.3 (2026-01-15) - FAQ Styling & UX Polish
+
+### Changed
+- FAQ toggles now green (#497C5E) with white text and darker hover (#3d6449)
+- FAQ containers expanded to 100% width (removed 900px constraint)
+- All FAQs initially closed by default (changed `open_first='false'`)
+
+## v2.8.2 (2026-01-15) - Accommodation Grid Fix
+
+### Fixed
+- Removed duplicate `<div class="accommodations-container">` causing single-column layout
+- Accommodations now properly display in dynamic columns (1-3) like sessions
+
+## v2.8.1 (2026-01-15) - Accommodations Enhancement & Word Counters
+
+### Added
+- Accommodations match sessions design: gradient background, green border, Amaranth font
+- Dynamic column system for accommodations (1-3 columns based on count)
+- 90-word counters for accommodation descriptions in admin
+- 90-word counters for session descriptions in admin
+- Real-time JavaScript word validation with visual warnings
+- Responsive CSS: accommodation columns stack on mobile
+
+### Changed
+- Accommodation cards: gradient #F5F5F5 → #D0D0D0, 2px green border
+- Accommodation H3: Amaranth font, 26px, 600 weight, 1.6em line-height
+
+## v2.8.0 (2026-01-15) - Session Card Polish
+
+### Changed
+- Session gradient updated: lighter top (#F5F5F5), darker bottom (#D0D0D0)
+- Added 2px solid green border (#497C5E) to session cards
+
+## v2.7.9 (2026-01-15) - Word Limits & Typography
+
+### Added
+- 90-word limit with automatic truncation for session descriptions
+- 90-word limit with automatic truncation for accommodation descriptions
+
+### Changed
+- Session H3 typography: Amaranth, 600 weight, 26px, 1.6em line-height
+- Session dates: 15px, #999, italic, 400 weight
+- Session card gradient: #E6E6E6 → #D0D0D0
+
+## v2.7.8 (2026-01-15) - Description Word Limit Adjustment
+
+### Changed
+- Camp description word limit reduced from 350 to 220 words
+- Updated all validation messages and UI counters
+
+## v2.7.7 (2026-01-15) - Rating Persistence Fix
+
+### Fixed
+- **Critical**: Rating field removed from camp director update handler
+- Admin ratings no longer overwritten when directors save changes
+- Directors can now update camp info without affecting admin-set ratings
+
+## v2.7.6 (2026-01-15) - Sessions Grid Fix
+
+### Fixed
+- Sessions grid classes moved to correct container element
+- Columns now display properly (2 or 3 side-by-side based on count)
+
+## v2.7.5 (2026-01-15) - Contact Info & Grid Updates
+
+### Changed
+- Contact info: removed H3 camp name, increased label to 16px/600, values to 15px
+- Sessions grid: fixed to `repeat(2, 1fr)` and `repeat(3, 1fr)` for proper columns
+- Added mobile responsive stacking for session columns
+
+### Fixed
+- Sessions no longer incorrectly stack in single column on desktop
+
+## v2.7.4 (2026-01-15) - Sessions Design & ZIP Fix
+
+### Removed
+- "Sessions & Pricing" H2 title
+
+### Changed
+- Session cards: #E6E6E6 background, 5px border-radius, no border
+- Dynamic columns based on session count (max 3)
+
+### Fixed
+- **Critical**: ZIP creation now excludes old ZIP files (size reduced from 160MB to 78KB)
+
+## v2.7.3 (2026-01-15) - New Shortcodes & Major Features
+
+### Added
+- `[camp_contact_info]` shortcode for sidebar contact display
+- `[camp_name_text]` shortcode for plain text name (SEO)
+- Google Maps clickable addresses in contact shortcodes
+- 350-word limit for camp description with real-time counter
+- Server-side word count validation
+- Visual warning and submit button disable when over limit
+- FontAwesome 6.5.1 with CDN + fallback loading
+
+### Changed
+- Info card icons: SVG → FontAwesome (fa-users, fa-calendar-check, etc.)
+- Contact info: #E6E6E6 background, 5px radius, Amaranth font
+
+### Fixed
+- FontAwesome icons not loading (multi-layer loading strategy)
+- Missing HTML closing tags in info cards
+
+## v2.7.2 (2026-01-15) - Info Cards Green Theme
+
+### Changed
+- Info cards: green background (#497C5E), hover (#548968)
+- Icons: FontAwesome 48px white with !important for theme override
+
+### Fixed
+- Card HTML structure with complete tags
+
+## v2.7.1 (2026-01-14) - Rating Polish
+
+### Fixed
+- Rating circle borders changed to white
+
 ## v2.6.0 (2026-01-14) - AJAX Rebuild & Upload Overlay
 
 ### Major Changes

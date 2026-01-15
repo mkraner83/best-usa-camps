@@ -306,6 +306,18 @@
 	min-height: 120px;
 }
 
+.word-counter {
+	margin-top: 8px;
+	font-size: 13px;
+	color: #666;
+	text-align: right;
+}
+
+.word-counter #word-count {
+	font-weight: 600;
+	color: #333;
+}
+
 .checkbox-grid {
 	display: grid;
 	grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));

@@ -193,7 +193,6 @@
    CAMP SECTIONS
    ==================== */
 .camp-section {
-	padding: 60px 0;
 	max-width: 1200px;
 	margin: 0 auto;
 }
@@ -203,8 +202,6 @@
 	font-weight: 700;
 	color: #333;
 	margin: 0 0 30px 0;
-	padding-bottom: 15px;
-	border-bottom: 3px solid #497C5E;
 }
 
 .camp-section h3 {
@@ -296,27 +293,44 @@
 	gap: 20px;
 }
 
-.accommodations-container.layout-cards {
+.accommodations-container.layout-cards,
+.accommodations-container.layout-grid {
 	display: grid;
-	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
 	gap: 25px;
 }
 
+.accommodations-container.columns-1 {
+	grid-template-columns: 1fr;
+}
+
+.accommodations-container.columns-2 {
+	grid-template-columns: repeat(2, 1fr);
+}
+
+.accommodations-container.columns-3 {
+	grid-template-columns: repeat(3, 1fr);
+}
+
 .accommodation-item {
-	padding: 25px;
-	background: #ffffff;
-	border: 2px solid #e0e0e0;
-	border-radius: 8px;
+	padding: 30px;
+	background: linear-gradient(to bottom, #F5F5F5 0%, #D0D0D0 100%);
+	border: 2px solid #497C5E;
+	border-radius: 5px;
 	transition: all 0.3s ease;
 }
 
 .accommodation-item:hover {
-	border-color: #497C5E;
-	box-shadow: 0 4px 12px rgba(73, 124, 94, 0.1);
+	box-shadow: 0 6px 20px rgba(73, 124, 94, 0.15);
+	transform: translateY(-2px);
 }
 
 .accommodation-item h3 {
 	margin-top: 0;
+	color: #497C5E;
+	font-family: "Amaranth", Sans-serif;
+	font-weight: 600;
+	font-size: 26px;
+	line-height: 1.6em;
 }
 
 .accommodation-item .capacity {
@@ -336,7 +350,7 @@
    FAQS
    ==================== */
 .faqs-container {
-	max-width: 900px;
+	width: 100%;
 }
 
 .faq-item {
@@ -355,7 +369,7 @@
 .style-accordion .faq-toggle {
 	width: 100%;
 	padding: 18px 20px;
-	background: #f8f8f8;
+	background: #497C5E;
 	border: none;
 	display: flex;
 	justify-content: space-between;
@@ -363,13 +377,13 @@
 	cursor: pointer;
 	font-size: 16px;
 	font-weight: 600;
-	color: #333;
+	color: white;
 	text-align: left;
 	transition: all 0.3s ease;
 }
 
 .faq-toggle:hover {
-	background: #497C5E;
+	background: #3d6449;
 	color: white;
 }
 
@@ -427,11 +441,11 @@
 }
 
 .sessions-container.layout-grid.columns-2 {
-	grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
+	grid-template-columns: repeat(2, 1fr);
 }
 
 .sessions-container.layout-grid.columns-3 {
-	grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+	grid-template-columns: repeat(3, 1fr);
 }
 
 .sessions-container.layout-list {
@@ -442,14 +456,13 @@
 
 .session-card {
 	padding: 30px;
-	background: #ffffff;
-	border: 2px solid #e0e0e0;
-	border-radius: 8px;
+	background: linear-gradient(to bottom, #F5F5F5 0%, #D0D0D0 100%);
+	border: 2px solid #497C5E;
+	border-radius: 5px;
 	transition: all 0.3s ease;
 }
 
 .session-card:hover {
-	border-color: #497C5E;
 	box-shadow: 0 6px 20px rgba(73, 124, 94, 0.15);
 	transform: translateY(-2px);
 }
@@ -457,13 +470,18 @@
 .session-card h3 {
 	margin-top: 0;
 	color: #497C5E;
+	font-family: "Amaranth", Sans-serif;
+	font-weight: 600;
+	font-size: 26px;
+	line-height: 1.6em;
 }
 
 .session-dates {
 	font-size: 15px;
-	color: #666;
+	color: #999;
 	margin: 10px 0;
-	font-weight: 500;
+	font-weight: 400;
+	font-style: italic;
 }
 
 .session-price {
@@ -496,6 +514,13 @@
 	gap: 20px;
 }
 
+/* 5-column grid for additional info */
+.info-grid-5 {
+	grid-template-columns: repeat(5, 1fr);
+	gap: 24px;
+	margin-top: 30px;
+}
+
 .info-item {
 	display: flex;
 	flex-direction: column;
@@ -506,18 +531,117 @@
 	border-radius: 4px;
 }
 
+/* Card style for info items */
+.info-card {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	text-align: center;
+	padding: 35px 20px;
+	background: #497C5E;
+	border: none;
+	border-radius: 8px;
+	transition: all 0.3s ease;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.info-card:hover {
+	background: #548968;
+	box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+	transform: translateY(-2px);
+}
+
+.info-icon {
+	width: 48px;
+	height: 48px;
+	margin: 0 auto 20px auto;
+	line-height: 1;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.info-icon i,
+.info-icon i.fa-solid,
+.info-icon i.fa-regular {
+	font-size: 48px;
+	color: #fff !important;
+	line-height: 1;
+}
+
 .info-label {
+	font-family: "Abel", Sans-serif;
 	font-size: 14px;
 	font-weight: 600;
-	color: #666;
+	color: #ffffff;
 	text-transform: uppercase;
-	letter-spacing: 0.5px;
+	letter-spacing: 1px;
+	margin-bottom: 10px;
 }
 
 .info-value {
-	font-size: 16px;
+	font-family: "Abel", Sans-serif;
+	font-size: 20px;
+	color: #ffffff;
+	font-weight: 700;
+	line-height: 1.3;
+}
+
+/* ====================
+   CONTACT INFO (SIDEBAR)
+   ==================== */
+.camp-contact-info {
+	background: #E6E6E6;
+	padding: 30px;
+	border-radius: 5px;
+}
+
+.contact-info-item {
+	margin-bottom: 20px;
+	padding-bottom: 20px;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+.contact-info-item:last-child {
+	margin-bottom: 0;
+	padding-bottom: 0;
+	border-bottom: none;
+}
+
+.contact-info-item.contact-name h3 {
+	margin: 0;
+	font-size: 18px;
+	font-family: "Amaranth", Sans-serif;
+	font-weight: 700;
 	color: #333;
-	font-weight: 500;
+	line-height: 1.3;
+}
+
+.contact-info-label {
+	font-size: 16px;
+	font-family: "Amaranth", Sans-serif;
+	font-weight: 600;
+	color: #777;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	margin-bottom: 8px;
+}
+
+.contact-info-value {
+	font-size: 15px;
+	color: #333;
+	line-height: 1.6;
+}
+
+.contact-info-value a {
+	color: #497C5E;
+	text-decoration: none;
+	transition: color 0.3s ease;
+}
+
+.contact-info-value a:hover {
+	color: #3a6249;
+	text-decoration: underline;
 }
 
 /* ====================
@@ -532,10 +656,6 @@
 		font-size: 16px;
 	}
 	
-	.camp-section {
-		padding: 40px 20px;
-	}
-	
 	.camp-section h2 {
 		font-size: 26px;
 	}
@@ -547,6 +667,12 @@
 		font-size: 20px;
 	}
 	
+	.accommodations-container.columns-1,
+	.accommodations-container.columns-2,
+	.accommodations-container.columns-3 {
+		grid-template-columns: 1fr;
+	}
+	
 	.carousel-prev {
 		left: 10px;
 	}
@@ -555,6 +681,7 @@
 		right: 10px;
 	}
 	
+	.sessions-container.layout-grid.columns-1,
 	.sessions-container.layout-grid.columns-2,
 	.sessions-container.layout-grid.columns-3 {
 		grid-template-columns: 1fr;
@@ -562,5 +689,33 @@
 	
 	.info-grid {
 		grid-template-columns: 1fr;
+	}
+	
+	.info-grid-5 {
+		grid-template-columns: 1fr;
+		gap: 16px;
+	}
+	
+	.info-card {
+		padding: 24px 16px;
+	}
+	
+	.info-icon {
+		font-size: 36px;
+	}
+}
+
+/* Tablet - 2 columns */
+@media (min-width: 769px) and (max-width: 1024px) {
+	.info-grid-5 {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 20px;
+	}
+}
+
+/* Small Desktop - 3 columns */
+@media (min-width: 1025px) and (max-width: 1280px) {
+	.info-grid-5 {
+		grid-template-columns: repeat(3, 1fr);
 	}
 }

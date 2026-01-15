@@ -555,6 +555,15 @@ class Camp_Dashboard {
 		), ARRAY_A );
 
 		// Update camp data
+		$about_camp = wp_kses_post( $_POST['about_camp'] ?? '' );
+		
+		// Validate word count (max 220 words)
+		$word_count = str_word_count( wp_strip_all_tags( $about_camp ) );
+		if ( $word_count > 220 ) {
+			wp_redirect( add_query_arg( 'error', 'word_limit', wp_get_referer() ) );
+			exit;
+		}
+		
 		$camp_data = [
 			'camp_name'        => sanitize_text_field( $_POST['camp_name'] ?? '' ),
 			'camp_directors'   => sanitize_text_field( $_POST['camp_directors'] ?? '' ),
@@ -565,8 +574,7 @@ class Camp_Dashboard {
 			'phone'            => sanitize_text_field( $_POST['phone'] ?? '' ),
 			'email'            => sanitize_email( $_POST['email'] ?? '' ),
 			'website'          => esc_url_raw( $_POST['website'] ?? '' ),
-			'about_camp'       => wp_kses_post( $_POST['about_camp'] ?? '' ),
-			'rating'           => floatval( $_POST['rating'] ?? 0 ),
+			'about_camp'       => $about_camp,
 			'opening_day'      => sanitize_text_field( $_POST['opening_day'] ?? '' ),
 			'closing_day'      => sanitize_text_field( $_POST['closing_day'] ?? '' ),
 			'minprice_2026'    => floatval( $_POST['minprice_2026'] ?? 0 ),
@@ -578,7 +586,7 @@ class Camp_Dashboard {
 			$camp_data,
 			[ 'id' => $camp_id ],
 			[
-				'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%s', '%s', '%f', '%f'
+				'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f'
 			],
 			[ '%d' ]
 		);
@@ -867,19 +875,27 @@ class Camp_Dashboard {
 				
 				$attach_id = wp_insert_attachment( $attachment, $uploaded_file['file'] );
 				
-				// Assign to "Camps" category
+				// Assign to "Camps" category - create term if it doesn't exist
 				$term = get_term_by( 'slug', 'camps', 'media_category' );
+				if ( ! $term ) {
+					// Create the term if it doesn't exist
+					$new_term = wp_insert_term( 'Camps', 'media_category', [
+						'description' => 'All camp photos and logos',
+						'slug'        => 'camps',
+					] );
+					if ( ! is_wp_error( $new_term ) ) {
+						$term = get_term_by( 'id', $new_term['term_id'], 'media_category' );
+					}
+				}
 				if ( $term ) {
-					$result = wp_set_object_terms( $attach_id, (int) $term->term_id, 'media_category', false );
-					error_log( 'Camp logo upload - Attachment ID: ' . $attach_id . ', Term ID: ' . $term->term_id . ', Result: ' . print_r( $result, true ) );
-				} else {
-					error_log( 'Camp logo upload - Term "camps" not found in media_category taxonomy' );
+					wp_set_object_terms( $attach_id, (int) $term->term_id, 'media_category', false );
 				}
 				
 				// Generate attachment metadata
 				$attach_data = wp_generate_attachment_metadata( $attach_id, $uploaded_file['file'] );
 				wp_update_attachment_metadata( $attach_id, $attach_data );
 				
+				// Update logo URL in database
 				$wpdb->update(
 					"{$wpdb->prefix}camp_management",
 					[ 'logo' => $uploaded_file['url'] ],
@@ -1299,6 +1315,12 @@ class Camp_Dashboard {
 					<p>✓ Your camp information has been updated successfully!</p>
 				</div>
 			<?php endif; ?>
+			
+			<?php if ( isset( $_GET['error'] ) && $_GET['error'] === 'word_limit' ) : ?>
+				<div class="camp-dashboard-error">
+					<p>✗ Camp description must be 220 words or less. Please shorten your description and try again.</p>
+				</div>
+			<?php endif; ?>
 
 			<form method="post" action="" class="camp-edit-form" enctype="multipart/form-data">
 				<?php wp_nonce_field( 'update_camp_data', 'camp_dashboard_nonce' ); ?>
@@ -1323,7 +1345,10 @@ class Camp_Dashboard {
 					<div class="form-row">
 					<div class="form-group">
 						<label for="about_camp">Camp Description <span class="required">*</span></label>
-						<textarea id="about_camp" name="about_camp" rows="6" required><?php echo esc_textarea( $camp['about_camp'] ); ?></textarea>
+						<textarea id="about_camp" name="about_camp" rows="6" maxlength="5000" required><?php echo esc_textarea( $camp['about_camp'] ); ?></textarea>
+						<div class="word-counter">
+							<span id="word-count">0</span> / 220 words <span id="word-limit-warning" style="color: #dc3545; display: none;">● Limit exceeded</span>
+						</div>
 					</div>
 					</div>
 
@@ -1535,6 +1560,56 @@ class Camp_Dashboard {
 				});
 			});
 			</script>
+			
+			<!-- Word counter for camp description -->
+			<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				const textarea = document.getElementById('about_camp');
+				const wordCountSpan = document.getElementById('word-count');
+				const warningSpan = document.getElementById('word-limit-warning');
+				const submitButton = document.querySelector('.camp-edit-form button[type="submit"]');
+				const maxWords = 220;
+				
+				function countWords(text) {
+					// Remove extra whitespace and count words
+					text = text.trim();
+					if (text === '') return 0;
+					return text.split(/\s+/).length;
+				}
+				
+				function updateWordCount() {
+					const text = textarea.value;
+					const wordCount = countWords(text);
+					wordCountSpan.textContent = wordCount;
+					
+					if (wordCount > maxWords) {
+						wordCountSpan.style.color = '#dc3545';
+						wordCountSpan.style.fontWeight = '700';
+						warningSpan.style.display = 'inline';
+						if (submitButton) {
+							submitButton.disabled = true;
+							submitButton.style.opacity = '0.6';
+							submitButton.style.cursor = 'not-allowed';
+						}
+					} else {
+						wordCountSpan.style.color = '#333';
+						wordCountSpan.style.fontWeight = '400';
+						warningSpan.style.display = 'none';
+						if (submitButton) {
+							submitButton.disabled = false;
+							submitButton.style.opacity = '1';
+							submitButton.style.cursor = 'pointer';
+						}
+					}
+				}
+				
+				// Update on page load
+				updateWordCount();
+				
+				// Update on typing
+				textarea.addEventListener('input', updateWordCount);
+			});
+			</script>
 		</div>
 
 		<!-- Photos Upload Section -->
@@ -1685,7 +1760,10 @@ class Camp_Dashboard {
 				</div>
 				<div class="form-group">
 					<label>Description</label>
-					<textarea id="accommodation-description" rows="3" placeholder="Describe the facilities and amenities"></textarea>
+					<textarea id="accommodation-description" rows="3" placeholder="Describe the facilities and amenities" maxlength="1000"></textarea>
+					<div class="word-counter">
+						<span id="accommodation-word-count">0</span> / 90 words <span id="accommodation-word-limit-warning" style="color: #dc3545; display: none;">● Limit exceeded</span>
+					</div>
 				</div>
 				<div style="margin-top:15px;">
 					<button type="button" class="btn-save" onclick="saveAccommodation()">Save</button>
@@ -1822,7 +1900,10 @@ class Camp_Dashboard {
 				</div>
 				<div class="form-group">
 					<label>Description</label>
-					<textarea id="session-description" rows="3" placeholder="Session details"></textarea>
+					<textarea id="session-description" rows="3" placeholder="Session details" maxlength="1000"></textarea>
+					<div class="word-counter">
+						<span id="session-word-count">0</span> / 90 words <span id="session-word-limit-warning" style="color: #dc3545; display: none;">● Limit exceeded</span>
+					</div>
 				</div>
 				<div style="margin-top:15px;">
 					<button type="button" class="btn-save" onclick="saveSession()">Save</button>
@@ -2041,6 +2122,41 @@ class Camp_Dashboard {
 			document.getElementById('accommodation-form').style.display = 'none';
 		}
 
+		// Word counter for accommodation description
+		(function() {
+			const textarea = document.getElementById('accommodation-description');
+			const wordCountSpan = document.getElementById('accommodation-word-count');
+			const warningSpan = document.getElementById('accommodation-word-limit-warning');
+			const maxWords = 90;
+			
+			if (textarea && wordCountSpan) {
+				function countWords(text) {
+					text = text.trim();
+					if (text === '') return 0;
+					return text.split(/\s+/).length;
+				}
+				
+				function updateWordCount() {
+					const text = textarea.value;
+					const wordCount = countWords(text);
+					wordCountSpan.textContent = wordCount;
+					
+					if (wordCount > maxWords) {
+						wordCountSpan.style.color = '#dc3545';
+						wordCountSpan.style.fontWeight = '700';
+						warningSpan.style.display = 'inline';
+					} else {
+						wordCountSpan.style.color = '#333';
+						wordCountSpan.style.fontWeight = '600';
+						warningSpan.style.display = 'none';
+					}
+				}
+				
+				textarea.addEventListener('input', updateWordCount);
+				updateWordCount();
+			}
+		})();
+
 		function saveAccommodation() {
 			const id = document.getElementById('accommodation-id').value;
 			const name = document.getElementById('accommodation-name').value.trim();
@@ -2231,6 +2347,41 @@ class Camp_Dashboard {
 		function cancelSessionForm() {
 			document.getElementById('session-form').style.display = 'none';
 		}
+
+		// Word counter for session description
+		(function() {
+			const textarea = document.getElementById('session-description');
+			const wordCountSpan = document.getElementById('session-word-count');
+			const warningSpan = document.getElementById('session-word-limit-warning');
+			const maxWords = 90;
+			
+			if (textarea && wordCountSpan) {
+				function countWords(text) {
+					text = text.trim();
+					if (text === '') return 0;
+					return text.split(/\s+/).length;
+				}
+				
+				function updateWordCount() {
+					const text = textarea.value;
+					const wordCount = countWords(text);
+					wordCountSpan.textContent = wordCount;
+					
+					if (wordCount > maxWords) {
+						wordCountSpan.style.color = '#dc3545';
+						wordCountSpan.style.fontWeight = '700';
+						warningSpan.style.display = 'inline';
+					} else {
+						wordCountSpan.style.color = '#333';
+						wordCountSpan.style.fontWeight = '600';
+						warningSpan.style.display = 'none';
+					}
+				}
+				
+				textarea.addEventListener('input', updateWordCount);
+				updateWordCount();
+			}
+		})();
 
 		function saveSession() {
 			const id = document.getElementById('session-id').value;

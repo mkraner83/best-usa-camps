@@ -18,6 +18,7 @@ class Camp_Frontend {
 		// Header shortcodes
 		add_shortcode( 'camp_logo', [ $this, 'render_logo' ] );
 		add_shortcode( 'camp_name', [ $this, 'render_name' ] );
+		add_shortcode( 'camp_name_text', [ $this, 'render_name_text' ] );
 		add_shortcode( 'camp_subtitle', [ $this, 'render_subtitle' ] );
 		add_shortcode( 'camp_contact_bar', [ $this, 'render_contact_bar' ] );
 		add_shortcode( 'camp_rating', [ $this, 'render_rating' ] );
@@ -25,14 +26,21 @@ class Camp_Frontend {
 		// Content shortcodes
 		add_shortcode( 'camp_description', [ $this, 'render_description' ] );
 		add_shortcode( 'camp_activities', [ $this, 'render_activities' ] );
-		add_shortcode( 'camp_types_weeks', [ $this, 'render_types_weeks' ] );
+		add_shortcode( 'camp_types', [ $this, 'render_types' ] );
+		add_shortcode( 'camp_weeks', [ $this, 'render_weeks' ] );
+		add_shortcode( 'camp_types_weeks', [ $this, 'render_types_weeks' ] ); // Backward compatibility
 		add_shortcode( 'camp_accommodations', [ $this, 'render_accommodations' ] );
 		add_shortcode( 'camp_faqs', [ $this, 'render_faqs' ] );
 		add_shortcode( 'camp_sessions', [ $this, 'render_sessions' ] );
 		add_shortcode( 'camp_additional_info', [ $this, 'render_additional_info' ] );
+		add_shortcode( 'camp_contact_info', [ $this, 'render_contact_info' ] );
+		
+		// Debug shortcode
+		add_shortcode( 'camp_debug', [ $this, 'render_debug' ] );
 		
 		// Enqueue frontend styles
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_frontend_styles' ] );
+		add_action( 'wp_head', [ $this, 'add_fontawesome_fallback' ], 100 );
 	}
 
 	/**
@@ -64,12 +72,39 @@ class Camp_Frontend {
 		// Check if page has camp_id custom field
 		global $post;
 		if ( is_a( $post, 'WP_Post' ) && get_post_meta( $post->ID, 'camp_id', true ) ) {
+			// FontAwesome 6.5.1 - Load with higher priority
+			if ( ! wp_style_is( 'font-awesome', 'enqueued' ) && ! wp_style_is( 'fontawesome', 'enqueued' ) ) {
+				wp_enqueue_style(
+					'cdbs-font-awesome',
+					'https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css',
+					[],
+					'6.5.1'
+				);
+			}
+			
+			// Camp frontend styles
 			wp_enqueue_style(
 				'camp-frontend',
 				plugin_dir_url( CREATIVE_DBS_CAMPMGMT_FILE ) . 'assets/camp-frontend.css',
 				[],
 				CDBS_CAMP_VERSION
 			);
+			
+			// Add FontAwesome integrity check
+			add_action( 'wp_head', function() {
+				echo '<link rel="preconnect" href="https://cdnjs.cloudflare.com">' . "\n";
+			}, 1 );
+		}
+	}
+
+	/**
+	 * Add FontAwesome fallback to ensure it loads
+	 */
+	public function add_fontawesome_fallback() {
+		global $post;
+		if ( is_a( $post, 'WP_Post' ) && get_post_meta( $post->ID, 'camp_id', true ) ) {
+			// Direct stylesheet link as fallback
+			echo '<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />' . "\n";
 		}
 	}
 
@@ -131,6 +166,18 @@ class Camp_Frontend {
 	}
 
 	/**
+	 * Render camp name as plain text (for SEO titles, meta descriptions)
+	 */
+	public function render_name_text( $atts ) {
+		$camp = $this->get_camp_data();
+		if ( ! $camp ) {
+			return '';
+		}
+		
+		return esc_html( $camp['camp_name'] );
+	}
+
+	/**
 	 * Render camp subtitle (auto-generated from camp types and location)
 	 */
 	public function render_subtitle( $atts ) {
@@ -186,10 +233,13 @@ class Camp_Frontend {
 		ob_start();
 		?>
 		<div class="camp-contact-bar<?php echo $custom_class; ?>">
-			<?php if ( ! empty( $camp['address'] ) ) : ?>
+			<?php if ( ! empty( $camp['address'] ) ) : 
+				$full_address = $camp['address'] . ', ' . $camp['city'] . ', ' . $camp['state'] . ' ' . $camp['zip'];
+				$maps_url = 'https://www.google.com/maps/search/?api=1&query=' . urlencode( $full_address );
+			?>
 				<div class="contact-item">
 					<i aria-hidden="true" class="icon icon-map-marker"></i>
-					<span class="contact-text"><?php echo esc_html( $camp['address'] . ', ' . $camp['city'] . ', ' . $camp['state'] . ' ' . $camp['zip'] ); ?></span>
+					<a href="<?php echo esc_url( $maps_url ); ?>" target="_blank" rel="noopener" class="contact-text"><?php echo esc_html( $full_address ); ?></a>
 				</div>
 			<?php endif; ?>
 			
@@ -266,7 +316,6 @@ class Camp_Frontend {
 		ob_start();
 		?>
 		<div class="camp-section camp-description<?php echo $custom_class; ?>">
-			<h2>About <?php echo esc_html( $camp['camp_name'] ); ?></h2>
 			<div class="description-content">
 				<?php echo wpautop( wp_kses_post( $camp['about_camp'] ) ); ?>
 			</div>
@@ -307,7 +356,6 @@ class Camp_Frontend {
 		ob_start();
 		?>
 		<div class="camp-section camp-activities<?php echo $custom_class; ?>">
-			<h2>Activities Offered</h2>
 			<div class="activities-grid">
 				<?php foreach ( $activities as $activity ) : ?>
 					<span class="activity-tag"><?php echo esc_html( $activity ); ?></span>
@@ -319,7 +367,95 @@ class Camp_Frontend {
 	}
 
 	/**
-	 * Render camp types and available weeks
+	 * Render camp types only
+	 */
+	public function render_types( $atts ) {
+		$atts = shortcode_atts( [
+			'class' => '',
+		], $atts );
+		
+		$camp = $this->get_camp_data();
+		if ( ! $camp ) {
+			return '';
+		}
+		
+		global $wpdb;
+		
+		// Get camp types
+		$camp_types = $wpdb->get_col( $wpdb->prepare(
+			"SELECT ct.name 
+			FROM {$wpdb->prefix}camp_type_terms ct
+			INNER JOIN {$wpdb->prefix}camp_management_types_map cmt ON ct.id = cmt.type_id
+			WHERE cmt.camp_id = %d
+			ORDER BY ct.name ASC",
+			$camp['id']
+		) );
+		
+		if ( empty( $camp_types ) ) {
+			return '';
+		}
+		
+		$custom_class = ! empty( $atts['class'] ) ? ' ' . esc_attr( $atts['class'] ) : '';
+		
+		ob_start();
+		?>
+		<div class="camp-section camp-types<?php echo $custom_class; ?>">
+			<div class="types-list">
+				<?php foreach ( $camp_types as $type ) : ?>
+					<span class="type-badge"><?php echo esc_html( $type ); ?></span>
+				<?php endforeach; ?>
+			</div>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Render camp weeks only
+	 */
+	public function render_weeks( $atts ) {
+		$atts = shortcode_atts( [
+			'class' => '',
+		], $atts );
+		
+		$camp = $this->get_camp_data();
+		if ( ! $camp ) {
+			return '';
+		}
+		
+		global $wpdb;
+		
+		// Get available weeks
+		$camp_weeks = $wpdb->get_col( $wpdb->prepare(
+			"SELECT wt.name 
+			FROM {$wpdb->prefix}camp_week_terms wt
+			INNER JOIN {$wpdb->prefix}camp_management_weeks_map cwm ON wt.id = cwm.week_id
+			WHERE cwm.camp_id = %d
+			ORDER BY wt.name ASC",
+			$camp['id']
+		) );
+		
+		if ( empty( $camp_weeks ) ) {
+			return '';
+		}
+		
+		$custom_class = ! empty( $atts['class'] ) ? ' ' . esc_attr( $atts['class'] ) : '';
+		
+		ob_start();
+		?>
+		<div class="camp-section camp-weeks<?php echo $custom_class; ?>">
+			<div class="weeks-list">
+				<?php foreach ( $camp_weeks as $week ) : ?>
+					<span class="week-badge"><?php echo esc_html( $week ); ?></span>
+				<?php endforeach; ?>
+			</div>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Render camp types and available weeks (backward compatibility)
 	 */
 	public function render_types_weeks( $atts ) {
 		$atts = shortcode_atts( [
@@ -339,7 +475,7 @@ class Camp_Frontend {
 			FROM {$wpdb->prefix}camp_type_terms ct
 			INNER JOIN {$wpdb->prefix}camp_management_types_map cmt ON ct.id = cmt.type_id
 			WHERE cmt.camp_id = %d
-			ORDER BY ct.sort_order ASC",
+			ORDER BY ct.name ASC",
 			$camp['id']
 		) );
 		
@@ -349,7 +485,7 @@ class Camp_Frontend {
 			FROM {$wpdb->prefix}camp_week_terms wt
 			INNER JOIN {$wpdb->prefix}camp_management_weeks_map cwm ON wt.id = cwm.week_id
 			WHERE cwm.camp_id = %d
-			ORDER BY wt.sort_order ASC",
+			ORDER BY wt.name ASC",
 			$camp['id']
 		) );
 		
@@ -360,7 +496,6 @@ class Camp_Frontend {
 		<div class="camp-section camp-types-weeks<?php echo $custom_class; ?>">
 			<?php if ( ! empty( $camp_types ) ) : ?>
 				<div class="types-section">
-					<h2>Camp Types</h2>
 					<div class="types-list">
 						<?php foreach ( $camp_types as $type ) : ?>
 							<span class="type-badge"><?php echo esc_html( $type ); ?></span>
@@ -371,7 +506,6 @@ class Camp_Frontend {
 			
 			<?php if ( ! empty( $camp_weeks ) ) : ?>
 				<div class="weeks-section">
-					<h2>Available Weeks</h2>
 					<div class="weeks-list">
 						<?php foreach ( $camp_weeks as $week ) : ?>
 							<span class="week-badge"><?php echo esc_html( $week ); ?></span>
@@ -408,22 +542,32 @@ class Camp_Frontend {
 			return '';
 		}
 		
+		// Determine columns based on accommodation count (max 3)
+		$accommodation_count = count( $accommodations );
+		$dynamic_columns = min( $accommodation_count, 3 );
+		
 		$layout_class = 'layout-' . esc_attr( $atts['layout'] );
+		$columns_class = 'columns-' . $dynamic_columns;
 		$custom_class = ! empty( $atts['class'] ) ? ' ' . esc_attr( $atts['class'] ) : '';
 		
 		ob_start();
 		?>
-		<div class="camp-section camp-accommodations <?php echo $layout_class . $custom_class; ?>">
-			<h2>Accommodation Facilities</h2>
-			<div class="accommodations-container">
+		<div class="camp-section camp-accommodations">
+			<div class="accommodations-container <?php echo $layout_class . ' ' . $columns_class . $custom_class; ?>">
 				<?php foreach ( $accommodations as $acc ) : ?>
 					<div class="accommodation-item">
 						<h3><?php echo esc_html( $acc['name'] ); ?></h3>
 						<?php if ( ! empty( $acc['capacity'] ) ) : ?>
 							<p class="capacity">Capacity: <strong><?php echo esc_html( $acc['capacity'] ); ?></strong></p>
 						<?php endif; ?>
-						<?php if ( ! empty( $acc['description'] ) ) : ?>
-							<p class="description"><?php echo esc_html( $acc['description'] ); ?></p>
+					<?php if ( ! empty( $acc['description'] ) ) : 
+						$description = esc_html( $acc['description'] );
+						$words = explode( ' ', $description );
+						if ( count( $words ) > 90 ) {
+							$description = implode( ' ', array_slice( $words, 0, 90 ) ) . '...';
+						}
+					?>
+						<p class="description"><?php echo $description; ?></p>
 						<?php endif; ?>
 					</div>
 				<?php endforeach; ?>
@@ -439,7 +583,7 @@ class Camp_Frontend {
 	public function render_faqs( $atts ) {
 		$atts = shortcode_atts( [
 			'style' => 'accordion', // accordion, list
-			'open_first' => 'true',
+			'open_first' => 'false',
 			'class' => '',
 		], $atts );
 		
@@ -465,7 +609,7 @@ class Camp_Frontend {
 		ob_start();
 		?>
 		<div class="camp-section camp-faqs <?php echo $style_class . $custom_class; ?>">
-			<h2>Frequently Asked Questions</h2>
+
 			<div class="faqs-container">
 				<?php foreach ( $faqs as $index => $faq ) : ?>
 					<div class="faq-item <?php echo ( $atts['style'] === 'accordion' && $index === 0 && $open_first ) ? 'open' : ''; ?>">
@@ -540,15 +684,18 @@ class Camp_Frontend {
 			return '';
 		}
 		
+		// Determine columns based on session count (max 3)
+		$session_count = count( $sessions );
+		$dynamic_columns = min( $session_count, 3 );
+		
 		$layout_class = 'layout-' . esc_attr( $atts['layout'] );
-		$columns_class = 'columns-' . esc_attr( $atts['columns'] );
+		$columns_class = 'columns-' . $dynamic_columns;
 		$custom_class = ! empty( $atts['class'] ) ? ' ' . esc_attr( $atts['class'] ) : '';
 		
 		ob_start();
 		?>
-		<div class="camp-section camp-sessions <?php echo $layout_class . ' ' . $columns_class . $custom_class; ?>">
-			<h2>Sessions & Pricing</h2>
-			<div class="sessions-container">
+		<div class="camp-section camp-sessions">
+			<div class="sessions-container <?php echo $layout_class . ' ' . $columns_class . $custom_class; ?>">
 				<?php foreach ( $sessions as $session ) : ?>
 					<div class="session-card">
 						<h3><?php echo esc_html( $session['session_name'] ); ?></h3>
@@ -569,8 +716,14 @@ class Camp_Frontend {
 							<div class="session-price">$<?php echo number_format( $session['price'], 2 ); ?></div>
 						<?php endif; ?>
 						
-						<?php if ( ! empty( $session['description'] ) ) : ?>
-							<p class="session-description"><?php echo esc_html( $session['description'] ); ?></p>
+<?php if ( ! empty( $session['description'] ) ) : 
+					$description = esc_html( $session['description'] );
+					$words = explode( ' ', $description );
+					if ( count( $words ) > 90 ) {
+						$description = implode( ' ', array_slice( $words, 0, 90 ) ) . '...';
+					}
+				?>
+					<p class="session-description"><?php echo $description; ?></p>
 						<?php endif; ?>
 						
 						<?php if ( ! empty( $session['notes'] ) ) : ?>
@@ -585,7 +738,7 @@ class Camp_Frontend {
 	}
 
 	/**
-	 * Render additional info (ages, year established, gender, etc.)
+	 * Render additional info (directors, dates, rates)
 	 */
 	public function render_additional_info( $atts ) {
 		$atts = shortcode_atts( [
@@ -602,29 +755,204 @@ class Camp_Frontend {
 		ob_start();
 		?>
 		<div class="camp-section camp-additional-info<?php echo $custom_class; ?>">
-			<h2>Camp Information</h2>
-			<div class="info-grid">
+			<div class="info-grid info-grid-5">
 				<?php if ( ! empty( $camp['camp_directors'] ) ) : ?>
-					<div class="info-item">
-						<span class="info-label">Director(s):</span>
-						<span class="info-value"><?php echo esc_html( $camp['camp_directors'] ); ?></span>
+					<div class="info-card">
+						<div class="info-icon">
+							<i class="fa-solid fa-users"></i>
+						</div>
+						<div class="info-label">Director(s)</div>
+						<div class="info-value"><?php echo esc_html( $camp['camp_directors'] ); ?></div>
 					</div>
 				<?php endif; ?>
 				
 				<?php if ( ! empty( $camp['opening_day'] ) ) : ?>
-					<div class="info-item">
-						<span class="info-label">Opening Day:</span>
-						<span class="info-value"><?php echo esc_html( date( 'F d, Y', strtotime( $camp['opening_day'] ) ) ); ?></span>
+					<div class="info-card">
+						<div class="info-icon">
+							<i class="fa-regular fa-calendar-check"></i>
+						</div>
+						<div class="info-label">Opening Day</div>
+						<div class="info-value"><?php echo esc_html( date( 'M j, Y', strtotime( $camp['opening_day'] ) ) ); ?></div>
 					</div>
 				<?php endif; ?>
 				
 				<?php if ( ! empty( $camp['closing_day'] ) ) : ?>
-					<div class="info-item">
-						<span class="info-label">Closing Day:</span>
-						<span class="info-value"><?php echo esc_html( date( 'F d, Y', strtotime( $camp['closing_day'] ) ) ); ?></span>
+					<div class="info-card">
+						<div class="info-icon">
+							<i class="fa-regular fa-calendar-xmark"></i>
+						</div>
+						<div class="info-label">Closing Day</div>
+						<div class="info-value"><?php echo esc_html( date( 'M j, Y', strtotime( $camp['closing_day'] ) ) ); ?></div>
+					</div>
+				<?php endif; ?>
+				
+				<?php if ( ! empty( $camp['minprice_2026'] ) && $camp['minprice_2026'] > 0 ) : ?>
+					<div class="info-card">
+						<div class="info-icon">
+							<i class="fa-solid fa-tag"></i>
+						</div>
+						<div class="info-label">Lowest Rate</div>
+						<div class="info-value">$<?php echo number_format( $camp['minprice_2026'], 0 ); ?></div>
+					</div>
+				<?php endif; ?>
+				
+				<?php if ( ! empty( $camp['maxprice_2026'] ) && $camp['maxprice_2026'] > 0 ) : ?>
+					<div class="info-card">
+						<div class="info-icon">
+							<i class="fa-solid fa-tags"></i>
+						</div>
+						<div class="info-label">Highest Rate</div>
+						<div class="info-value">$<?php echo number_format( $camp['maxprice_2026'], 0 ); ?></div>
 					</div>
 				<?php endif; ?>
 			</div>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Render contact information (sidebar format - name, address, contact details stacked)
+	 */
+	public function render_contact_info( $atts ) {
+		$atts = shortcode_atts( [
+			'class' => '',
+		], $atts );
+		
+		$camp = $this->get_camp_data();
+		if ( ! $camp ) {
+			return '';
+		}
+		
+		$custom_class = ! empty( $atts['class'] ) ? ' ' . esc_attr( $atts['class'] ) : '';
+		
+		ob_start();
+		?>
+		<div class="camp-section camp-contact-info<?php echo $custom_class; ?>">
+			<?php if ( ! empty( $camp['address'] ) || ! empty( $camp['city'] ) || ! empty( $camp['state'] ) || ! empty( $camp['zip'] ) ) : 
+				$address_parts = array_filter( [ $camp['address'], $camp['city'], $camp['state'], $camp['zip'] ] );
+				$full_address = implode( ', ', $address_parts );
+				$maps_url = 'https://www.google.com/maps/search/?api=1&query=' . urlencode( $full_address );
+			?>
+				<div class="contact-info-item contact-address">
+					<div class="contact-info-label">Address</div>
+					<?php if ( ! empty( $camp['address'] ) ) : ?>
+						<div class="contact-info-value">
+							<a href="<?php echo esc_url( $maps_url ); ?>" target="_blank" rel="noopener"><?php echo esc_html( $camp['address'] ); ?></a>
+						</div>
+					<?php endif; ?>
+					<?php if ( ! empty( $camp['city'] ) || ! empty( $camp['state'] ) || ! empty( $camp['zip'] ) ) : ?>
+						<div class="contact-info-value">
+							<a href="<?php echo esc_url( $maps_url ); ?>" target="_blank" rel="noopener">
+								<?php 
+								$location_parts = array_filter( [ $camp['city'], $camp['state'], $camp['zip'] ] );
+								echo esc_html( implode( ', ', $location_parts ) );
+								?>
+							</a>
+						</div>
+					<?php endif; ?>
+				</div>
+			<?php endif; ?>
+			
+			<?php if ( ! empty( $camp['email'] ) ) : ?>
+				<div class="contact-info-item contact-email">
+					<div class="contact-info-label">Email</div>
+					<div class="contact-info-value">
+						<a href="mailto:<?php echo esc_attr( $camp['email'] ); ?>"><?php echo esc_html( $camp['email'] ); ?></a>
+					</div>
+				</div>
+			<?php endif; ?>
+			
+			<?php if ( ! empty( $camp['phone'] ) ) : ?>
+				<div class="contact-info-item contact-phone">
+					<div class="contact-info-label">Phone</div>
+					<div class="contact-info-value">
+						<a href="tel:<?php echo esc_attr( preg_replace( '/[^0-9]/', '', $camp['phone'] ) ); ?>"><?php echo esc_html( $camp['phone'] ); ?></a>
+					</div>
+				</div>
+			<?php endif; ?>
+			
+			<?php if ( ! empty( $camp['website'] ) ) : ?>
+				<div class="contact-info-item contact-website">
+					<div class="contact-info-label">Website</div>
+					<div class="contact-info-value">
+						<a href="<?php echo esc_url( $camp['website'] ); ?>" target="_blank" rel="noopener"><?php echo esc_html( preg_replace( '#^https?://(www\.)?#', '', $camp['website'] ) ); ?></a>
+					</div>
+				</div>
+			<?php endif; ?>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Render debug information (for troubleshooting only)
+	 */
+	public function render_debug( $atts ) {
+		// Only show to logged-in administrators
+		if ( ! current_user_can( 'manage_options' ) ) {
+			return '<!-- Debug info only visible to administrators -->';
+		}
+		
+		global $wpdb, $post;
+		
+		$camp_id = get_post_meta( $post->ID, 'camp_id', true );
+		$camp = $this->get_camp_data();
+		
+		ob_start();
+		?>
+		<div style="background: #f5f5f5; border: 2px solid #333; padding: 20px; margin: 20px 0; font-family: monospace;">
+			<h3 style="margin-top: 0;">🔍 Camp Debug Information</h3>
+			<table style="width: 100%; border-collapse: collapse;">
+				<tr>
+					<td style="padding: 5px; border: 1px solid #ccc;"><strong>Page ID:</strong></td>
+					<td style="padding: 5px; border: 1px solid #ccc;"><?php echo esc_html( $post->ID ); ?></td>
+				</tr>
+				<tr>
+					<td style="padding: 5px; border: 1px solid #ccc;"><strong>Camp ID (custom field):</strong></td>
+					<td style="padding: 5px; border: 1px solid #ccc;"><?php echo esc_html( $camp_id ? $camp_id : 'NOT SET' ); ?></td>
+				</tr>
+				<tr>
+					<td style="padding: 5px; border: 1px solid #ccc;"><strong>Camp Found:</strong></td>
+					<td style="padding: 5px; border: 1px solid #ccc;"><?php echo $camp ? 'YES' : 'NO'; ?></td>
+				</tr>
+				<?php if ( $camp ) : ?>
+				<tr>
+					<td style="padding: 5px; border: 1px solid #ccc;"><strong>Camp Name:</strong></td>
+					<td style="padding: 5px; border: 1px solid #ccc;"><?php echo esc_html( $camp['camp_name'] ); ?></td>
+				</tr>
+				<tr>
+					<td style="padding: 5px; border: 1px solid #ccc;"><strong>Logo URL (DB):</strong></td>
+					<td style="padding: 5px; border: 1px solid #ccc; word-break: break-all;">
+						<?php echo esc_html( $camp['logo'] ? $camp['logo'] : 'EMPTY' ); ?>
+					</td>
+				</tr>
+				<tr>
+					<td style="padding: 5px; border: 1px solid #ccc;"><strong>Logo Filename:</strong></td>
+					<td style="padding: 5px; border: 1px solid #ccc;">
+						<?php echo esc_html( $camp['logo'] ? basename( $camp['logo'] ) : 'N/A' ); ?>
+					</td>
+				</tr>
+				<tr>
+					<td style="padding: 5px; border: 1px solid #ccc;"><strong>Logo Preview:</strong></td>
+					<td style="padding: 5px; border: 1px solid #ccc;">
+						<?php if ( ! empty( $camp['logo'] ) && pathinfo( $camp['logo'], PATHINFO_EXTENSION ) !== 'pdf' ) : ?>
+							<img src="<?php echo esc_url( $camp['logo'] ); ?>" style="max-width: 200px; max-height: 100px; display: block; margin-top: 10px;" alt="Logo">
+						<?php elseif ( ! empty( $camp['logo'] ) ) : ?>
+							PDF File
+						<?php else : ?>
+							No logo set
+						<?php endif; ?>
+					</td>
+				</tr>
+				<?php endif; ?>
+			</table>
+			<?php if ( $camp ) : ?>
+			<details style="margin-top: 15px;">
+				<summary style="cursor: pointer; font-weight: bold;">Show Full Camp Data</summary>
+				<pre style="background: #fff; padding: 10px; overflow: auto; max-height: 400px; margin-top: 10px;"><?php print_r( $camp ); ?></pre>
+			</details>
+			<?php endif; ?>
 		</div>
 		<?php
 		return ob_get_clean();
