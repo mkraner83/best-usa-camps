@@ -357,7 +357,7 @@ class Camp_Dashboard {
 		// Get camp data
 		global $wpdb;
 		$camp = $wpdb->get_row( $wpdb->prepare(
-			"SELECT camp_name FROM {$wpdb->prefix}camp_management WHERE user_id = %d",
+			"SELECT camp_name FROM {$wpdb->prefix}camp_management WHERE wordpress_user_id = %d",
 			$user->ID
 		), ARRAY_A );
 
@@ -483,7 +483,7 @@ class Camp_Dashboard {
 
 		global $wpdb;
 		$camp = $wpdb->get_row( $wpdb->prepare(
-			"SELECT camp_directors FROM {$wpdb->prefix}camp_management WHERE user_id = %d",
+			"SELECT camp_directors FROM {$wpdb->prefix}camp_management WHERE wordpress_user_id = %d",
 			$user->ID
 		), ARRAY_A );
 
@@ -540,7 +540,7 @@ class Camp_Dashboard {
 		// Get camp ID associated with this user
 		global $wpdb;
 		$camp_id = $wpdb->get_var( $wpdb->prepare(
-			"SELECT id FROM {$wpdb->prefix}camp_management WHERE user_id = %d",
+			"SELECT id FROM {$wpdb->prefix}camp_management WHERE wordpress_user_id = %d",
 			$user->ID
 		) );
 
@@ -1198,7 +1198,7 @@ class Camp_Dashboard {
 		// Get camp data
 		global $wpdb;
 		$camp = $wpdb->get_row( $wpdb->prepare(
-			"SELECT * FROM {$wpdb->prefix}camp_management WHERE user_id = %d",
+			"SELECT * FROM {$wpdb->prefix}camp_management WHERE wordpress_user_id = %d",
 			$user->ID
 		), ARRAY_A );
 
@@ -2598,7 +2598,7 @@ class Camp_Dashboard {
 		// Get camp_id for current user
 		global $wpdb;
 		$camp_id = $wpdb->get_var( $wpdb->prepare(
-			"SELECT id FROM {$wpdb->prefix}camp_management WHERE user_id = %d",
+			"SELECT id FROM {$wpdb->prefix}camp_management WHERE wordpress_user_id = %d",
 			$user->ID
 		) );
 
@@ -2684,7 +2684,7 @@ class Camp_Dashboard {
 
 		global $wpdb;
 		$camp_id = $wpdb->get_var( $wpdb->prepare(
-			"SELECT id FROM {$wpdb->prefix}camp_management WHERE user_id = %d",
+			"SELECT id FROM {$wpdb->prefix}camp_management WHERE wordpress_user_id = %d",
 			$user->ID
 		) );
 
@@ -2765,7 +2765,7 @@ class Camp_Dashboard {
 
 		global $wpdb;
 		$camp_id = $wpdb->get_var( $wpdb->prepare(
-			"SELECT id FROM {$wpdb->prefix}camp_management WHERE user_id = %d",
+			"SELECT id FROM {$wpdb->prefix}camp_management WHERE wordpress_user_id = %d",
 			$user->ID
 		) );
 
