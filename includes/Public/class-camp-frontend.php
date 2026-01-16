@@ -39,12 +39,19 @@ class Camp_Frontend {
 		add_shortcode( 'camp_contact_info', [ $this, 'render_contact_info' ] );
 		add_shortcode( 'camp_gallery', [ $this, 'render_gallery' ] );
 		
+		// Search shortcode
+		add_shortcode( 'camp_search', [ $this, 'render_search' ] );
+		
 		// Debug shortcode
 		add_shortcode( 'camp_debug', [ $this, 'render_debug' ] );
 		
 		// Enqueue frontend styles
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_frontend_styles' ] );
 		add_action( 'wp_head', [ $this, 'add_fontawesome_fallback' ], 100 );
+		
+		// AJAX handlers for search
+		add_action( 'wp_ajax_camp_search', [ $this, 'ajax_camp_search' ] );
+		add_action( 'wp_ajax_nopriv_camp_search', [ $this, 'ajax_camp_search' ] );
 	}
 
 	/**
@@ -73,9 +80,13 @@ class Camp_Frontend {
 	 * Enqueue frontend styles
 	 */
 	public function enqueue_frontend_styles() {
-		// Check if page has camp_id custom field
 		global $post;
-		if ( is_a( $post, 'WP_Post' ) && get_post_meta( $post->ID, 'camp_id', true ) ) {
+		
+		// Check if page has camp_id custom field OR camp_search shortcode
+		$has_camp_id = is_a( $post, 'WP_Post' ) && get_post_meta( $post->ID, 'camp_id', true );
+		$has_search = is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'camp_search' );
+		
+		if ( $has_camp_id || $has_search ) {
 			// FontAwesome 6.5.1 - Load with higher priority
 			if ( ! wp_style_is( 'font-awesome', 'enqueued' ) && ! wp_style_is( 'fontawesome', 'enqueued' ) ) {
 				wp_enqueue_style(
@@ -85,7 +96,10 @@ class Camp_Frontend {
 					'6.5.1'
 				);
 			}
-			
+		}
+		
+		// Camp detail page styles
+		if ( $has_camp_id ) {
 			// Camp frontend styles
 			wp_enqueue_style(
 				'camp-frontend',
@@ -94,10 +108,39 @@ class Camp_Frontend {
 				CDBS_CAMP_VERSION
 			);
 			
+			// Camp section visibility script
+			wp_enqueue_script(
+				'camp-section-visibility',
+				plugin_dir_url( CREATIVE_DBS_CAMPMGMT_FILE ) . 'assets/camp-section-visibility.js',
+				[],
+				CDBS_CAMP_VERSION,
+				true // Load in footer
+			);
+			
 			// Add FontAwesome integrity check
 			add_action( 'wp_head', function() {
 				echo '<link rel="preconnect" href="https://cdnjs.cloudflare.com">' . "\n";
 			}, 1 );
+		}
+		
+		// Camp search page styles
+		if ( $has_search ) {
+			// Search page styles
+			wp_enqueue_style(
+				'camp-search',
+				plugin_dir_url( CREATIVE_DBS_CAMPMGMT_FILE ) . 'assets/camp-search.css',
+				[],
+				CDBS_CAMP_VERSION
+			);
+			
+			// Search page script (requires jQuery)
+			wp_enqueue_script(
+				'camp-search',
+				plugin_dir_url( CREATIVE_DBS_CAMPMGMT_FILE ) . 'assets/camp-search.js',
+				[ 'jquery' ],
+				CDBS_CAMP_VERSION,
+				true // Load in footer
+			);
 		}
 	}
 
@@ -1180,7 +1223,412 @@ class Camp_Frontend {
 		<?php
 		return ob_get_clean();
 	}
+
+	/**
+	 * Render camp search page
+	 */
+	public function render_search( $atts ) {
+		$atts = shortcode_atts( [
+			'results_per_page' => 12,
+			'class' => '',
+		], $atts );
+		
+		global $wpdb;
+		
+		// Get filter options from database
+		$states = $wpdb->get_col( "SELECT DISTINCT state FROM {$wpdb->prefix}camp_management WHERE state != '' ORDER BY state ASC" );
+		$camp_types = $wpdb->get_col( "SELECT DISTINCT camp_types FROM {$wpdb->prefix}camp_management WHERE camp_types != ''" );
+		$weeks = $wpdb->get_col( "SELECT DISTINCT weeks FROM {$wpdb->prefix}camp_management WHERE weeks != ''" );
+		$activities = $wpdb->get_col( "SELECT DISTINCT activities FROM {$wpdb->prefix}camp_management WHERE activities != ''" );
+		
+		// Parse comma-separated values and create unique arrays
+		$all_types = [];
+		foreach ( $camp_types as $types ) {
+			$split = array_map( 'trim', explode( ',', $types ) );
+			$all_types = array_merge( $all_types, $split );
+		}
+		$all_types = array_unique( array_filter( $all_types ) );
+		sort( $all_types );
+		
+		$all_weeks = [];
+		foreach ( $weeks as $week ) {
+			$split = array_map( 'trim', explode( ',', $week ) );
+			$all_weeks = array_merge( $all_weeks, $split );
+		}
+		$all_weeks = array_unique( array_filter( $all_weeks ) );
+		sort( $all_weeks );
+		
+		$all_activities = [];
+		foreach ( $activities as $activity ) {
+			$split = array_map( 'trim', explode( ',', $activity ) );
+			$all_activities = array_merge( $all_activities, $split );
+		}
+		$all_activities = array_unique( array_filter( $all_activities ) );
+		sort( $all_activities );
+		
+		// Get price range
+		$price_range = $wpdb->get_row( "SELECT MIN(price) as min_price, MAX(price) as max_price FROM " . \CreativeDBS\CampMgmt\DB::table_sessions() . " WHERE price > 0" );
+		$min_price = $price_range ? floor( $price_range->min_price ) : 0;
+		$max_price = $price_range ? ceil( $price_range->max_price ) : 10000;
+		
+		$custom_class = ! empty( $atts['class'] ) ? ' ' . esc_attr( $atts['class'] ) : '';
+		
+		ob_start();
+		?>
+		<div class="camp-search-wrapper<?php echo $custom_class; ?>">
+			<!-- Search Bar -->
+			<div class="camp-search-bar">
+				<div class="search-input-wrapper">
+					<i class="fa fa-search"></i>
+					<input type="text" 
+					       id="camp-search-input" 
+					       placeholder="Search camps by name, location, activities, or any keyword..." 
+					       class="camp-search-input">
+				</div>
+				<button id="camp-search-btn" class="camp-search-btn">
+					<i class="fa fa-search"></i> Search
+				</button>
+				<button id="camp-clear-btn" class="camp-clear-btn">
+					<i class="fa fa-times"></i> Clear
+				</button>
+			</div>
+			
+			<!-- Main Content Area -->
+			<div class="camp-search-content">
+				<!-- Filters Sidebar -->
+				<aside class="camp-filters-sidebar">
+					<div class="filters-header">
+						<h3><i class="fa fa-filter"></i> Filters</h3>
+						<button class="filters-toggle-mobile">
+							<i class="fa fa-sliders"></i> Toggle Filters
+						</button>
+					</div>
+					
+					<div class="filters-container">
+						<!-- State Filter -->
+						<div class="filter-group">
+							<label class="filter-label">
+								<i class="fa fa-map-marker-alt"></i> State
+							</label>
+							<select id="filter-state" class="filter-select">
+								<option value="">All States</option>
+								<?php foreach ( $states as $state ) : ?>
+									<option value="<?php echo esc_attr( $state ); ?>">
+										<?php echo esc_html( $state ); ?>
+									</option>
+								<?php endforeach; ?>
+							</select>
+						</div>
+						
+						<!-- Start Date Filter -->
+						<div class="filter-group">
+							<label class="filter-label">
+								<i class="fa fa-calendar-alt"></i> Start Date (From)
+							</label>
+							<input type="date" id="filter-start-date" class="filter-input">
+						</div>
+						
+						<!-- End Date Filter -->
+						<div class="filter-group">
+							<label class="filter-label">
+								<i class="fa fa-calendar-check"></i> End Date (To)
+							</label>
+							<input type="date" id="filter-end-date" class="filter-input">
+						</div>
+						
+						<!-- Price Range Filter -->
+						<div class="filter-group">
+							<label class="filter-label">
+								<i class="fa fa-dollar-sign"></i> Price Range
+							</label>
+							<div class="price-range-display">
+								$<span id="min-price-display"><?php echo number_format( $min_price ); ?></span> - 
+								$<span id="max-price-display"><?php echo number_format( $max_price ); ?></span>
+							</div>
+							<div class="price-slider-wrapper">
+								<input type="range" 
+								       id="filter-min-price" 
+								       class="price-slider" 
+								       min="<?php echo $min_price; ?>" 
+								       max="<?php echo $max_price; ?>" 
+								       value="<?php echo $min_price; ?>"
+								       data-label="min">
+								<input type="range" 
+								       id="filter-max-price" 
+								       class="price-slider" 
+								       min="<?php echo $min_price; ?>" 
+								       max="<?php echo $max_price; ?>" 
+								       value="<?php echo $max_price; ?>"
+								       data-label="max">
+							</div>
+						</div>
+						
+						<!-- Camp Types Filter -->
+						<div class="filter-group">
+							<label class="filter-label">
+								<i class="fa fa-campground"></i> Camp Type
+							</label>
+							<div class="filter-checkboxes">
+								<?php foreach ( $all_types as $type ) : ?>
+									<label class="filter-checkbox-label">
+										<input type="checkbox" name="camp_type" value="<?php echo esc_attr( $type ); ?>">
+										<span><?php echo esc_html( $type ); ?></span>
+									</label>
+								<?php endforeach; ?>
+							</div>
+						</div>
+						
+						<!-- Weeks Filter -->
+						<div class="filter-group">
+							<label class="filter-label">
+								<i class="fa fa-calendar-week"></i> Duration (Weeks)
+							</label>
+							<div class="filter-checkboxes">
+								<?php foreach ( $all_weeks as $week ) : ?>
+									<label class="filter-checkbox-label">
+										<input type="checkbox" name="weeks" value="<?php echo esc_attr( $week ); ?>">
+										<span><?php echo esc_html( $week ); ?></span>
+									</label>
+								<?php endforeach; ?>
+							</div>
+						</div>
+						
+						<!-- Activities Filter -->
+						<div class="filter-group">
+							<label class="filter-label">
+								<i class="fa fa-running"></i> Activities Offered
+							</label>
+							<div class="filter-checkboxes scrollable">
+								<?php foreach ( $all_activities as $activity ) : ?>
+									<label class="filter-checkbox-label">
+										<input type="checkbox" name="activities" value="<?php echo esc_attr( $activity ); ?>">
+										<span><?php echo esc_html( $activity ); ?></span>
+									</label>
+								<?php endforeach; ?>
+							</div>
+						</div>
+			</div>
+		</aside>
+
+				<!-- Results Area -->
+				<div class="camp-results-area">
+					<!-- Results Header -->
+					<div class="results-header">
+						<div class="results-count">
+							Showing <span id="results-count">0</span> camps
+						</div>
+						<div class="results-sort">
+							<label for="sort-by">Sort by:</label>
+							<select id="sort-by" class="sort-select">
+								<option value="random">Random</option>
+								<option value="name_asc">Name (A-Z)</option>
+								<option value="name_desc">Name (Z-A)</option>
+								<option value="rating_desc">Highest Rated</option>
+								<option value="rating_asc">Lowest Rated</option>
+								<option value="price_asc">Lowest Price</option>
+								<option value="price_desc">Highest Price</option>
+							</select>
+						</div>
+					</div>
+					
+					<!-- Loading Indicator -->
+					<div id="search-loading" class="search-loading" style="display: none;">
+						<i class="fa fa-spinner fa-spin"></i> Loading camps...
+					</div>
+					
+					<!-- Results Grid -->
+					<div id="camp-results-grid" class="camp-results-grid">
+						<!-- Results will be loaded via AJAX -->
+					</div>
+					
+					<!-- No Results Message -->
+					<div id="no-results" class="no-results" style="display: none;">
+						<i class="fa fa-search"></i>
+						<h3>No camps found</h3>
+						<p>Try adjusting your filters or search terms to find what you're looking for.</p>
+					</div>
+					
+					<!-- Load More Button -->
+					<div class="load-more-wrapper">
+						<button id="load-more-btn" class="load-more-btn" style="display: none;">
+							<i class="fa fa-plus-circle"></i> Load More Camps
+						</button>
+					</div>
+				</div>
+			</div>
+		</div>
+		
+		<script>
+		// Pass data to JavaScript
+		var campSearchData = {
+			ajaxUrl: '<?php echo admin_url( 'admin-ajax.php' ); ?>',
+			resultsPerPage: <?php echo intval( $atts['results_per_page'] ); ?>,
+			minPrice: <?php echo $min_price; ?>,
+			maxPrice: <?php echo $max_price; ?>
+		};
+		</script>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * AJAX handler for camp search
+	 */
+	public function ajax_camp_search() {
+		global $wpdb;
+		
+		// Get search parameters
+		$search = isset( $_POST['search'] ) ? sanitize_text_field( $_POST['search'] ) : '';
+		$state = isset( $_POST['state'] ) ? sanitize_text_field( $_POST['state'] ) : '';
+		$start_date = isset( $_POST['start_date'] ) ? sanitize_text_field( $_POST['start_date'] ) : '';
+		$end_date = isset( $_POST['end_date'] ) ? sanitize_text_field( $_POST['end_date'] ) : '';
+		$min_price = isset( $_POST['min_price'] ) ? intval( $_POST['min_price'] ) : 0;
+		$max_price = isset( $_POST['max_price'] ) ? intval( $_POST['max_price'] ) : 999999;
+		$camp_types = isset( $_POST['camp_types'] ) ? $_POST['camp_types'] : [];
+		$weeks = isset( $_POST['weeks'] ) ? $_POST['weeks'] : [];
+		$activities = isset( $_POST['activities'] ) ? $_POST['activities'] : [];
+		$sort_by = isset( $_POST['sort_by'] ) ? sanitize_text_field( $_POST['sort_by'] ) : 'random';
+		$page = isset( $_POST['page'] ) ? intval( $_POST['page'] ) : 1;
+		$per_page = isset( $_POST['per_page'] ) ? intval( $_POST['per_page'] ) : 12;
+		
+		$offset = ( $page - 1 ) * $per_page;
+		
+		// Build query
+		$where = [ '1=1' ];
+		$join = '';
+		
+		// Search across all camp data
+		if ( ! empty( $search ) ) {
+			$search_like = '%' . $wpdb->esc_like( $search ) . '%';
+			$where[] = $wpdb->prepare(
+				"(camp_name LIKE %s OR city LIKE %s OR state LIKE %s OR description LIKE %s OR activities LIKE %s OR camp_types LIKE %s OR weeks LIKE %s OR additional_info LIKE %s)",
+				$search_like, $search_like, $search_like, $search_like, $search_like, $search_like, $search_like, $search_like
+			);
+		}
+		
+		// State filter
+		if ( ! empty( $state ) ) {
+			$where[] = $wpdb->prepare( "state = %s", $state );
+		}
+		
+		// Date filters (operational dates)
+		if ( ! empty( $start_date ) ) {
+			$where[] = $wpdb->prepare( "start_date >= %s", $start_date );
+		}
+		if ( ! empty( $end_date ) ) {
+			$where[] = $wpdb->prepare( "end_date <= %s", $end_date );
+		}
+		
+		// Camp types filter
+		if ( ! empty( $camp_types ) && is_array( $camp_types ) ) {
+			$type_conditions = [];
+			foreach ( $camp_types as $type ) {
+				$type_conditions[] = $wpdb->prepare( "camp_types LIKE %s", '%' . $wpdb->esc_like( $type ) . '%' );
+			}
+			$where[] = '(' . implode( ' OR ', $type_conditions ) . ')';
+		}
+		
+		// Weeks filter
+		if ( ! empty( $weeks ) && is_array( $weeks ) ) {
+			$week_conditions = [];
+			foreach ( $weeks as $week ) {
+				$week_conditions[] = $wpdb->prepare( "weeks LIKE %s", '%' . $wpdb->esc_like( $week ) . '%' );
+			}
+			$where[] = '(' . implode( ' OR ', $week_conditions ) . ')';
+		}
+		
+		// Activities filter
+		if ( ! empty( $activities ) && is_array( $activities ) ) {
+			$activity_conditions = [];
+			foreach ( $activities as $activity ) {
+				$activity_conditions[] = $wpdb->prepare( "activities LIKE %s", '%' . $wpdb->esc_like( $activity ) . '%' );
+			}
+			$where[] = '(' . implode( ' OR ', $activity_conditions ) . ')';
+		}
+		
+		// Price filter - join with sessions table
+		if ( $min_price > 0 || $max_price < 999999 ) {
+			$join = " LEFT JOIN " . \CreativeDBS\CampMgmt\DB::table_sessions() . " s ON c.id = s.camp_id";
+			$where[] = $wpdb->prepare( "(s.price >= %d AND s.price <= %d)", $min_price, $max_price );
+		}
+		
+		// Sorting
+		$order_by = 'RAND()'; // Default random
+		switch ( $sort_by ) {
+			case 'name_asc':
+				$order_by = 'c.camp_name ASC';
+				break;
+			case 'name_desc':
+				$order_by = 'c.camp_name DESC';
+				break;
+			case 'rating_desc':
+				$order_by = 'c.rating DESC, c.camp_name ASC';
+				break;
+			case 'rating_asc':
+				$order_by = 'c.rating ASC, c.camp_name ASC';
+				break;
+			case 'price_asc':
+				if ( empty( $join ) ) {
+					$join = " LEFT JOIN " . \CreativeDBS\CampMgmt\DB::table_sessions() . " s ON c.id = s.camp_id";
+				}
+				$order_by = 'MIN(s.price) ASC';
+				break;
+			case 'price_desc':
+				if ( empty( $join ) ) {
+					$join = " LEFT JOIN " . \CreativeDBS\CampMgmt\DB::table_sessions() . " s ON c.id = s.camp_id";
+				}
+				$order_by = 'MAX(s.price) DESC';
+				break;
+		}
+		
+		$where_clause = implode( ' AND ', $where );
+		
+		// Get total count
+		$count_query = "SELECT COUNT(DISTINCT c.id) FROM {$wpdb->prefix}camp_management c {$join} WHERE {$where_clause}";
+		$total_results = $wpdb->get_var( $count_query );
+		
+		// Get camps
+		$query = "SELECT DISTINCT c.* FROM {$wpdb->prefix}camp_management c {$join} WHERE {$where_clause} GROUP BY c.id ORDER BY {$order_by} LIMIT %d OFFSET %d";
+		$camps = $wpdb->get_results( $wpdb->prepare( $query, $per_page, $offset ), ARRAY_A );
+		
+		// Format camp data for frontend
+		$formatted_camps = [];
+		foreach ( $camps as $camp ) {
+			// Get min/max price for this camp
+			$prices = $wpdb->get_row( $wpdb->prepare(
+				"SELECT MIN(price) as min_price, MAX(price) as max_price FROM " . \CreativeDBS\CampMgmt\DB::table_sessions() . " WHERE camp_id = %d AND price > 0",
+				$camp['id']
+			) );
+			
+			// Get page URL if exists
+			$page_query = $wpdb->get_var( $wpdb->prepare(
+				"SELECT ID FROM {$wpdb->prefix}posts WHERE post_type = 'page' AND post_status = 'publish' AND ID IN (SELECT post_id FROM {$wpdb->prefix}postmeta WHERE meta_key = 'camp_id' AND meta_value = %d) LIMIT 1",
+				$camp['id']
+			) );
+			
+			$formatted_camps[] = [
+				'id' => $camp['id'],
+				'name' => $camp['camp_name'],
+				'city' => $camp['city'],
+				'state' => $camp['state'],
+				'logo' => $camp['logo_url'],
+				'rating' => $camp['rating'],
+				'camp_types' => $camp['camp_types'],
+				'min_price' => $prices ? $prices->min_price : null,
+				'max_price' => $prices ? $prices->max_price : null,
+				'url' => $page_query ? get_permalink( $page_query ) : '#',
+			];
+		}
+		
+		wp_send_json_success( [
+			'camps' => $formatted_camps,
+			'total' => $total_results,
+			'page' => $page,
+			'has_more' => ( $offset + $per_page ) < $total_results,
+		] );
+	}
 }
+
 
 // Initialize - safe for plugin updates
 if ( ! isset( $GLOBALS['camp_frontend_initialized'] ) ) {
