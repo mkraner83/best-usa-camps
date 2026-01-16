@@ -1,32 +1,95 @@
 # Changelog
 
-## v2.8.5 (2026-01-16) - Photo Gallery & Header Consolidation
-
-### Added
-- **NEW:** `[camp_header]` combined shortcode with all header elements in one
-- **NEW:** `[camp_gallery]` shortcode with smart grid layout (1-10 photos)
-- Elementor lightbox integration for gallery (keyboard navigation, slideshow)
-- Safe plugin update mechanism with global initialization flag
-- Smart gallery layouts based on photo count (1-4 single row, 5-10 two rows)
-- Mobile gallery optimization: always 2 columns to prevent long pages
+## v2.8.6 (2026-01-16) - Mobile Gallery Optimization
 
 ### Changed
-- Header layout: two rows (name/logo top, contact/rating bottom)
-- Header background: #343434 dark gray, full-width in Elementor containers
-- Mobile header: 15px padding, 12px gaps, 2px contact gap, 70px logo max-height
-- Sessions/accommodations: #E6E6E6 background with white cards
-- FAQ: first item opens by default (improved UX)
-- Gallery thumbnails use object-fit: cover for consistent display
-- Responsive breakpoint: 768px for mobile
+- Gallery mobile layout locked to 2 columns (removed 1-column breakpoint at 480px)
+- Prevents long scrolling on mobile devices while maintaining visual appeal
 
-### Technical
-- Removed custom lightbox in favor of Elementor's native solution
-- CSS targeting for Elementor widget width constraints
-- Dashboard-style thumbnail filling technique
-- Flexbox grid with data-photo-count targeting
-- Plugin version: 2.8.5
+## v2.8.5 (2026-01-16) - Elementor Lightbox Integration
 
-## v2.8.3 (2026-01-15) - FAQ Styling & UX Polish
+### Added
+- Elementor native lightbox integration for gallery
+- Slideshow support with camp ID grouping
+- Keyboard navigation (arrow keys) support
+
+### Removed
+- ~160 lines of custom lightbox code (CSS, HTML, JavaScript)
+- Custom modal overlay and navigation system
+
+### Changed
+- Gallery links now use Elementor data attributes
+- Improved performance using Elementor's optimized lightbox
+- Better compatibility with Elementor theme/plugins
+
+## v2.8.4 (2026-01-16) - Gallery Thumbnail Fixes
+
+### Fixed
+- Gallery thumbnails now fill properly using dashboard CSS technique
+- min-width/min-height: 100%, max-width: none, object-fit: cover
+- Photos display without stretching or distortion
+
+## v2.8.3 (2026-01-16) - Gallery Shortcode
+
+### Added
+- `[camp_gallery]` shortcode with smart 1-10 photo grid layouts
+- Intelligent distribution: 1-4 single row, 5-10 two rows with balanced layouts
+- 200px fixed height thumbnails with proper aspect ratios
+- 5px border-radius, 2px #CCCCCC borders
+- Custom lightbox with keyboard navigation and slideshow
+- Database migration for `photos` TEXT column
+
+### Changed
+- Gallery uses comma-separated photo URLs from database
+- Responsive thumbnail filling with object-fit: cover
+
+## v2.8.2 (2026-01-15) - Mobile Header Optimization
+
+### Changed
+- Mobile logo max-height reduced to 70px (from 130px)
+- Header padding: 15px 0px on mobile (tighter spacing)
+- Row gap: 12px (elements closer together)
+- Contact items gap: 2px (minimal spacing)
+
+## v2.8.1 (2026-01-15) - Header Full-Width Fix
+
+### Fixed
+- Header now properly full-width inside Elementor containers
+- CSS targeting `.elementor-widget` for container compatibility
+- Removed viewport-width constraints
+
+## v2.8.0 (2026-01-15) - Combined Header Shortcode
+
+### Added
+- `[camp_header]` shortcode combining logo, name, subtitle, contact, rating
+- Two-row flexbox layout (logo/name/subtitle top, contact/rating bottom)
+- Dark background (#343434) with full-width styling
+- Auto-generated subtitle from camp types and location
+
+### Changed
+- Header typography updated: Name 42px Abel, Subtitle 18px Lato
+- Contact bar integrated into header bottom row
+- Rating display integrated with contact info
+
+### Notes
+- Individual header shortcodes (`[camp_logo]`, `[camp_name]`, etc.) still available for backward compatibility
+
+## v2.7.9 (2026-01-15) - Design Updates
+
+### Changed
+- FAQ first item now opens by default (`open_first='true'`)
+- Session/accommodation outer containers: #E6E6E6 background
+- Session/accommodation cards: White background for better contrast
+- Improved visual hierarchy and user experience
+
+## v2.7.8 (2026-01-15) - Safe Plugin Updates
+
+### Added
+- Global initialization flag: `$GLOBALS['camp_frontend_initialized']`
+- Prevents double class loading during WordPress updates
+- Eliminates fatal errors on plugin activation/update
+
+## v2.7.7 (2026-01-15) - FAQ Styling & UX Polish
 
 ### Changed
 - FAQ toggles now green (#497C5E) with white text and darker hover (#3d6449)
