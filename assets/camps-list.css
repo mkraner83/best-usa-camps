@@ -1,0 +1,451 @@
+/* Camps List - Clean & Simple */
+
+.camps-list {
+	max-width: 1200px;
+	margin: 0 auto;
+	padding: 40px 20px;
+}
+
+/* Search Bar */
+.camps-search-bar {
+	margin-bottom: 20px;
+}
+
+.camps-search-form {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 10px;
+	max-width: 100%;
+	margin: 0 auto;
+}
+
+input[type="text"].camps-search-input {
+	flex: 1;
+	padding: 12px 20px !important;
+	border: 2px solid #4a6b5a !important;
+	border-radius: 5px !important;
+	font-size: 1rem !important;
+	transition: border-color 0.2s !important;
+	box-shadow: none !important;
+}
+
+input[type="text"].camps-search-input:focus {
+	outline: none !important;
+	border-color: #3a5a4a !important;
+}
+
+.camps-sort-select {
+	padding: 10px 15px;
+	border: 2px solid #4a6b5a;
+	border-radius: 5px;
+	font-size: 0.95rem;
+	background: white;
+	cursor: pointer;
+	transition: border-color 0.2s;
+	min-width: 180px;
+}
+
+.camps-sort-select:focus {
+	outline: none;
+	border-color: #3a5a4a;
+}
+
+.camps-search-btn,
+.camps-reset-btn {
+	padding: 12px 30px;
+	border: none;
+	border-radius: 6px;
+	font-size: 1.3rem;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background 0.2s;
+	text-decoration: none;
+	display: inline-block;
+	font-family: "Annie Use Your Telescope", Sans-serif !important;
+}
+
+.camps-search-btn {
+	background: #4a6b5a;
+	color: white;
+}
+
+.camps-search-btn:hover {
+	background: #3a5a4a;
+}
+
+.camps-reset-btn {
+	background: #DA9D43;
+	color: white;
+}
+
+.camps-reset-btn:hover {
+	background: #c98a30;
+	color: white;
+	text-decoration: none;
+}
+
+/* Filters Row */
+.camps-filters-row {
+	width: 100%;
+	display: grid;
+	grid-template-columns: repeat(5, 1fr);
+	gap: 15px;
+	margin-top: 20px;
+	padding: 20px;
+	background: #f8f9fa;
+	border-radius: 8px;
+	border: 2px solid #e9ecef;
+}
+
+.filter-col {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.filter-col label {
+	font-size: 0.9rem;
+	font-weight: 600;
+	color: #4a6b5a;
+	margin: 0;
+}
+
+/* Sort and Count Row */
+.camps-sort-row {
+	width: 100%;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-top: 5px;
+	padding: 0px;
+	background: transparent;
+	border-radius: 0px;
+	border: none;
+}
+
+.sort-group {
+	display: flex;
+	align-items: center;
+	gap: 12px;
+	margin-left: auto;
+}
+
+.camps-count {
+	font-size: 0.95rem;
+	color: #4a6b5a;
+	font-weight: 600;
+	white-space: nowrap;
+}
+
+.camps-filter-select {
+	padding: 10px 15px;
+	border: 2px solid #ddd;
+	border-radius: 5px;
+	font-size: 0.95rem;
+	background: white;
+	cursor: pointer;
+	transition: border-color 0.2s;
+}
+
+.camps-filter-select:focus {
+	outline: none;
+	border-color: #4a6b5a;
+}
+
+.camps-filter-select-small {
+	flex: 1;
+	padding: 10px 15px;
+	border: 2px solid #ddd;
+	border-radius: 5px;
+	font-size: 0.95rem;
+	background: white;
+	cursor: pointer;
+	transition: border-color 0.2s;
+	min-width: 0;
+}
+
+.camps-filter-select-small:focus {
+	outline: none;
+	border-color: #4a6b5a;
+}
+
+.filter-price-group,
+.filter-date-group {
+	display: flex;
+	gap: 8px;
+}
+
+.camps-filter-input-small {
+	flex: 1;
+	padding: 6px 15px;
+	border: 2px solid #ddd;
+	border-radius: 5px;
+	font-size: 0.95rem;
+	background: white;
+	transition: border-color 0.2s;
+	min-width: 0;
+	max-width: 120px;
+}
+
+.camps-filter-input-small:focus {
+	outline: none;
+	border-color: #4a6b5a;
+}
+
+/* Responsive filters */
+@media (max-width: 1200px) {
+	.camps-filters-row {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+@media (max-width: 992px) {
+	.camps-filters-row {
+		grid-template-columns: repeat(2, 1fr);
+	}
+}
+
+@media (max-width: 576px) {
+	.camps-filters-row {
+		grid-template-columns: 1fr;
+	}
+}
+
+.camps-empty {
+	text-align: center;
+	padding: 80px 20px;
+	color: #95a5a6;
+	font-size: 1.2rem;
+}
+
+/* Grid Layout */
+.camps-grid {
+	display: grid;
+	gap: 30px;
+}
+
+.camps-grid-2 {
+	grid-template-columns: repeat(2, 1fr);
+}
+
+.camps-grid-3 {
+	grid-template-columns: repeat(3, 1fr);
+}
+
+.camps-grid-4 {
+	grid-template-columns: repeat(4, 1fr);
+}
+
+/* Camp Card */
+.camp-card {
+	background: #ffffff;
+	border-radius: 12px;
+	overflow: hidden;
+	box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+	transition: all 0.3s ease;
+	padding: 20px;
+}
+
+.camp-card:hover {
+	transform: translateY(-5px);
+	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Logo - Centered at Top */
+.camp-logo-circle {
+	width: 80px;
+	height: 80px;
+	border-radius: 50%;
+	overflow: hidden;
+	background: #f8f9fa;
+	border: 3px solid #4a6b5a;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	margin: 0 auto 15px auto;
+}
+
+.camp-logo-circle img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.camp-logo-circle.camp-logo-placeholder {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.camp-logo-circle.camp-logo-placeholder span {
+	font-size: 1.5rem;
+	color: #ffffff;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+/* Camp Info */
+.camp-info {
+}
+
+.camp-name {
+	font-size: 1.3rem;
+	color: #2c3e50;
+	margin: 0 0 8px 0;
+	font-weight: 600;
+	line-height: 1.4;
+	font-family: "Abel", sans-serif;
+	text-align: center;
+}
+
+.camp-location {
+	font-size: 0.95rem;
+	color: #7f8c8d;
+	margin: 0 0 15px 0;
+	text-align: center;
+}
+
+/* Meta Rows with Badges */
+.camp-meta-row {
+	margin-bottom: 12px;
+}
+
+.meta-label {
+	display: block;
+	font-size: 0.85rem;
+	color: #95a5a6;
+	margin-bottom: 5px;
+	font-weight: 600;
+}
+
+.camp-badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+}
+
+.camp-badge {
+	display: inline-block;
+	padding: 4px 10px;
+	background: #ffffff;
+	color: #4a6b5a;
+	border-radius: 20px;
+	font-size: 0.75rem;
+	font-weight: 500;
+	border: 2px solid #4a6b5a;
+}
+
+/* Activities badges - gray background */
+.camp-meta-row:nth-of-type(3) .camp-badge {
+	background: #e0e0e0;
+}
+
+/* Dates and Prices */
+.camp-dates-prices {
+	margin: 15px 0;
+	padding: 12px;
+	background: #4a6b5a;
+	border-radius: 6px;
+}
+
+.camp-detail {
+	font-size: 0.9rem;
+	color: #ffffff;
+	margin-bottom: 6px;
+}
+
+.camp-detail:last-child {
+	margin-bottom: 0;
+}
+
+.camp-detail strong {
+	color: #ffffff;
+	font-weight: 600;
+}
+
+/* Visit Button */
+.camp-visit-btn {
+	display: block;
+	width: 100%;
+	margin-top: 15px;
+	padding: 10px 14px;
+	background: #e0e0e0;
+	color: #4a6b5a;
+	text-decoration: none;
+	border-radius: 5px;
+	font-weight: 800;
+	font-size: 1.3rem;
+	text-align: center;
+	transition: background 0.2s ease;
+	font-family: "Annie Use Your Telescope", Sans-serif !important;
+	border: 2px solid #4a6b5a;
+}
+
+.camp-visit-btn:hover {
+	background: #d0d0d0;
+	color: #4a6b5a;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+	.camps-grid-4 {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+@media (max-width: 768px) {
+	.camps-list {
+		padding: 30px 15px;
+	}
+	
+	.camps-header h2 {
+		font-size: 2rem;
+	}
+	
+	.camps-grid-2,
+	.camps-grid-3,
+	.camps-grid-4 {
+		grid-template-columns: repeat(2, 1fr);
+	}
+	
+	.camps-grid {
+		gap: 20px;
+	}
+	name {
+		font-size: 1.1rem;
+	}
+	
+	.camp-logo-circle {
+		width: 70px;
+		height: 70;
+		right: 12px;
+	}
+	
+	.camp-logo-circle.camp-logo-placeholder span {
+		font-size: 1.2rem;
+	}
+}
+
+@media (max-width: 480px) {
+	.camps-grid-2,
+	.camps-grid-3,
+	.camps-grid-4 {
+		grid-template-columns: 1fr;
+	}
+	
+	.camps-header {
+		margin-bottom: 30px;
+	}
+	
+	.camps-header h2 {
+		font-size: 1.6rem;
+	}
+	
+	.camp-info {
+		padding-right: 65px;
+	}
+	
+	.camp-logo-circle {
+		widthlogo-circle {
+		width: 60px;
+		height: 6
+}

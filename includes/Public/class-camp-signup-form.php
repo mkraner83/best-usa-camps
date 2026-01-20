@@ -318,7 +318,7 @@ class Camp_Signup_Form {
 
 		// Prepare camp data
 		$camp_data = [
-			'user_id'        => $user_id,
+			'wordpress_user_id' => $user_id,
 			'unique_key'     => $unique_key,
 			'camp_name'      => sanitize_text_field( $data['camp_name'] ?? '' ),
 			'opening_day'    => sanitize_text_field( $data['opening_day'] ?? '' ),
