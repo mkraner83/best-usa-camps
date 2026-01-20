@@ -334,6 +334,12 @@ input[type="text"].camps-search-input:focus {
 	border: 2px solid #4a6b5a;
 }
 
+/* Plus badge for more activities */
+.camp-badge-plus {
+	font-weight: 700;
+	font-size: 0.9rem;
+}
+
 /* Activities badges - gray background */
 .camp-meta-row:nth-of-type(3) .camp-badge {
 	background: #e0e0e0;
@@ -415,8 +421,8 @@ input[type="text"].camps-search-input:focus {
 	}
 	
 	.camp-logo-circle {
-		width: 70px;
-		height: 70;
+		width: 60px;
+		height: 60px;
 		right: 12px;
 	}
 	
@@ -439,13 +445,22 @@ input[type="text"].camps-search-input:focus {
 	.camps-header h2 {
 		font-size: 1.6rem;
 	}
+		/* Search form mobile layout */
+	input[type="text"].camps-search-input {
+		width: 100% !important;
+		flex: 1 1 100% !important;
+	}
 	
-	.camp-info {
-		padding-right: 65px;
+	.camps-search-btn,
+	.camps-reset-btn {
+		flex: 1 1 calc(50% - 5px) !important;
+	}
+		.camp-info {
+		padding-right: 0px;
 	}
 	
 	.camp-logo-circle {
-		widthlogo-circle {
 		width: 60px;
-		height: 6
+		height: 60px;
+	}
 }

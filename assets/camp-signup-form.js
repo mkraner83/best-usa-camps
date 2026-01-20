@@ -138,4 +138,55 @@ document.addEventListener('DOMContentLoaded', function() {
 			}
 		});
 	}
+
+	// About Camp word count (300 word limit)
+	const aboutCampField = document.getElementById('about_camp_signup');
+	const wordCountDisplay = document.getElementById('word-count-signup');
+	
+	if (aboutCampField && wordCountDisplay) {
+		function countWords(text) {
+			text = text.trim();
+			if (text === '') return 0;
+			return text.split(/\s+/).length;
+		}
+		
+		function updateWordCount() {
+			const text = aboutCampField.value;
+			const words = countWords(text);
+			wordCountDisplay.textContent = words;
+			
+			// Change color based on word count
+			if (words > 300) {
+				wordCountDisplay.style.color = '#d63638';
+				wordCountDisplay.parentElement.style.color = '#d63638';
+			} else if (words > 270) {
+				wordCountDisplay.style.color = '#dba617';
+				wordCountDisplay.parentElement.style.color = '#dba617';
+			} else {
+				wordCountDisplay.style.color = '#666';
+				wordCountDisplay.parentElement.style.color = '#666';
+			}
+		}
+		
+		aboutCampField.addEventListener('input', updateWordCount);
+		aboutCampField.addEventListener('paste', function() {
+			setTimeout(updateWordCount, 10);
+		});
+		
+		// Initial count
+		updateWordCount();
+		
+		// Prevent form submission if over 300 words
+		if (form) {
+			form.addEventListener('submit', function(e) {
+				const words = countWords(aboutCampField.value);
+				if (words > 300) {
+					e.preventDefault();
+					alert('About Camp description must be 300 words or less. Current: ' + words + ' words');
+					aboutCampField.focus();
+					return false;
+				}
+			});
+		}
+	}
 });

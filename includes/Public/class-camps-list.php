@@ -169,11 +169,22 @@ class Camps_List {
 		}
 		
 		// Get approved camps with all needed fields
-		$query = "SELECT DISTINCT {$wpdb->prefix}camp_management.id, camp_name, city, state, logo, opening_day, closing_day, minprice_2026, maxprice_2026, internal_link
-			FROM {$wpdb->prefix}camp_management
-			{$join}
-			{$where}
-			ORDER BY {$order_by}";
+		// Use subquery or GROUP BY to prevent duplicates from JOINs
+		if ( ! empty( $join ) ) {
+			// When using JOINs, we need to use GROUP BY to prevent duplicates
+			$query = "SELECT {$wpdb->prefix}camp_management.id, camp_name, city, state, logo, opening_day, closing_day, minprice_2026, maxprice_2026, internal_link
+				FROM {$wpdb->prefix}camp_management
+				{$join}
+				{$where}
+				GROUP BY {$wpdb->prefix}camp_management.id
+				ORDER BY {$order_by}";
+		} else {
+			// No JOINs, DISTINCT is fine
+			$query = "SELECT DISTINCT {$wpdb->prefix}camp_management.id, camp_name, city, state, logo, opening_day, closing_day, minprice_2026, maxprice_2026, internal_link
+				FROM {$wpdb->prefix}camp_management
+				{$where}
+				ORDER BY {$order_by}";
+		}
 		
 		if ( ! empty( $prepare_args ) ) {
 			$camps = $wpdb->get_results( $wpdb->prepare( $query, $prepare_args ), ARRAY_A );
@@ -181,14 +192,14 @@ class Camps_List {
 			$camps = $wpdb->get_results( $query, ARRAY_A );
 		}
 		
-		// Debug: Check for duplicate IDs
-		$camp_ids = array_column( $camps, 'id' );
-		$unique_ids = array_unique( $camp_ids );
-		if ( count( $camp_ids ) !== count( $unique_ids ) ) {
-			// Remove duplicates based on ID
+		// Always deduplicate to ensure no duplicate camp IDs (many-to-many JOINs can cause this)
+		if ( ! empty( $camps ) ) {
 			$camps_by_id = [];
 			foreach ( $camps as $camp ) {
-				$camps_by_id[ $camp['id'] ] = $camp;
+				// Keep only the first occurrence of each camp ID
+				if ( ! isset( $camps_by_id[ $camp['id'] ] ) ) {
+					$camps_by_id[ $camp['id'] ] = $camp;
+				}
 			}
 			$camps = array_values( $camps_by_id );
 		}
@@ -209,6 +220,13 @@ class Camps_List {
 					"SELECT t.name FROM {$wpdb->prefix}camp_week_terms t
 					INNER JOIN {$wpdb->prefix}camp_management_weeks_map m ON t.id = m.week_id
 					WHERE m.camp_id = %d",
+					$camp['id']
+				) );
+				
+				// Get total activity count
+				$camp['activities_total'] = $wpdb->get_var( $wpdb->prepare(
+					"SELECT COUNT(*) FROM {$wpdb->prefix}camp_management_activities_map
+					WHERE camp_id = %d",
 					$camp['id']
 				) );
 				
@@ -234,11 +252,18 @@ class Camps_List {
 					$camp['page_url'] = '#';
 				}
 			}
+			unset($camp); // Destroy the reference to avoid issues in subsequent loops
 		}
 		
 		$columns = intval( $atts['columns'] );
 		if ( $columns < 2 || $columns > 4 ) {
 			$columns = 3;
+		}
+		
+		// Debug: Log camp IDs to check for duplicates
+		if ( ! empty( $camps ) ) {
+			error_log( 'Camps List - Total camps: ' . count( $camps ) );
+			error_log( 'Camps List - Camp IDs: ' . implode( ', ', array_column( $camps, 'id' ) ) );
 		}
 		
 		ob_start();
@@ -383,7 +408,13 @@ class Camps_List {
 					<p>No camps match your search criteria. Try adjusting your filters.</p>
 				</div>
 			<?php else : ?>
-			<div class="camps-grid camps-grid-<?php echo $columns; ?>"><?php foreach ( $camps as $camp ) : ?>
+			<div class="camps-grid camps-grid-<?php echo $columns; ?>">
+				<?php 
+				$camp_index = 0;
+				foreach ( $camps as $camp ) : 
+					$camp_index++;
+				?>
+					<!-- Camp #<?php echo $camp_index; ?> - ID: <?php echo $camp['id']; ?> -->
 					<div class="camp-card">
 						<?php if ( ! empty( $camp['logo'] ) ) : ?>
 							<div class="camp-logo-circle">
@@ -437,13 +468,16 @@ class Camps_List {
 										<?php foreach ( $camp['activities'] as $activity ) : ?>
 											<span class="camp-badge"><?php echo esc_html( $activity ); ?></span>
 										<?php endforeach; ?>
-									</div>
+									<?php if ( $camp['activities_total'] > 4 ) : ?>
+										<span class="camp-badge camp-badge-plus">+</span>
+									<?php endif; ?>
 								</div>
-							<?php endif; ?>
-							
-							<div class="camp-dates-prices">
-								<?php if ( $camp['opening_day'] ) : ?>
-									<div class="camp-detail">
+							</div>
+						<?php endif; ?>
+						
+						<div class="camp-dates-prices">
+							<?php if ( $camp['opening_day'] ) : ?>
+								<div class="camp-detail">
 										<strong>Opening Day:</strong> <?php echo esc_html( date( 'M j, Y', strtotime( $camp['opening_day'] ) ) ); ?>
 									</div>
 								<?php endif; ?>
