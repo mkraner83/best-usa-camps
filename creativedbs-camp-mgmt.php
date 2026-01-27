@@ -2,14 +2,14 @@
 /*
 Plugin Name: CreativeDBS Camp Management
 Description: Ultimate US Summer Camp Management Application.
-Version: 3.1.0
+Version: 3.2.0
 Author: CreativeDBS
 Text Domain: creativedbs-camp-mgmt
 Requires at least: 5.8
 Requires PHP: 7.4
 */
 
-define('CDBS_CAMP_VERSION', '3.1.0');
+define('CDBS_CAMP_VERSION', '3.2.0');
 
 defined( 'ABSPATH' ) || exit;
 
@@ -92,6 +92,7 @@ class CreativeDBS_Camp_Management {
         add_action('admin_menu', [$this, 'register_admin_menu']);
         add_action('admin_enqueue_scripts', [$this, 'admin_assets']);
         add_action('admin_footer', [$this, 'admin_footer_js']);
+        add_action('admin_footer', [$this, 'taxonomy_sortable_js']);
         add_action('admin_init', [$this, 'handle_inline_actions']);
         add_action('wp_ajax_cdbs_toggle_approval', [$this, 'ajax_toggle_approval']);
         add_action('wp_ajax_cdbs_save_accommodation', [$this, 'ajax_save_accommodation']);
@@ -100,6 +101,7 @@ class CreativeDBS_Camp_Management {
         add_action('wp_ajax_cdbs_delete_faq', [$this, 'ajax_delete_faq']);
         add_action('wp_ajax_cdbs_save_session', [$this, 'ajax_save_session']);
         add_action('wp_ajax_cdbs_delete_session', [$this, 'ajax_delete_session']);
+        add_action('wp_ajax_cdbs_update_term_order', [$this, 'ajax_update_term_order']);
     }
 
     // Tables
@@ -161,6 +163,7 @@ class CreativeDBS_Camp_Management {
             name VARCHAR(190) NOT NULL,
             slug VARCHAR(190) NOT NULL,
             is_active TINYINT(1) NOT NULL DEFAULT 1,
+            sort_order INT NOT NULL DEFAULT 0,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
@@ -182,6 +185,7 @@ class CreativeDBS_Camp_Management {
             name VARCHAR(190) NOT NULL,
             slug VARCHAR(190) NOT NULL,
             is_active TINYINT(1) NOT NULL DEFAULT 1,
+            sort_order INT NOT NULL DEFAULT 0,
             created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
             updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
             PRIMARY KEY (id),
@@ -224,6 +228,19 @@ class CreativeDBS_Camp_Management {
         if (empty($column_exists)) {
             $wpdb->query("ALTER TABLE {$table_name} ADD COLUMN last_edited DATETIME NULL AFTER updated_at");
         }
+        
+        // Migration: Add sort_order column to taxonomy tables if it doesn't exist
+        $taxonomy_tables = [
+            self::table_type_terms(),
+            self::table_week_terms(),
+            self::table_activity_terms()
+        ];
+        foreach ($taxonomy_tables as $tax_table) {
+            $sort_column_exists = $wpdb->get_results("SHOW COLUMNS FROM {$tax_table} LIKE 'sort_order'");
+            if (empty($sort_column_exists)) {
+                $wpdb->query("ALTER TABLE {$tax_table} ADD COLUMN sort_order INT NOT NULL DEFAULT 0 AFTER is_active");
+            }
+        }
     }
 
     public function register_admin_menu() {
@@ -248,6 +265,15 @@ class CreativeDBS_Camp_Management {
         if (strpos($hook, self::SLUG) === false) return;
         wp_enqueue_style(self::SLUG, plugin_dir_url(__FILE__) . 'assets/admin.css', [], self::VERSION);
         wp_enqueue_media();
+        
+        // Enqueue jQuery UI Sortable for taxonomy pages
+        if (strpos($hook, '-types') !== false || strpos($hook, '-weeks') !== false || strpos($hook, '-activities') !== false) {
+            wp_enqueue_script('jquery-ui-sortable');
+        }
+        
+        // Enqueue wp-pointer to prevent console errors (WordPress help system)
+        wp_enqueue_script('wp-pointer');
+        wp_enqueue_style('wp-pointer');
     }
 
     public function admin_footer_js() {
@@ -307,6 +333,86 @@ class CreativeDBS_Camp_Management {
                 xhr.send('action=cdbs_toggle_approval&camp_id=' + campId + '&approved=' + approved + '&nonce=' + '<?php echo wp_create_nonce("cdbs_toggle_approval"); ?>');
             });
         })();
+        </script>
+        <?php
+    }
+    
+    public function taxonomy_sortable_js() {
+        if (!isset($_GET['page'])) return;
+        $page = $_GET['page'];
+        
+        // Only add sortable on taxonomy pages
+        if (strpos($page, '-types') === false && strpos($page, '-weeks') === false && strpos($page, '-activities') === false) {
+            return;
+        }
+        
+        // Determine table type
+        $tableType = '';
+        if (strpos($page, '-types') !== false) $tableType = 'types';
+        elseif (strpos($page, '-weeks') !== false) $tableType = 'weeks';
+        elseif (strpos($page, '-activities') !== false) $tableType = 'activities';
+        
+        if (!$tableType) return;
+        ?>
+        <script>
+        jQuery(document).ready(function($) {
+            var tbody = $('.cdbs-sortable-tbody');
+            if (tbody.length === 0) return;
+            
+            tbody.sortable({
+                handle: 'td:first-child',
+                cursor: 'move',
+                opacity: 0.6,
+                helper: function(e, tr) {
+                    var $originals = tr.children();
+                    var $helper = tr.clone();
+                    $helper.children().each(function(index) {
+                        $(this).width($originals.eq(index).width());
+                    });
+                    return $helper;
+                },
+                update: function(event, ui) {
+                    // Get new order
+                    var order = [];
+                    tbody.find('tr[data-id]').each(function() {
+                        order.push($(this).data('id'));
+                    });
+                    
+                    // Save via AJAX
+                    $.ajax({
+                        url: ajaxurl,
+                        method: 'POST',
+                        data: {
+                            action: 'cdbs_update_term_order',
+                            table_type: '<?php echo esc_js($tableType); ?>',
+                            order: order.join(','),
+                            nonce: '<?php echo wp_create_nonce("cdbs_update_term_order"); ?>'
+                        },
+                        success: function(response) {
+                            if (response.success) {
+                                // Show brief success indicator
+                                var successMsg = $('<div style="position:fixed;top:32px;right:20px;background:#46b450;color:white;padding:10px 20px;border-radius:3px;z-index:99999;">Order saved!</div>');
+                                $('body').append(successMsg);
+                                setTimeout(function() {
+                                    successMsg.fadeOut(function() {
+                                        successMsg.remove();
+                                    });
+                                }, 2000);
+                            } else {
+                                alert('Failed to save order');
+                            }
+                        },
+                        error: function() {
+                            alert('Failed to save order');
+                        }
+                    });
+                }
+            });
+            
+            // Add visual feedback
+            tbody.find('tr').css('cursor', 'move');
+            tbody.find('td:first-child').css('cursor', 'grab');
+        });
         </script>
         <?php
     }
@@ -600,6 +706,58 @@ class CreativeDBS_Camp_Management {
         }
     }
 
+    public function ajax_update_term_order() {
+        check_ajax_referer('cdbs_update_term_order', 'nonce');
+        
+        if (!current_user_can('manage_options')) {
+            wp_send_json_error('Unauthorized');
+        }
+        
+        $table_type = isset($_POST['table_type']) ? sanitize_text_field($_POST['table_type']) : '';
+        $order = isset($_POST['order']) ? sanitize_text_field($_POST['order']) : '';
+        
+        if (!$table_type || !$order) {
+            wp_send_json_error('Missing required fields');
+        }
+        
+        // Determine which table to update
+        global $wpdb;
+        switch ($table_type) {
+            case 'types':
+                $table = self::table_type_terms();
+                break;
+            case 'weeks':
+                $table = self::table_week_terms();
+                break;
+            case 'activities':
+                $table = self::table_activity_terms();
+                break;
+            default:
+                wp_send_json_error('Invalid table type');
+                return;
+        }
+        
+        // Parse order
+        $ids = explode(',', $order);
+        $position = 0;
+        
+        foreach ($ids as $id) {
+            $id = absint($id);
+            if ($id > 0) {
+                $wpdb->update(
+                    $table,
+                    ['sort_order' => $position],
+                    ['id' => $id],
+                    ['%d'],
+                    ['%d']
+                );
+                $position++;
+            }
+        }
+        
+        wp_send_json_success();
+    }
+
     public function handle_inline_actions(){
         if (!is_admin() || !current_user_can('manage_options')) return;
 
@@ -841,11 +999,11 @@ class CreativeDBS_Camp_Management {
                 $camp_id = absint($_GET['camp']);
                 $camp = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id=%d", $camp_id));
                 if ($camp):
-                    $types = $wpdb->get_results("SELECT id, name, is_active FROM ".self::table_type_terms()." ORDER BY name ASC");
-                    $weeks = $wpdb->get_results("SELECT id, name, is_active FROM ".self::table_week_terms()." ORDER BY name ASC");
+                    $types = $wpdb->get_results("SELECT id, name, is_active FROM ".self::table_type_terms()." ORDER BY sort_order ASC, name ASC");
+                    $weeks = $wpdb->get_results("SELECT id, name, is_active FROM ".self::table_week_terms()." ORDER BY sort_order ASC, name ASC");
                     $sel_types = $wpdb->get_col($wpdb->prepare("SELECT type_id FROM ".self::table_camp_type_pivot()." WHERE camp_id=%d", $camp_id)) ?: [];
                     $sel_weeks = $wpdb->get_col($wpdb->prepare("SELECT week_id FROM ".self::table_camp_week_pivot()." WHERE camp_id=%d", $camp_id)) ?: [];
-                    $act_terms = $wpdb->get_results("SELECT id, name FROM ".self::table_activity_terms()." ORDER BY name ASC");
+                    $act_terms = $wpdb->get_results("SELECT id, name FROM ".self::table_activity_terms()." ORDER BY sort_order ASC, name ASC");
                     $sel_acts = $wpdb->get_col($wpdb->prepare("SELECT activity_id FROM ".self::table_camp_activity_pivot()." WHERE camp_id=%d", $camp_id)) ?: [];
                     $sel_act_names = [];
                     if ($act_terms) { foreach ($act_terms as $t){ if (in_array($t->id, $sel_acts, true)) $sel_act_names[] = $t->name; } }
@@ -1295,7 +1453,30 @@ class CreativeDBS_Camp_Management {
         if (!current_user_can('manage_options')) return;
         global $wpdb;
         $table = ($kind==='types') ? self::table_type_terms() : (($kind==='weeks') ? self::table_week_terms() : self::table_activity_terms());
-        $items = $wpdb->get_results("SELECT id, name, slug, is_active FROM {$table} ORDER BY name ASC");
+        
+        // Determine pivot table for counting usage
+        $pivot_table = '';
+        $pivot_column = '';
+        if ($kind === 'types') {
+            $pivot_table = self::table_camp_type_pivot();
+            $pivot_column = 'type_id';
+        } elseif ($kind === 'weeks') {
+            $pivot_table = self::table_camp_week_pivot();
+            $pivot_column = 'week_id';
+        } else {
+            $pivot_table = self::table_camp_activity_pivot();
+            $pivot_column = 'activity_id';
+        }
+        
+        // Get items with usage count
+        $items = $wpdb->get_results("
+            SELECT t.*, COUNT(p.camp_id) as usage_count
+            FROM {$table} t
+            LEFT JOIN {$pivot_table} p ON t.id = p.{$pivot_column}
+            GROUP BY t.id
+            ORDER BY t.sort_order ASC, t.name ASC
+        ");
+        
         $editing = null;
         if (isset($_GET['action'], $_GET['id']) && $_GET['action']==='edit') {
             $editing = $wpdb->get_row($wpdb->prepare("SELECT * FROM {$table} WHERE id=%d", intval($_GET['id'])));
@@ -1318,19 +1499,25 @@ class CreativeDBS_Camp_Management {
             </form>
 
             <h2 class="title" style="margin-top:24px;">All <?php echo esc_html($title); ?></h2>
-            <table class="widefat fixed striped">
-                <thead><tr><th>Name</th><th>Slug</th><th>Status</th><th>Actions</th></tr></thead>
-                <tbody>
+            <p class="description" style="margin-bottom:10px;">💡 Drag and drop rows to reorder</p>
+            <table class="widefat fixed striped cdbs-sortable-table" data-table-type="<?php echo esc_attr($kind); ?>">
+                <thead><tr><th style="width:40px;"></th><th>Name</th><th>Slug</th><th>Status</th><th style="width:80px;">Usage</th><th>Actions</th></tr></thead>
+                <tbody class="cdbs-sortable-tbody">
                     <?php if (!$items): ?>
-                        <tr><td colspan="4">No records yet. Add one above.</td></tr>
+                        <tr><td colspan="6">No records yet. Add one above.</td></tr>
                     <?php else: foreach ($items as $it):
                         $edit = wp_nonce_url(add_query_arg(['action'=>'edit','id'=>$it->id], $base), 'cdbs_master_edit_'.$kind.'_'.$it->id);
                         $del  = wp_nonce_url(add_query_arg(['action'=>'delete','id'=>$it->id], $base), 'cdbs_master_delete_'.$kind.'_'.$it->id);
                     ?>
-                        <tr>
+                        <tr data-id="<?php echo esc_attr($it->id); ?>" style="cursor:move;">
+                            <td style="text-align:center;cursor:grab;"><span class="dashicons dashicons-menu" style="color:#999;"></span></td>
                             <td><strong><?php echo esc_html($it->name); ?></strong></td>
                             <td><?php echo esc_html($it->slug); ?></td>
                             <td><?php echo $it->is_active ? 'Active' : 'Inactive'; ?></td>
+                            <td style="text-align:center;">
+                                <span class="dashicons dashicons-groups" style="color:#999;"></span>
+                                <strong><?php echo intval($it->usage_count); ?></strong>
+                            </td>
                             <td>
                                 <a class="button" href="<?php echo esc_url($edit); ?>">Edit</a>
                                 <a class="button button-link-delete" href="<?php echo esc_url($del); ?>">Delete</a>
@@ -1430,9 +1617,9 @@ class CreativeDBS_Camp_Management {
         }
 
         // Load term lists
-        $types = $wpdb->get_results("SELECT id, name, is_active FROM ".self::table_type_terms()." WHERE is_active=1 ORDER BY name ASC");
-        $weeks = $wpdb->get_results("SELECT id, name, is_active FROM ".self::table_week_terms()." WHERE is_active=1 ORDER BY name ASC");
-        $act_terms = $wpdb->get_results("SELECT id, name, is_active FROM ".self::table_activity_terms()." WHERE is_active=1 ORDER BY name ASC");
+        $types = $wpdb->get_results("SELECT id, name, is_active FROM ".self::table_type_terms()." WHERE is_active=1 ORDER BY sort_order ASC, name ASC");
+        $weeks = $wpdb->get_results("SELECT id, name, is_active FROM ".self::table_week_terms()." WHERE is_active=1 ORDER BY sort_order ASC, name ASC");
+        $act_terms = $wpdb->get_results("SELECT id, name, is_active FROM ".self::table_activity_terms()." WHERE is_active=1 ORDER BY sort_order ASC, name ASC");
 
         ?>
         <div class="wrap">

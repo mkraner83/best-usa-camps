@@ -503,15 +503,25 @@ class Camp_Frontend {
 		}
 		
 		$custom_class = ! empty( $atts['class'] ) ? ' ' . esc_attr( $atts['class'] ) : '';
+		$total_activities = count( $activities );
+		$show_more = $total_activities > 5;
 		
 		ob_start();
 		?>
 		<div class="camp-section camp-activities<?php echo $custom_class; ?>">
 			<div class="activities-grid">
-				<?php foreach ( $activities as $activity ) : ?>
-					<span class="activity-tag"><?php echo esc_html( $activity ); ?></span>
+				<?php foreach ( $activities as $index => $activity ) : ?>
+					<span class="activity-tag<?php echo ( $index >= 5 ) ? ' activity-hidden' : ''; ?>"><?php echo esc_html( $activity ); ?></span>
 				<?php endforeach; ?>
 			</div>
+			<?php if ( $show_more ) : ?>
+				<button class="activities-show-more" onclick="this.previousElementSibling.classList.add('show-all'); this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+					Show More (<?php echo $total_activities - 5; ?> more)
+				</button>
+				<button class="activities-show-less" style="display: none;" onclick="this.previousElementSibling.previousElementSibling.classList.remove('show-all'); this.style.display='none'; this.previousElementSibling.style.display='inline-block';">
+					Show Less
+				</button>
+			<?php endif; ?>
 		</div>
 		<?php
 		return ob_get_clean();

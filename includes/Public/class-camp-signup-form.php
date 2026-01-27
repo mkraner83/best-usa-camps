@@ -81,11 +81,11 @@ class Camp_Signup_Form {
 	public function render_form() {
 		global $wpdb;
 		// Fetch active camp types
-		$types = $wpdb->get_results( "SELECT id, name FROM " . DB::table_type_terms() . " WHERE is_active = 1 ORDER BY name ASC" );
+		$types = $wpdb->get_results( "SELECT id, name FROM " . DB::table_type_terms() . " WHERE is_active = 1 ORDER BY sort_order ASC, name ASC" );
 		// Fetch active durations/weeks
-		$weeks = $wpdb->get_results( "SELECT id, name FROM " . DB::table_week_terms() . " WHERE is_active = 1 ORDER BY name ASC" );
+		$weeks = $wpdb->get_results( "SELECT id, name FROM " . DB::table_week_terms() . " WHERE is_active = 1 ORDER BY sort_order ASC, name ASC" );
 		// Fetch active activities (for suggestions)
-		$activities = $wpdb->get_results( "SELECT id, name FROM " . DB::table_activity_terms() . " WHERE is_active = 1 ORDER BY name ASC" );
+		$activities = $wpdb->get_results( "SELECT id, name FROM " . DB::table_activity_terms() . " WHERE is_active = 1 ORDER BY sort_order ASC, name ASC" );
 
 		ob_start();
 		?>

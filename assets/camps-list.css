@@ -209,13 +209,38 @@ input[type="text"].camps-search-input:focus {
 	.camps-filters-row {
 		grid-template-columns: 1fr;
 	}
+	
+	/* Opening dates side by side on mobile */
+	.filter-col:has(.filter-date-group) {
+		grid-column: 1 / -1;
+	}
+	
+	.filter-date-group {
+		display: grid !important;
+		grid-template-columns: 1fr 1fr !important;
+		gap: 8px !important;
+	}
+	
+	.camps-filter-input-small {
+		max-width: 100% !important;
+	}
 }
 
 .camps-empty {
 	text-align: center;
-	padding: 80px 20px;
-	color: #95a5a6;
-	font-size: 1.2rem;
+	padding: 30px 40px;
+	margin: 20px auto;
+	max-width: 100%;
+	background: #f8f9fa;
+	border: 1px solid #e0e0e0;
+	border-radius: 8px;
+	box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.camps-empty p {
+	color: #6c757d;
+	font-size: 1.1rem;
+	margin: 0;
 }
 
 /* Grid Layout */
@@ -445,17 +470,36 @@ input[type="text"].camps-search-input:focus {
 	.camps-header h2 {
 		font-size: 1.6rem;
 	}
-		/* Search form mobile layout */
+	
+	/* Search form mobile layout - search full width, buttons in row */
+	.camps-search-form {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 10px;
+	}
+	
 	input[type="text"].camps-search-input {
 		width: 100% !important;
 		flex: 1 1 100% !important;
+		order: 1;
 	}
 	
-	.camps-search-btn,
+	.camps-search-btn {
+		flex: 1 1 calc(50% - 5px) !important;
+		order: 2;
+	}
+	
 	.camps-reset-btn {
 		flex: 1 1 calc(50% - 5px) !important;
+		order: 3;
 	}
-		.camp-info {
+	
+	.camps-filters-row {
+		order: 4;
+		width: 100%;
+	}
+	
+	.camp-info {
 		padding-right: 0px;
 	}
 	

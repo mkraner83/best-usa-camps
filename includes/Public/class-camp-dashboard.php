@@ -1300,7 +1300,7 @@ class Camp_Dashboard {
 		$singular_name = isset( $table_map[$table_name] ) ? $table_map[$table_name] : $table_name;
 		$table = "{$wpdb->prefix}camp_{$singular_name}_terms";
 		
-		$results = $wpdb->get_results( "SELECT id, name FROM {$table} WHERE is_active = 1 ORDER BY name ASC", ARRAY_A );
+		$results = $wpdb->get_results( "SELECT id, name FROM {$table} WHERE is_active = 1 ORDER BY sort_order ASC, name ASC", ARRAY_A );
 		
 		error_log( "CDBS Camp Dashboard: get_all_options for {$table_name} - Singular: {$singular_name}, Table: {$table}, Count: " . count( $results ) );
 		if ( $wpdb->last_error ) {
