@@ -388,6 +388,7 @@ class Camp_Dashboard {
 				<a href="#accommodations" class="sidenav-link">Accommodation Facilities</a>
 				<a href="#faqs" class="sidenav-link">FAQs</a>
 				<a href="#sessions" class="sidenav-link">Sessions (Rates & Dates)</a>
+				<button type="submit" form="camp-dashboard-form" class="sidenav-link sidenav-save-btn">Save All Changes</button>
 			</div>
 		</nav>
 		<script>
@@ -424,9 +425,11 @@ class Camp_Dashboard {
 			// Smooth scroll with offset
 			navLinks.forEach(link => {
 				link.addEventListener('click', function(e) {
-					e.preventDefault();
-					const targetId = this.getAttribute('href').substring(1);
-					const targetElement = document.getElementById(targetId);
+				// Skip if this is a button (like save button) or has no href
+				if (this.tagName === 'BUTTON' || !this.getAttribute('href')) {
+					return;
+				}
+				
 					
 					if (targetElement) {
 						const targetPosition = targetElement.getBoundingClientRect().top + window.pageYOffset - offset;
@@ -579,6 +582,7 @@ class Camp_Dashboard {
 			'closing_day'      => sanitize_text_field( $_POST['closing_day'] ?? '' ),
 			'minprice_2026'    => floatval( $_POST['minprice_2026'] ?? 0 ),
 			'maxprice_2026'    => floatval( $_POST['maxprice_2026'] ?? 0 ),
+			'last_edited'      => current_time( 'mysql' ),
 		];
 
 		$wpdb->update(
@@ -586,7 +590,7 @@ class Camp_Dashboard {
 			$camp_data,
 			[ 'id' => $camp_id ],
 			[
-				'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f'
+				'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f', '%s'
 			],
 			[ '%d' ]
 		);
@@ -603,6 +607,13 @@ class Camp_Dashboard {
 
 		// Handle logo upload
 		$this->handle_logo_upload( $camp_id, $camp );
+
+		// Check if photos or logo were uploaded
+		$photos_uploaded = ! empty( $_FILES['camp_photos']['name'][0] );
+		$logo_uploaded = ! empty( $_FILES['camp_logo']['name'] );
+		
+		// Always send admin notification when camp saves changes
+		$this->send_admin_notification_camp_updated( $camp_id, $camp_data['camp_name'], $photos_uploaded, $logo_uploaded );
 
 		// Debug: Check if section marker fields are present
 		error_log('CDBS: Section markers - Accommodations: ' . (isset($_POST['accommodations_section_present']) ? 'YES' : 'NO'));
@@ -1289,7 +1300,7 @@ class Camp_Dashboard {
 		$singular_name = isset( $table_map[$table_name] ) ? $table_map[$table_name] : $table_name;
 		$table = "{$wpdb->prefix}camp_{$singular_name}_terms";
 		
-		$results = $wpdb->get_results( "SELECT id, name FROM {$table} WHERE is_active = 1 ORDER BY name ASC", ARRAY_A );
+		$results = $wpdb->get_results( "SELECT id, name FROM {$table} WHERE is_active = 1 ORDER BY sort_order ASC, name ASC", ARRAY_A );
 		
 		error_log( "CDBS Camp Dashboard: get_all_options for {$table_name} - Singular: {$singular_name}, Table: {$table}, Count: " . count( $results ) );
 		if ( $wpdb->last_error ) {
@@ -1318,11 +1329,11 @@ class Camp_Dashboard {
 			
 			<?php if ( isset( $_GET['error'] ) && $_GET['error'] === 'word_limit' ) : ?>
 				<div class="camp-dashboard-error">
-					<p>✗ Camp description must be 220 words or less. Please shorten your description and try again.</p>
+					<p>✗ Camp description must be 300 words or less. Please shorten your description and try again.</p>
 				</div>
 			<?php endif; ?>
 
-			<form method="post" action="" class="camp-edit-form" enctype="multipart/form-data">
+<form method="post" action="" class="camp-edit-form" id="camp-dashboard-form" enctype="multipart/form-data">
 				<?php wp_nonce_field( 'update_camp_data', 'camp_dashboard_nonce' ); ?>
 
 				<div class="form-section" id="basic-info">
@@ -1347,7 +1358,7 @@ class Camp_Dashboard {
 						<label for="about_camp">Camp Description <span class="required">*</span></label>
 						<textarea id="about_camp" name="about_camp" rows="6" maxlength="5000" required><?php echo esc_textarea( $camp['about_camp'] ); ?></textarea>
 						<div class="word-counter">
-							<span id="word-count">0</span> / 220 words <span id="word-limit-warning" style="color: #dc3545; display: none;">● Limit exceeded</span>
+							<span id="word-count">0</span> / 300 words <span id="word-limit-warning" style="color: #dc3545; display: none;">● Limit exceeded</span>
 						</div>
 					</div>
 					</div>
@@ -1568,7 +1579,7 @@ class Camp_Dashboard {
 				const wordCountSpan = document.getElementById('word-count');
 				const warningSpan = document.getElementById('word-limit-warning');
 				const submitButton = document.querySelector('.camp-edit-form button[type="submit"]');
-				const maxWords = 220;
+				const maxWords = 300;
 				
 				function countWords(text) {
 					// Remove extra whitespace and count words
@@ -2842,6 +2853,97 @@ class Camp_Dashboard {
 		$wpdb->delete( \CreativeDBS\CampMgmt\DB::table_sessions(), array( 'id' => $id ) );
 		
 		wp_send_json_success();
+	}
+
+	/**
+	 * Send notification email to admin when camp updates their profile
+	 */
+	private function send_admin_notification_camp_updated( $camp_id, $camp_name, $photos_uploaded, $logo_uploaded ) {
+		$admin_email = get_option( 'admin_email' );
+		
+		$subject = 'Camp Profile Updated: ' . $camp_name;
+		
+		$message = $this->get_admin_update_email_template( $camp_id, $camp_name, $photos_uploaded, $logo_uploaded );
+
+		$headers = [
+			'Content-Type: text/html; charset=UTF-8',
+			'From: Best USA Summer Camps <noreply@bestusacamps.com>',
+		];
+
+		wp_mail( $admin_email, $subject, $message, $headers );
+	}
+
+	/**
+	 * Get admin update notification email HTML template
+	 */
+	private function get_admin_update_email_template( $camp_id, $camp_name, $photos_uploaded, $logo_uploaded ) {
+		$edit_url = admin_url( 'admin.php?page=creativedbs-camp-mgmt&action=edit&camp=' . $camp_id );
+		$edit_url = wp_nonce_url( $edit_url, 'edit_camp' );
+		
+		$changes = [];
+		if ( $photos_uploaded ) {
+			$changes[] = 'New photos uploaded';
+		}
+		if ( $logo_uploaded ) {
+			$changes[] = 'Logo updated';
+		}
+		$changes[] = 'Profile information updated';
+		
+		ob_start();
+		?>
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<title>Camp Profile Updated</title>
+		</head>
+		<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0;">
+			<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f4;">
+				<tr>
+					<td align="center" style="padding: 20px 10px;">
+						<div style="max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+							<div style="background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%); color: #ffffff; padding: 30px 20px; text-align: center;">
+								<h1 style="margin: 0; font-size: 28px; font-weight: bold;">📝 Camp Profile Updated</h1>
+							</div>
+							<div style="padding: 30px 20px;">
+								<h2 style="color: #497C5E; margin-top: 0; font-size: 22px;">Camp Information Has Been Updated</h2>
+								<p style="margin: 15px 0; font-size: 16px;">Hello Administrator,</p>
+								<p style="margin: 15px 0; font-size: 16px;"><strong><?php echo esc_html( $camp_name ); ?></strong> has updated their camp profile.</p>
+								
+								<div style="background: #f8f9fa; border-left: 4px solid #497C5E; padding: 15px; margin: 20px 0; border-radius: 4px;">
+									<p style="margin: 5px 0; font-size: 16px;"><strong style="color: #497C5E;">Camp Name:</strong> <?php echo esc_html( $camp_name ); ?></p>
+									<p style="margin: 5px 0; font-size: 16px;"><strong style="color: #497C5E;">Camp ID:</strong> #<?php echo esc_html( $camp_id ); ?></p>
+									<p style="margin: 5px 0; font-size: 16px;"><strong style="color: #497C5E;">Updated:</strong> <?php echo date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) ); ?></p>
+								</div>
+								
+								<p style="margin: 15px 0; font-size: 16px;"><strong>Changes made:</strong></p>
+								<ul style="margin: 10px 0; padding-left: 25px;">
+									<?php foreach ( $changes as $change ) : ?>
+										<li style="margin: 5px 0; font-size: 15px;"><?php echo esc_html( $change ); ?></li>
+									<?php endforeach; ?>
+								</ul>
+								
+								<p style="margin: 15px 0; font-size: 16px;">You can review the updated camp profile in the WordPress admin:</p>
+								
+								<div style="text-align: center;">
+									<a href="<?php echo esc_url( $edit_url ); ?>" style="display: inline-block; padding: 14px 30px; background: #497C5E !important; color: #ffffff !important; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; text-align: center;">View Camp Profile</a>
+								</div>
+								
+								<p style="font-size: 14px; color: #666; margin-top: 25px;">If the button doesn't work, copy and paste this link into your browser:<br>
+								<a href="<?php echo esc_url( $edit_url ); ?>" style="color: #497C5E; word-break: break-all;"><?php echo esc_url( $edit_url ); ?></a></p>
+							</div>
+							<div style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #666; border-top: 1px solid #e9ecef;">
+								<p style="margin: 0;"><strong>Best USA Summer Camps</strong> - Admin Notification</p>
+							</div>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</body>
+		</html>
+		<?php
+		return ob_get_clean();
 	}
 
 }

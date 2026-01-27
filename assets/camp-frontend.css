@@ -449,6 +449,41 @@
 	color: white;
 }
 
+/* Hide activities beyond the first 5 */
+.activity-tag.activity-hidden {
+	display: none;
+}
+
+/* Show all activities when show-all class is added */
+.activities-grid.show-all .activity-tag.activity-hidden {
+	display: inline-block;
+}
+
+/* Show More and Show Less buttons */
+.activities-show-more,
+.activities-show-less {
+	margin-top: 15px;
+	padding: 10px 24px;
+	background: #497C5E;
+	color: white;
+	border: none;
+	border-radius: 20px;
+	font-size: 14px;
+	font-weight: 600;
+	font-family: 'Roboto', sans-serif;
+	letter-spacing: 0px;
+	cursor: pointer;
+	transition: all 0.3s ease;
+}
+
+.activities-show-more:hover,
+.activities-show-less:hover {
+	background: #3a6249;
+	transform: translateY(-2px);
+	box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+
 /* ====================
    TYPES & WEEKS
    ==================== */

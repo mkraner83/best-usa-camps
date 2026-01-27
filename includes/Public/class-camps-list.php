@@ -169,11 +169,22 @@ class Camps_List {
 		}
 		
 		// Get approved camps with all needed fields
-		$query = "SELECT DISTINCT {$wpdb->prefix}camp_management.id, camp_name, city, state, logo, opening_day, closing_day, minprice_2026, maxprice_2026, internal_link
-			FROM {$wpdb->prefix}camp_management
-			{$join}
-			{$where}
-			ORDER BY {$order_by}";
+		// Use subquery or GROUP BY to prevent duplicates from JOINs
+		if ( ! empty( $join ) ) {
+			// When using JOINs, we need to use GROUP BY to prevent duplicates
+			$query = "SELECT {$wpdb->prefix}camp_management.id, camp_name, city, state, logo, opening_day, closing_day, minprice_2026, maxprice_2026, internal_link
+				FROM {$wpdb->prefix}camp_management
+				{$join}
+				{$where}
+				GROUP BY {$wpdb->prefix}camp_management.id
+				ORDER BY {$order_by}";
+		} else {
+			// No JOINs, DISTINCT is fine
+			$query = "SELECT DISTINCT {$wpdb->prefix}camp_management.id, camp_name, city, state, logo, opening_day, closing_day, minprice_2026, maxprice_2026, internal_link
+				FROM {$wpdb->prefix}camp_management
+				{$where}
+				ORDER BY {$order_by}";
+		}
 		
 		if ( ! empty( $prepare_args ) ) {
 			$camps = $wpdb->get_results( $wpdb->prepare( $query, $prepare_args ), ARRAY_A );
@@ -181,14 +192,14 @@ class Camps_List {
 			$camps = $wpdb->get_results( $query, ARRAY_A );
 		}
 		
-		// Debug: Check for duplicate IDs
-		$camp_ids = array_column( $camps, 'id' );
-		$unique_ids = array_unique( $camp_ids );
-		if ( count( $camp_ids ) !== count( $unique_ids ) ) {
-			// Remove duplicates based on ID
+		// Always deduplicate to ensure no duplicate camp IDs (many-to-many JOINs can cause this)
+		if ( ! empty( $camps ) ) {
 			$camps_by_id = [];
 			foreach ( $camps as $camp ) {
-				$camps_by_id[ $camp['id'] ] = $camp;
+				// Keep only the first occurrence of each camp ID
+				if ( ! isset( $camps_by_id[ $camp['id'] ] ) ) {
+					$camps_by_id[ $camp['id'] ] = $camp;
+				}
 			}
 			$camps = array_values( $camps_by_id );
 		}
@@ -209,6 +220,13 @@ class Camps_List {
 					"SELECT t.name FROM {$wpdb->prefix}camp_week_terms t
 					INNER JOIN {$wpdb->prefix}camp_management_weeks_map m ON t.id = m.week_id
 					WHERE m.camp_id = %d",
+					$camp['id']
+				) );
+				
+				// Get total activity count
+				$camp['activities_total'] = $wpdb->get_var( $wpdb->prepare(
+					"SELECT COUNT(*) FROM {$wpdb->prefix}camp_management_activities_map
+					WHERE camp_id = %d",
 					$camp['id']
 				) );
 				
@@ -234,11 +252,18 @@ class Camps_List {
 					$camp['page_url'] = '#';
 				}
 			}
+			unset($camp); // Destroy the reference to avoid issues in subsequent loops
 		}
 		
 		$columns = intval( $atts['columns'] );
 		if ( $columns < 2 || $columns > 4 ) {
 			$columns = 3;
+		}
+		
+		// Debug: Log camp IDs to check for duplicates
+		if ( ! empty( $camps ) ) {
+			error_log( 'Camps List - Total camps: ' . count( $camps ) );
+			error_log( 'Camps List - Camp IDs: ' . implode( ', ', array_column( $camps, 'id' ) ) );
 		}
 		
 		ob_start();
@@ -247,10 +272,10 @@ class Camps_List {
 		$states = $wpdb->get_col( "SELECT DISTINCT state FROM {$wpdb->prefix}camp_management WHERE approved = 1 AND state != '' ORDER BY state ASC" );
 		
 		// Get camp types for filter
-		$camp_types = $wpdb->get_results( "SELECT id, name FROM {$wpdb->prefix}camp_type_terms ORDER BY name ASC" );
+		$camp_types = $wpdb->get_results( "SELECT id, name FROM {$wpdb->prefix}camp_type_terms ORDER BY sort_order ASC, name ASC" );
 		
 		// Get durations/weeks for filter
-		$durations = $wpdb->get_results( "SELECT id, name FROM {$wpdb->prefix}camp_week_terms ORDER BY name ASC" );
+		$durations = $wpdb->get_results( "SELECT id, name FROM {$wpdb->prefix}camp_week_terms ORDER BY sort_order ASC, name ASC" );
 		
 		?>
 		<div class="camps-list">
@@ -273,7 +298,7 @@ class Camps_List {
 						value="<?php echo esc_attr( $search_query ); ?>"
 					>
 					<button type="submit" class="camps-search-btn">Search</button>
-					<a href="<?php echo esc_url( strtok( $_SERVER['REQUEST_URI'], '?' ) ); ?>" class="camps-reset-btn">Reset All</a>
+					<a href="<?php echo esc_url( strtok( $_SERVER['REQUEST_URI'], '?' ) ); ?>#camps-filter-form" class="camps-reset-btn">Reset All</a>
 				
 					<!-- Filters Row -->
 					<div class="camps-filters-row">
@@ -356,9 +381,87 @@ class Camps_List {
 						</div>
 					</div>
 					
+					<?php
+					// Build search criteria display
+					$criteria = array();
+					
+					if ( ! empty( $search_query ) ) {
+						$criteria[] = $search_query;
+					}
+					
+					if ( ! empty( $filter_state ) ) {
+						// Convert state abbreviation to full name
+						$state_map = array(
+							'AL' => 'Alabama', 'AK' => 'Alaska', 'AZ' => 'Arizona', 'AR' => 'Arkansas',
+							'CA' => 'California', 'CO' => 'Colorado', 'CT' => 'Connecticut', 'DE' => 'Delaware',
+							'FL' => 'Florida', 'GA' => 'Georgia', 'HI' => 'Hawaii', 'ID' => 'Idaho',
+							'IL' => 'Illinois', 'IN' => 'Indiana', 'IA' => 'Iowa', 'KS' => 'Kansas',
+							'KY' => 'Kentucky', 'LA' => 'Louisiana', 'ME' => 'Maine', 'MD' => 'Maryland',
+							'MA' => 'Massachusetts', 'MI' => 'Michigan', 'MN' => 'Minnesota', 'MS' => 'Mississippi',
+							'MO' => 'Missouri', 'MT' => 'Montana', 'NE' => 'Nebraska', 'NV' => 'Nevada',
+							'NH' => 'New Hampshire', 'NJ' => 'New Jersey', 'NM' => 'New Mexico', 'NY' => 'New York',
+							'NC' => 'North Carolina', 'ND' => 'North Dakota', 'OH' => 'Ohio', 'OK' => 'Oklahoma',
+							'OR' => 'Oregon', 'PA' => 'Pennsylvania', 'RI' => 'Rhode Island', 'SC' => 'South Carolina',
+							'SD' => 'South Dakota', 'TN' => 'Tennessee', 'TX' => 'Texas', 'UT' => 'Utah',
+							'VT' => 'Vermont', 'VA' => 'Virginia', 'WA' => 'Washington', 'WV' => 'West Virginia',
+							'WI' => 'Wisconsin', 'WY' => 'Wyoming'
+						);
+						$state_name = isset( $state_map[ $filter_state ] ) ? $state_map[ $filter_state ] : $filter_state;
+						$criteria[] = $state_name;
+					}
+					
+					if ( ! empty( $filter_type ) ) {
+						$type_result = $wpdb->get_row( $wpdb->prepare(
+							"SELECT name FROM {$wpdb->prefix}camp_type_terms WHERE id = %d",
+							$filter_type
+						) );
+						if ( $type_result ) {
+							$criteria[] = $type_result->name;
+						}
+					}
+					
+					if ( ! empty( $filter_duration ) ) {
+						$duration_result = $wpdb->get_row( $wpdb->prepare(
+							"SELECT name FROM {$wpdb->prefix}camp_week_terms WHERE id = %d",
+							$filter_duration
+						) );
+						if ( $duration_result ) {
+							$criteria[] = $duration_result->name;
+						}
+					}
+					
+					if ( ! empty( $filter_price_min ) || ! empty( $filter_price_max ) ) {
+						if ( ! empty( $filter_price_min ) && ! empty( $filter_price_max ) ) {
+							$criteria[] = '$' . number_format( $filter_price_min ) . ' - $' . number_format( $filter_price_max );
+						} elseif ( ! empty( $filter_price_min ) ) {
+							$criteria[] = 'From $' . number_format( $filter_price_min );
+						} elseif ( ! empty( $filter_price_max ) ) {
+							$criteria[] = 'Up to $' . number_format( $filter_price_max );
+						}
+					}
+					
+					if ( ! empty( $filter_date_from ) || ! empty( $filter_date_to ) ) {
+						if ( ! empty( $filter_date_from ) && ! empty( $filter_date_to ) ) {
+							$criteria[] = date( 'M j', strtotime( $filter_date_from ) ) . ' - ' . date( 'M j, Y', strtotime( $filter_date_to ) );
+						} elseif ( ! empty( $filter_date_from ) ) {
+							$criteria[] = 'From ' . date( 'M j, Y', strtotime( $filter_date_from ) );
+						} elseif ( ! empty( $filter_date_to ) ) {
+							$criteria[] = 'Until ' . date( 'M j, Y', strtotime( $filter_date_to ) );
+						}
+					}
+					
+					$has_criteria = ! empty( $criteria );
+					$criteria_text = $has_criteria ? implode( ', ', $criteria ) : '';
+					?>
+					
 					<!-- Sort and Count Row -->
 					<div class="camps-sort-row">
 						<div class="sort-group">
+							<?php if ( $has_criteria ) : ?>
+								<span class="search-criteria" style="color: #4a6b5a; font-weight: 600; margin-right: 10px;">
+									Search for: <?php echo esc_html( $criteria_text ); ?> |
+								</span>
+							<?php endif; ?>
 							<span class="camps-count"><?php echo count( $camps ); ?> camps</span>
 							<select name="camp_sort" id="camp_sort" class="camps-sort-select" onchange="this.form.submit()">
 								<option value="random" <?php selected( $sort_by, 'random' ); ?>>Random Order</option>
@@ -383,7 +486,13 @@ class Camps_List {
 					<p>No camps match your search criteria. Try adjusting your filters.</p>
 				</div>
 			<?php else : ?>
-			<div class="camps-grid camps-grid-<?php echo $columns; ?>"><?php foreach ( $camps as $camp ) : ?>
+			<div class="camps-grid camps-grid-<?php echo $columns; ?>">
+				<?php 
+				$camp_index = 0;
+				foreach ( $camps as $camp ) : 
+					$camp_index++;
+				?>
+					<!-- Camp #<?php echo $camp_index; ?> - ID: <?php echo $camp['id']; ?> -->
 					<div class="camp-card">
 						<?php if ( ! empty( $camp['logo'] ) ) : ?>
 							<div class="camp-logo-circle">
@@ -437,13 +546,16 @@ class Camps_List {
 										<?php foreach ( $camp['activities'] as $activity ) : ?>
 											<span class="camp-badge"><?php echo esc_html( $activity ); ?></span>
 										<?php endforeach; ?>
-									</div>
+									<?php if ( $camp['activities_total'] > 4 ) : ?>
+										<span class="camp-badge camp-badge-plus">+</span>
+									<?php endif; ?>
 								</div>
-							<?php endif; ?>
-							
-							<div class="camp-dates-prices">
-								<?php if ( $camp['opening_day'] ) : ?>
-									<div class="camp-detail">
+							</div>
+						<?php endif; ?>
+						
+						<div class="camp-dates-prices">
+							<?php if ( $camp['opening_day'] ) : ?>
+								<div class="camp-detail">
 										<strong>Opening Day:</strong> <?php echo esc_html( date( 'M j, Y', strtotime( $camp['opening_day'] ) ) ); ?>
 									</div>
 								<?php endif; ?>
@@ -476,6 +588,39 @@ class Camps_List {
 			</div>
 			<?php endif; ?>
 		</div>
+		
+		<script>
+		(function() {
+			// Scroll to search form if filters or search were submitted
+			var urlParams = new URLSearchParams(window.location.search);
+			var hasFilters = urlParams.has('camp_search') || 
+							 urlParams.has('filter_state') || 
+							 urlParams.has('filter_type') || 
+							 urlParams.has('filter_duration') || 
+							 urlParams.has('filter_price_min') || 
+							 urlParams.has('filter_price_max') || 
+							 urlParams.has('filter_date_from') || 
+							 urlParams.has('filter_date_to') ||
+							 urlParams.has('camp_sort');
+			
+			if (hasFilters) {
+				setTimeout(function() {
+					var searchForm = document.querySelector('.camps-search-bar');
+					if (searchForm) {
+						var offset = 100; // Offset from top
+						var elementPosition = searchForm.getBoundingClientRect().top;
+						var offsetPosition = elementPosition + window.pageYOffset - offset;
+						
+						window.scrollTo({
+							top: offsetPosition,
+							behavior: 'smooth'
+						});
+					}
+				}, 100);
+			}
+		})();
+		</script>
+		
 		<?php
 		return ob_get_clean();
 	}

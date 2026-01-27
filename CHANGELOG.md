@@ -1,5 +1,41 @@
 # Changelog
 
+## v3.1.0 (2026-01-20) - Admin Date Tracking Complete
+
+### Added
+- "Date Edited" column in admin camps list table
+- `last_edited` database field to track when camps are modified
+- Admin email notifications when camps update their profile
+- Admin email notifications when new camps register
+- "Save All Changes" button in dashboard side navigation
+
+### Fixed
+- Admin save now properly updates `last_edited` timestamp
+- Admin table query now properly retrieves `last_edited` field
+- Dashboard smooth scroll skips button elements in navigation
+
+### Changed
+- Reduced padding on dashboard sidenav links for better spacing
+- Database migration ensures `last_edited` column exists on plugin activation
+
+---
+
+## v3.0.0 (2026-01-20) - Major Admin Enhancement Release
+
+### Added
+- Complete AJAX management for Accommodations/Cabins in admin
+- Complete AJAX management for FAQs in admin
+- Complete AJAX management for Sessions (Rates & Dates) in admin
+- "Approved" checkbox column with AJAX toggle in camps list
+- Inline editing forms for all three new modules
+- Admin can now manage all camp modules without page reloads
+
+### Changed
+- Admin camps list now shows approval status with quick toggle
+- Improved admin UX with inline editing capabilities
+
+---
+
 ## v2.8.6 (2026-01-16) - Mobile Gallery Optimization
 
 ### Changed

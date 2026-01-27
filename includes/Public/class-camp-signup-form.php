@@ -81,11 +81,11 @@ class Camp_Signup_Form {
 	public function render_form() {
 		global $wpdb;
 		// Fetch active camp types
-		$types = $wpdb->get_results( "SELECT id, name FROM " . DB::table_type_terms() . " WHERE is_active = 1 ORDER BY name ASC" );
+		$types = $wpdb->get_results( "SELECT id, name FROM " . DB::table_type_terms() . " WHERE is_active = 1 ORDER BY sort_order ASC, name ASC" );
 		// Fetch active durations/weeks
-		$weeks = $wpdb->get_results( "SELECT id, name FROM " . DB::table_week_terms() . " WHERE is_active = 1 ORDER BY name ASC" );
+		$weeks = $wpdb->get_results( "SELECT id, name FROM " . DB::table_week_terms() . " WHERE is_active = 1 ORDER BY sort_order ASC, name ASC" );
 		// Fetch active activities (for suggestions)
-		$activities = $wpdb->get_results( "SELECT id, name FROM " . DB::table_activity_terms() . " WHERE is_active = 1 ORDER BY name ASC" );
+		$activities = $wpdb->get_results( "SELECT id, name FROM " . DB::table_activity_terms() . " WHERE is_active = 1 ORDER BY sort_order ASC, name ASC" );
 
 		ob_start();
 		?>
@@ -156,7 +156,11 @@ class Camp_Signup_Form {
 				<option value="WI">Wisconsin</option>
 				<option value="WY">Wyoming</option>
 			</select></div>
-			<div class="full-width"><label>About Camp</label><textarea name="about_camp" required></textarea></div>
+			<div class="full-width"><label>About Camp</label><textarea name="about_camp" id="about_camp_signup" required></textarea>
+				<p class="description" style="margin-top:5px;color:#666;font-size:12px;">
+					<span id="word-count-signup">0</span>/300 words
+				</p>
+			</div>
 			<div class="full-width"><label class="required-label">Camp Type</label></div>
 			<div class="full-width checkbox-group">
 				<?php if ( $types ) foreach ( $types as $type ) : ?>
@@ -259,6 +263,9 @@ class Camp_Signup_Form {
 
 		// Send thank you email
 		$this->send_welcome_email( $user_id, $username, $email, $camp_name );
+
+		// Send notification to admin
+		$this->send_admin_notification_new_camp( $camp_name, $email, $camp_director, $camp_id );
 
 		// Generate password reset key and redirect to WordPress set password page
 		$reset_key = get_password_reset_key( $user );
@@ -497,6 +504,82 @@ class Camp_Signup_Form {
 							</div>
 							<div style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #666; border-top: 1px solid #e9ecef;">
 								<p style="margin: 0;"><strong>Best USA Summer Camps</strong></p>
+							</div>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</body>
+		</html>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Send notification email to admin when new camp registers
+	 */
+	private function send_admin_notification_new_camp( $camp_name, $camp_email, $camp_director, $camp_id ) {
+		$admin_email = get_option( 'admin_email' );
+		
+		$subject = 'New Camp Registration: ' . $camp_name;
+		
+		$message = $this->get_admin_email_template( $camp_name, $camp_email, $camp_director, $camp_id );
+
+		$headers = [
+			'Content-Type: text/html; charset=UTF-8',
+			'From: Best USA Summer Camps <noreply@bestusacamps.com>',
+		];
+
+		wp_mail( $admin_email, $subject, $message, $headers );
+	}
+
+	/**
+	 * Get admin notification email HTML template
+	 */
+	private function get_admin_email_template( $camp_name, $camp_email, $camp_director, $camp_id ) {
+		$edit_url = admin_url( 'admin.php?page=creativedbs-camp-mgmt&action=edit&camp=' . $camp_id );
+		$edit_url = wp_nonce_url( $edit_url, 'edit_camp' );
+		
+		ob_start();
+		?>
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<title>New Camp Registration</title>
+		</head>
+		<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0;">
+			<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f4;">
+				<tr>
+					<td align="center" style="padding: 20px 10px;">
+						<div style="max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+							<div style="background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%); color: #ffffff; padding: 30px 20px; text-align: center;">
+								<h1 style="margin: 0; font-size: 28px; font-weight: bold;">🏕️ New Camp Registration!</h1>
+							</div>
+							<div style="padding: 30px 20px;">
+								<h2 style="color: #497C5E; margin-top: 0; font-size: 22px;">A New Camp Profile Has Been Created</h2>
+								<p style="margin: 15px 0; font-size: 16px;">Hello Administrator,</p>
+								<p style="margin: 15px 0; font-size: 16px;">A new camp has just registered on Best USA Summer Camps:</p>
+								
+								<div style="background: #f8f9fa; border-left: 4px solid #497C5E; padding: 15px; margin: 20px 0; border-radius: 4px;">
+									<p style="margin: 5px 0; font-size: 16px;"><strong style="color: #497C5E;">Camp Name:</strong> <?php echo esc_html( $camp_name ); ?></p>
+									<p style="margin: 5px 0; font-size: 16px;"><strong style="color: #497C5E;">Director:</strong> <?php echo esc_html( $camp_director ); ?></p>
+									<p style="margin: 5px 0; font-size: 16px;"><strong style="color: #497C5E;">Email:</strong> <?php echo esc_html( $camp_email ); ?></p>
+									<p style="margin: 5px 0; font-size: 16px;"><strong style="color: #497C5E;">Camp ID:</strong> #<?php echo esc_html( $camp_id ); ?></p>
+								</div>
+								
+								<p style="margin: 15px 0; font-size: 16px;">You can review and edit this camp profile in the WordPress admin:</p>
+								
+								<div style="text-align: center;">
+									<a href="<?php echo esc_url( $edit_url ); ?>" style="display: inline-block; padding: 14px 30px; background: #497C5E !important; color: #ffffff !important; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; text-align: center;">View Camp Profile</a>
+								</div>
+								
+								<p style="font-size: 14px; color: #666; margin-top: 25px;">If the button doesn't work, copy and paste this link into your browser:<br>
+								<a href="<?php echo esc_url( $edit_url ); ?>" style="color: #497C5E; word-break: break-all;"><?php echo esc_url( $edit_url ); ?></a></p>
+							</div>
+							<div style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #666; border-top: 1px solid #e9ecef;">
+								<p style="margin: 0;"><strong>Best USA Summer Camps</strong> - Admin Notification</p>
 							</div>
 						</div>
 					</td>
