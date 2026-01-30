@@ -443,7 +443,7 @@ class Camp_Signup_Form {
 	 * Send welcome email to new camp user
 	 */
 	private function send_welcome_email( $user_id, $username, $email, $camp_name ) {
-		$reset_url = wp_lostpassword_url();
+		$reset_url = home_url( '/camp-lost-password/' );
 		
 		$subject = 'Welcome to Best USA Summer Camps!';
 		

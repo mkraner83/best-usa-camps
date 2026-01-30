@@ -1,0 +1,282 @@
+/* Featured Camps Grid - Matches Search Cards Design */
+
+.featured-camps-grid {
+	display: grid;
+	gap: 30px;
+	margin: 40px 0;
+	grid-auto-rows: auto;
+	width: 100%;
+}
+
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+	.featured-camps-grid[data-columns="4"] {
+		grid-template-columns: repeat(3, 1fr) !important;
+	}
+}
+
+@media (max-width: 900px) {
+	.featured-camps-grid[data-columns="3"],
+	.featured-camps-grid[data-columns="4"] {
+		grid-template-columns: repeat(2, 1fr) !important;
+	}
+}
+
+@media (max-width: 600px) {
+	.featured-camps-grid {
+		grid-template-columns: 1fr !important;
+	}
+}
+
+/* Featured Camp Card - Matches .camp-card */
+.featured-camp-card {
+	background: #ffffff;
+	border-radius: 10px;
+	box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+	overflow: visible;
+	display: flex;
+	flex-direction: column;
+	transition: all 0.3s ease;
+}
+
+.featured-camp-card:hover {
+	transform: translateY(-5px);
+	box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+/* Header Image with Overlay */
+.featured-card-header {
+	position: relative;
+	width: 100%;
+	height: 168px;
+	overflow: hidden;
+	background: #f5f5f5;
+	border-radius: 10px 10px 0 0;
+}
+
+.featured-card-header img {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	min-width: 100%;
+	min-height: 100%;
+	object-fit: cover;
+	object-position: center;
+	transition: transform 0.3s ease;
+}
+
+.featured-camp-card:hover .featured-card-header img {
+	transform: scale(1.05);
+}
+
+/* Black Overlay - 0.6 opacity */
+.featured-header-overlay {
+	position: absolute;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0, 0, 0, 0.6);
+	pointer-events: none;
+	z-index: 1;
+}
+
+/* Card Body */
+.featured-card-body {
+	position: relative;
+	padding: 20px;
+	display: flex;
+	flex-direction: column;
+	z-index: 1;
+	background: #ffffff;
+}
+
+/* Logo Circle - Centered in Header Image */
+.featured-logo-circle {
+	position: absolute;
+	top: 50%;
+	left: 50%;
+	transform: translate(-50%, -50%);
+	width: 100px;
+	height: 100px;
+	border-radius: 50%;
+	overflow: hidden;
+	background: #ffffff;
+	border: 3px solid #4a6b5a;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	z-index: 10;
+}
+
+.featured-logo-circle img {
+	width: 100%;
+	height: 100%;
+	object-fit: cover;
+}
+
+.featured-logo-circle.featured-logo-placeholder {
+	background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.featured-logo-circle.featured-logo-placeholder span {
+	font-size: 1.5rem;
+	color: #ffffff;
+	font-weight: 700;
+	text-transform: uppercase;
+}
+
+/* Camp Info */
+.featured-card-info {
+}
+
+.featured-camp-name {
+	font-size: 1.3rem;
+	color: #2c3e50;
+	margin: 0 0 8px 0;
+	font-weight: 600;
+	line-height: 1.4;
+	font-family: "Abel", sans-serif;
+	text-align: center;
+}
+
+.featured-camp-location {
+	font-size: 0.95rem;
+	color: #7f8c8d;
+	margin: 0 0 15px 0;
+	text-align: center;
+}
+
+/* Meta Rows with Badges */
+.featured-meta-row {
+	margin-bottom: 12px;
+}
+
+.featured-meta-label {
+	display: block;
+	font-size: 0.85rem;
+	color: #95a5a6;
+	margin-bottom: 5px;
+	font-weight: 600;
+	text-align: center;
+}
+
+.featured-badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 6px;
+	justify-content: center;
+}
+
+.featured-badge {
+	display: inline-block;
+	padding: 4px 10px;
+	background: #ffffff;
+	color: #4a6b5a;
+	border-radius: 20px;
+	font-size: 0.75rem;
+	font-weight: 500;
+	border: 2px solid #4a6b5a;
+}
+
+/* Plus badge for more activities */
+.featured-badge-plus {
+	font-weight: 700;
+	font-size: 0.9rem;
+}
+
+/* Activities badges - gray background (third meta row) */
+.featured-meta-row:nth-of-type(3) .featured-badge {
+	background: #e0e0e0;
+}
+
+/* Dates and Prices - Green Box */
+.featured-dates-prices {
+	margin: 15px 0;
+	padding: 12px;
+	background: #4a6b5a;
+	border-radius: 6px;
+}
+
+.featured-detail {
+	font-size: 0.9rem;
+	color: #ffffff;
+	margin-bottom: 6px;
+}
+
+.featured-detail:last-child {
+	margin-bottom: 0;
+}
+
+.featured-detail strong {
+	color: #ffffff;
+	font-weight: 600;
+}
+
+/* Visit Button - Matches .camp-visit-btn */
+.featured-visit-btn {
+	display: block;
+	width: 100%;
+	margin-top: 15px;
+	padding: 10px 14px;
+	background: #e0e0e0;
+	color: #4a6b5a;
+	text-decoration: none;
+	border-radius: 5px;
+	font-weight: 800;
+	font-size: 1.3rem;
+	text-align: center;
+	transition: background 0.2s ease;
+	font-family: "Annie Use Your Telescope", Sans-serif !important;
+	border: 2px solid #4a6b5a;
+}
+
+.featured-visit-btn:hover {
+	background: #d0d0d0;
+	color: #4a6b5a;
+	text-decoration: none;
+}
+
+/* No Featured Camps */
+.no-featured-camps {
+	text-align: center;
+	padding: 60px 20px;
+	color: #666;
+	font-family: 'Lato', Arial, sans-serif;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+	.featured-camps-grid {
+		grid-template-columns: repeat(3, 1fr);
+	}
+}
+
+@media (max-width: 768px) {
+	.featured-camps-grid {
+		grid-template-columns: repeat(2, 1fr);
+		gap: 20px;
+	}
+	
+	.featured-camp-name {
+		font-size: 1.1rem;
+	}
+	
+	.featured-logo-circle {
+		width: 60px;
+		height: 60px;
+	}
+	
+	.featured-card-header {
+		height: 200px;
+	}
+}
+
+@media (max-width: 480px) {
+	.featured-camps-grid {
+		grid-template-columns: 1fr;
+	}
+}

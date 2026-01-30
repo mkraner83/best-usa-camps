@@ -2,14 +2,14 @@
 /*
 Plugin Name: CreativeDBS Camp Management
 Description: Ultimate US Summer Camp Management Application.
-Version: 3.2.0
+Version: 3.3.0
 Author: CreativeDBS
 Text Domain: creativedbs-camp-mgmt
 Requires at least: 5.8
 Requires PHP: 7.4
 */
 
-define('CDBS_CAMP_VERSION', '3.2.0');
+define('CDBS_CAMP_VERSION', '3.3.0');
 
 defined( 'ABSPATH' ) || exit;
 
@@ -27,13 +27,17 @@ $required_files = [
     __DIR__ . '/includes/migrations-phase7.php',
     __DIR__ . '/includes/migrations-modules.php',
     __DIR__ . '/includes/migrations-add-user-id.php',
+    __DIR__ . '/includes/migrations-featured-camps.php',
     __DIR__ . '/includes/Public/class-public-controller.php',
     __DIR__ . '/includes/Public/class-camp-dashboard.php',
     __DIR__ . '/includes/Public/class-camp-signup-form.php',
     __DIR__ . '/includes/Public/class-camp-frontend.php',
     __DIR__ . '/includes/Public/class-camps-list.php',
+    __DIR__ . '/includes/Public/class-featured-camps-frontend.php',
     __DIR__ . '/includes/Admin/class-admin.php',
     __DIR__ . '/includes/Admin/class-import-export.php',
+    __DIR__ . '/includes/Admin/class-featured-camps.php',
+    __DIR__ . '/includes/Admin/class-shortcodes-guide.php',
 ];
 
 foreach ( $required_files as $file ) {
@@ -49,6 +53,12 @@ if ( is_admin() ) {
 add_action( 'admin_init', [ '\\CreativeDBS\\CampMgmt\\Migrations_Phase7', 'run' ] );
 add_action( 'admin_init', [ '\\CreativeDBS\\CampMgmt\\Migrations_Modules', 'run' ] );
 add_action( 'admin_init', [ '\\CreativeDBS\\CampMgmt\\Migration_Add_WordPress_User_ID', 'run' ] );
+
+// Run featured camps migration
+if ( ! get_option( 'creativedbs_campmgmt_featured_migrated' ) ) {
+	require_once __DIR__ . '/includes/migrations-featured-camps.php';
+}
+
 if ( function_exists( 'register_uninstall_hook' ) ) {
     if ( ! function_exists( 'creativedbs_campmgmt_uninstall_marker' ) ) {
         function creativedbs_campmgmt_uninstall_marker() {}
@@ -58,11 +68,9 @@ if ( function_exists( 'register_uninstall_hook' ) ) {
 
 // Instantiate plugin early.
 add_action( 'plugins_loaded', function() {
-	if ( ! class_exists( '\\CreativeDBS\\CampMgmt\\Plugin' ) ) {
-		return;
-	}
-	\CreativeDBS\CampMgmt\Plugin::instance();
-	new \CreativeDBS\CampMgmt\Admin\Admin();
+	new \CreativeDBS\CampMgmt\Admin\Featured_Camps();
+	new \CreativeDBS\CampMgmt\Admin\Shortcodes_Guide();
+	new \CreativeDBS\CampMgmt\PublicArea\Featured_Camps_Frontend();
 	if ( is_admin() ) {
 		new \CreativeDBS\CampMgmt\Admin\Import_Export();
 	}

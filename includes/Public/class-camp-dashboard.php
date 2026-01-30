@@ -53,6 +53,23 @@ class Camp_Dashboard {
 		
 		// Hide admin bar for camp users
 		add_action( 'after_setup_theme', [ $this, 'hide_admin_bar_for_camps' ] );
+		
+		// Override lost password URL to use custom page (high priority to override other plugins)
+		add_filter( 'lostpassword_url', [ $this, 'custom_lostpassword_url' ], 99, 2 );
+		add_filter( 'login_url', [ $this, 'custom_login_url' ], 99, 3 );
+		
+		// Handle lost password form submission
+		add_action( 'template_redirect', [ $this, 'handle_lostpassword_redirect' ] );
+		
+		// Fix lost password form action URL
+		add_action( 'wp_footer', [ $this, 'fix_lostpassword_form_action' ] );
+		
+		// Allow HTML in login errors
+		add_filter( 'login_errors', [ $this, 'allow_html_in_login_errors' ], 10, 1 );
+		
+		// Customize password reset email
+		add_filter( 'retrieve_password_message', [ $this, 'custom_password_reset_email' ], 10, 4 );
+		add_filter( 'retrieve_password_title', [ $this, 'custom_password_reset_subject' ], 10, 3 );
 	}
 	
 	/**
@@ -68,11 +85,221 @@ class Camp_Dashboard {
 	}
 	
 	/**
-	 * Redirect camp users to dashboard after login
+	 * Override lost password URL to use custom page
+	 */
+	public function custom_lostpassword_url( $lostpassword_url, $redirect ) {
+		return home_url( '/camp-lost-password/' );
+	}
+	
+	/**
+	 * Override login URL to always use custom camp-login page
+	 */
+	public function custom_login_url( $login_url, $redirect, $force_reauth ) {
+		// Always redirect to custom camp login page
+		return home_url( '/camp-login/' );
+	}
+	
+	/**
+	 * Redirect lost password attempts to custom page
+	 */
+	public function handle_lostpassword_redirect() {
+		// Check if this is the administrator login page with lostpassword action
+		// But don't redirect if it's a POST request (actual form submission)
+		if ( isset( $_GET['action'] ) && $_GET['action'] === 'lostpassword' && $_SERVER['REQUEST_METHOD'] !== 'POST' ) {
+			// Redirect to custom page
+			wp_redirect( home_url( '/camp-lost-password/' ) );
+			exit;
+		}
+	}
+	
+	/**
+	 * Fix lost password form action URL with JavaScript
+	 */
+	public function fix_lostpassword_form_action() {
+		// Only run on the camp lost password page
+		if ( is_page( 'camp-lost-password' ) ) {
+			?>
+			<script type="text/javascript">
+			document.addEventListener('DOMContentLoaded', function() {
+				// Find the lost password form
+				var form = document.getElementById('lostpasswordform');
+				if (form) {
+					// Get the proper WordPress login URL (not filtered)
+					var wpLoginUrl = '<?php echo esc_js( site_url( 'wp-login.php' ) ); ?>';
+					
+					// Always set the action to WordPress login with lostpassword action
+					form.setAttribute('action', wpLoginUrl + '?action=lostpassword');
+					
+					console.log('Lost password form action set to:', form.getAttribute('action'));
+				} else {
+					console.log('Lost password form not found');
+				}
+			});
+			</script>
+			<?php
+		}
+		
+		// Fix HTML rendering in login errors on camp-login page
+		if ( is_page( 'camp-login' ) || is_page( 'camp-lost-password' ) || is_page( 'camp-reset-password' ) ) {
+			?>
+			<script type="text/javascript">
+			document.addEventListener('DOMContentLoaded', function() {
+				// Fix HTML rendering in error and message boxes
+				setTimeout(function() {
+					// Find all possible error/message containers
+					var selectors = [
+						'.login-error p',
+						'.login-message p', 
+						'#login_error',
+						'.message',
+						'.error',
+						'[class*="login"][class*="error"]',
+						'[class*="login"][class*="message"]'
+					];
+					
+					selectors.forEach(function(selector) {
+						var elements = document.querySelectorAll(selector);
+						elements.forEach(function(element) {
+							var html = element.innerHTML;
+							// Check if HTML tags are being displayed as text
+							if (html.indexOf('&lt;') !== -1 || html.indexOf('&gt;') !== -1) {
+								// Decode HTML entities
+								var textarea = document.createElement('textarea');
+								textarea.innerHTML = html;
+								element.innerHTML = textarea.value;
+							}
+							// Also check for literal tags in text content
+							var text = element.textContent || element.innerText || '';
+							if (text.indexOf('<strong>') !== -1 || text.indexOf('<a href=') !== -1) {
+								element.innerHTML = text;
+							}
+						});
+					});
+				}, 100);
+			});
+			</script>
+			<?php
+		}
+	}
+	
+	/**
+	 * Allow HTML in login errors (WordPress sanitizes too aggressively by default)
+	 */
+	public function allow_html_in_login_errors( $error ) {
+		// Remove duplicate "Error:" prefix
+		$error = preg_replace( '/^Error:\s*<strong>Error:<\/strong>/i', '<strong>Error:</strong>', $error );
+		
+		// Return the error as-is since WordPress already sanitizes it with wp_kses
+		return $error;
+	}
+	
+	/**
+	 * Customize password reset email subject
+	 */
+	public function custom_password_reset_subject( $title, $user_login, $user_data ) {
+		return '[Best USA Summer Camps - 2026 Camp Search Engine] Password Reset';
+	}
+	
+	/**
+	 * Customize password reset email with HTML template
+	 */
+	public function custom_password_reset_email( $message, $key, $user_login, $user_data ) {
+		// Build the reset URL
+		$reset_url = network_site_url( "wp-login.php?action=rp&key=$key&login=" . rawurlencode( $user_login ), 'login' );
+		
+		// Get the HTML template
+		$html_message = $this->get_password_reset_email_template( $user_login, $reset_url );
+		
+		// Send the email directly using wp_mail to ensure HTML content type
+		$to = $user_data->user_email;
+		$subject = '[Best USA Summer Camps - 2026 Camp Search Engine] Password Reset';
+		$headers = [
+			'Content-Type: text/html; charset=UTF-8',
+			'From: Best American Summer Camps <info@bestusacamps.com>',
+		];
+		
+		// Send the email
+		wp_mail( $to, $subject, $html_message, $headers );
+		
+		// Return empty string to prevent WordPress from sending the default email
+		return '';
+	}
+	
+	/**
+	 * Get password reset email HTML template
+	 */
+	private function get_password_reset_email_template( $user_login, $reset_url ) {
+		ob_start();
+		?>
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<title>Password Reset Request</title>
+		</head>
+		<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0;">
+			<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f4;">
+				<tr>
+					<td align="center" style="padding: 20px 10px;">
+						<div style="max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+							<div style="background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%); color: #ffffff; padding: 30px 20px; text-align: center;">
+								<h1 style="margin: 0; font-size: 28px; font-weight: bold;">🔐 Password Reset Request</h1>
+							</div>
+							<div style="padding: 30px 20px;">
+								<h2 style="color: #497C5E; margin-top: 0; font-size: 22px;">Reset Your Password</h2>
+								<p style="margin: 15px 0; font-size: 16px;">Hello!</p>
+								<p style="margin: 15px 0; font-size: 16px;">Someone has requested a password reset for the following account on <strong>Best USA Summer Camps</strong>:</p>
+								
+								<div style="background: #f8f9fa; border-left: 4px solid #497C5E; padding: 15px; margin: 20px 0; border-radius: 4px;">
+									<p style="margin: 0; font-size: 16px;"><strong style="color: #497C5E;">Site Name:</strong> Best USA Summer Camps - 2026 Camp Search Engine</p>
+									<p style="margin: 5px 0 0 0; font-size: 16px;"><strong style="color: #497C5E;">Username:</strong> <?php echo esc_html( $user_login ); ?></p>
+								</div>
+								
+								<p style="margin: 15px 0; font-size: 16px;"><strong>If this was a mistake, just ignore this email and nothing will happen.</strong></p>
+								
+								<p style="margin: 15px 0; font-size: 16px;">To reset your password, click the button below:</p>
+								
+								<div style="text-align: center;">
+									<a href="<?php echo esc_url( $reset_url ); ?>" style="display: inline-block; padding: 14px 30px; background: #497C5E !important; color: #ffffff !important; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; text-align: center;">Reset My Password</a>
+								</div>
+								
+								<p style="font-size: 14px; color: #666; margin-top: 25px;">If the button doesn't work, copy and paste this link into your browser:<br>
+								<a href="<?php echo esc_url( $reset_url ); ?>" style="color: #497C5E; word-break: break-all;"><?php echo esc_url( $reset_url ); ?></a></p>
+								
+								<div style="height: 1px; background: #e9ecef; margin: 25px 0;"></div>
+								
+								<p style="font-size: 14px; color: #666; margin: 15px 0;"><strong>Security Note:</strong><br>
+								This password reset request originated from the IP address: <?php echo esc_html( $_SERVER['REMOTE_ADDR'] ?? 'Unknown' ); ?></p>
+								
+								<p style="font-size: 14px; color: #666; margin: 15px 0;">If you did not request a password reset, please ignore this email or contact our support team if you have concerns.</p>
+							</div>
+							<div style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #666; border-top: 1px solid #e9ecef;">
+								<p style="margin: 0;"><strong>Best USA Summer Camps</strong></p>
+							</div>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</body>
+		</html>
+		<?php
+		return ob_get_clean();
+	}
+	
+	/**
+	 * Redirect users after login based on their role
 	 */
 	public function camp_login_redirect( $redirect_to, $request, $user ) {
-		if ( isset( $user->roles ) && is_array( $user->roles ) && in_array( 'camp', $user->roles ) ) {
-			return home_url( '/user-dashboard/' );
+		if ( isset( $user->roles ) && is_array( $user->roles ) ) {
+			// Camp directors go to their dashboard
+			if ( in_array( 'camp', $user->roles ) ) {
+				return home_url( '/user-dashboard/' );
+			}
+			// Administrators go to WordPress admin
+			if ( in_array( 'administrator', $user->roles ) ) {
+				return admin_url();
+			}
 		}
 		return $redirect_to;
 	}
