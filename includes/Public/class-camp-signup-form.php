@@ -58,6 +58,21 @@ class Camp_Signup_Form {
 				CDBS_CAMP_VERSION,
 				true
 			);
+			
+			// Pass success flag to JavaScript
+			if ( ! session_id() ) {
+				session_start();
+			}
+			$show_popup = isset( $_SESSION['camp_signup_success'] ) && $_SESSION['camp_signup_success'];
+			$reset_url = isset( $_SESSION['camp_password_reset_url'] ) ? $_SESSION['camp_password_reset_url'] : '';
+			if ( $show_popup ) {
+				unset( $_SESSION['camp_signup_success'] );
+				unset( $_SESSION['camp_password_reset_url'] );
+			}
+			wp_localize_script( 'camp-signup-form-logic', 'campSignupData', [
+				'showSuccessPopup' => $show_popup,
+				'passwordResetUrl' => $reset_url,
+			] );
 		}
 	}
 
@@ -91,18 +106,38 @@ class Camp_Signup_Form {
 		?>
 		<form method="post" enctype="multipart/form-data" class="camp-signup-form">
 			<?php wp_nonce_field( 'camp_signup_form_action', 'camp_signup_nonce' ); ?>
-			<div class="full-width"><label>Camp Name</label><input type="text" name="camp_name" required></div>
-			<div><label>Camp Opening Day</label><input type="text" id="opening_day" name="opening_day" placeholder="Select date" required readonly></div>
-			<div><label>Camp Closing Day</label><input type="text" id="closing_day" name="closing_day" placeholder="Select date" required readonly></div>
-			<div><label>Lowest Rate</label><input type="text" id="minprice_2026" name="minprice_2026" placeholder="$0.00" required></div>
-			<div><label>Highest Rate</label><input type="text" id="maxprice_2026" name="maxprice_2026" placeholder="$0.00" required></div>
-			<div><label>Email</label><input type="email" id="email" name="email" required></div>
-			<div><label>Phone</label><input type="text" name="phone" required></div>
-			<div><label>Website URL</label><input type="url" id="website" name="website" placeholder="https://" required></div>
-			<div><label>Camp Director</label><input type="text" name="camp_directors" required></div>
-			<div><label>Address</label><input type="text" name="address" required></div>
-			<div><label>City</label><input type="text" name="city" required></div>
-			<div><label>Zip</label><input type="text" name="zip" required></div>
+			<div class="full-width"><label>Camp Name</label><input type="text" name="camp_name" placeholder="e.g., Pine Valley Summer Camp" required></div>
+			<div><label>Camp Opening Day</label><input type="text" id="opening_day" name="opening_day" placeholder="First day of camp" required readonly></div>
+			<div><label>Camp Closing Day</label><input type="text" id="closing_day" name="closing_day" placeholder="Last day of camp" required readonly></div>
+			<div><label>Lowest Rate</label><input type="text" id="minprice_2026" name="minprice_2026" placeholder="$1,500" required></div>
+			<div><label>Highest Rate</label><input type="text" id="maxprice_2026" name="maxprice_2026" placeholder="$3,500" required></div>
+			<div><label>Email</label><input type="email" id="email" name="email" placeholder="director@yourcamp.com" required></div>
+			<div><label>Phone</label><input type="text" name="phone" placeholder="(555) 123-4567" required></div>
+			<div><label>Website URL</label><input type="url" id="website" name="website" placeholder="https://yourcamp.com" required></div>
+			<div><label>Camp Director</label><input type="text" name="camp_directors" placeholder="Director's Full Name" required></div>
+			
+			<!-- Social Media Links -->
+			<div class="full-width">
+				<label>Social Media Links</label>
+				<div id="social-media-container">
+					<div class="social-media-field">
+						<input type="url" name="social_media[]" placeholder="https://facebook.com/yourcamp" class="social-media-input">
+						<button type="button" class="remove-social-btn" style="display:none;">×</button>
+					</div>
+				</div>
+				<button type="button" id="add-social-btn" class="add-social-btn">+ Add Another Social Link</button>
+				<p class="description" style="margin-top:8px;color:#666;font-size:13px;">Add your camp's social media profiles (Facebook, Instagram, Twitter, etc.)</p>
+			</div>
+			
+			<!-- Video URL -->
+			<div class="full-width">
+				<label>Camp Video URL</label>
+				<input type="url" id="video_url" name="video_url" placeholder="https://youtube.com/watch?v=... or https://vimeo.com/...">
+				<p class="description" style="margin-top:8px;color:#666;font-size:13px;">Showcase your camp with a video tour! (YouTube, Vimeo, or other video platform)</p>
+			</div>
+			<div><label>Address</label><input type="text" name="address" placeholder="123 Camp Road" required></div>
+			<div><label>City</label><input type="text" name="city" placeholder="Lake Placid" required></div>
+			<div><label>Zip</label><input type="text" name="zip" placeholder="12345" required></div>
 			<div><label>State</label><select name="state" required>
 				<option value="">Select State</option>
 				<option value="AL">Alabama</option>
@@ -156,7 +191,7 @@ class Camp_Signup_Form {
 				<option value="WI">Wisconsin</option>
 				<option value="WY">Wyoming</option>
 			</select></div>
-			<div class="full-width"><label>About Camp</label><textarea name="about_camp" id="about_camp_signup" required></textarea>
+			<div class="full-width"><label>About Camp</label><textarea name="about_camp" id="about_camp_signup" placeholder="Share what makes your camp special! Describe your mission, unique programs, facilities, and what campers can expect from a summer at your camp..." required></textarea>
 				<p class="description" style="margin-top:5px;color:#666;font-size:12px;">
 					<span id="word-count-signup">0</span>/300 words
 				</p>
@@ -174,16 +209,57 @@ class Camp_Signup_Form {
 				<?php endforeach; ?>
 			</div>
 			<div class="full-width"><label>Activities</label>
-				<input type="text" name="activities" required placeholder="Comma-separated (e.g. Dance, Swimming)" list="activity-list">
+				<input type="text" id="activities_field" name="activities" required placeholder="Comma-separated (e.g. Dance, Swimming)" list="activity-list">
 				<datalist id="activity-list">
 					<?php if ( $activities ) foreach ( $activities as $act ) : ?>
 						<option value="<?php echo esc_attr($act->name); ?>">
 					<?php endforeach; ?>
 				</datalist>
 			</div>
-			<div class="full-width"><label>Logo</label><input type="file" name="logo"></div>
-			<button type="submit" name="camp_signup_submit">Submit</button>
+			<div class="full-width"><label class="required-label">Camp Logo</label><input type="file" name="logo" accept="image/*" required>
+				<p class="description" style="margin-top:8px;color:#666;font-size:13px;">Upload your camp's logo (recommended: 500x500px, PNG or JPG)</p>
+			</div>
+			<button type="submit" name="camp_signup_submit">Create Camp Profile</button>
 		</form>
+		
+		<!-- Success Popup -->
+		<div id="camp-success-popup" class="camp-popup-overlay" style="display:none;">
+			<div class="camp-popup-content">
+				<div class="camp-popup-header">
+					<h2>🏕️ Thank You for Creating Your Camp Profile!</h2>
+				</div>
+				<div class="camp-popup-body">
+					<h3>Step 1: Complete Your Camp Profile</h3>
+					<p>Our Director Dashboard is designed to be user-friendly and intuitive. To ensure your camp is published and discoverable by families, you must provide a complete profile:</p>
+					<ul>
+						<li><strong>Full Program Details:</strong> Fill in all required information including session lengths, cabin details, and frequently asked questions.</li>
+						<li><strong>The Power of Photos:</strong> Listings without images are not published. High-resolution photos (1280px or larger) are the #1 factor in a parent's decision to request expert advice about your camp.</li>
+					</ul>
+					
+					<h3>Step 2: The "Best USA Summer Camps" Logo Requirement</h3>
+					<p>To provide this platform free of charge, Best USA Summer Camps operates on a community-support model:</p>
+					<ul>
+						<li><strong>Requirement:</strong> Your camp must display the Best USA Summer Camps logo with a backlink on your camp's official website.</li>
+						<li><strong>Get Your Logo:</strong> <a href="https://bestusacamps.com/the-camp-directors-guide/" target="_blank">Download logos here →</a></li>
+					</ul>
+					<p class="highlight-box">Without the logo and backlink, your camp will not be published in our directory.</p>
+					
+					<h3>Step 3: Managing Leads in Your Director Dashboard</h3>
+					<p>Once your listing is live, you can log in anytime to:</p>
+					<ul>
+						<li>Track profile views and engagement</li>
+						<li>Update your camp's information and photos</li>
+						<li>See which parents have expressed interest in your program</li>
+						<li>Manage inquiries and connect with prospective families</li>
+					</ul>
+					
+					<div style="margin-top: 30px;">
+						<p style="font-size: 14px; color: #666; margin-bottom: 15px;">You'll receive an email shortly with instructions to set your password and access your dashboard.</p>
+						<button type="button" id="close-popup-btn" class="popup-close-btn">Got It! Close This Message</button>
+					</div>
+				</div>
+			</div>
+		</div>
 		<?php
 		return ob_get_clean();
 	}
@@ -227,6 +303,10 @@ class Camp_Signup_Form {
 			$errors[] = 'Please select at least one duration.';
 		}
 
+		if ( empty( $_FILES['logo']['name'] ) ) {
+			$errors[] = 'Camp logo is required.';
+		}
+
 		if ( ! empty( $errors ) ) {
 			wp_die( implode( '<br>', $errors ) );
 		}
@@ -267,15 +347,25 @@ class Camp_Signup_Form {
 		// Send notification to admin
 		$this->send_admin_notification_new_camp( $camp_name, $email, $camp_director, $camp_id );
 
-		// Generate password reset key and redirect to WordPress set password page
+		// Generate password reset key for redirect after popup
 		$reset_key = get_password_reset_key( $user );
+		$reset_url = '';
 		if ( ! is_wp_error( $reset_key ) ) {
 			$reset_url = network_site_url( "wp-login.php?action=rp&key=$reset_key&login=" . rawurlencode( $username ), 'login' );
-			wp_redirect( $reset_url );
 		} else {
-			// Fallback: redirect to login with message
-			wp_redirect( wp_login_url() . '?checkemail=confirm' );
+			// Fallback to password reset page
+			$reset_url = home_url( '/camp-lost-password/' );
 		}
+
+		// Set session flag to show success popup
+		if ( ! session_id() ) {
+			session_start();
+		}
+		$_SESSION['camp_signup_success'] = true;
+		$_SESSION['camp_password_reset_url'] = $reset_url;
+		
+		// Redirect to same page to show popup
+		wp_redirect( add_query_arg( 'signup', 'success', wp_get_referer() ) );
 		exit;
 	}
 
@@ -323,6 +413,18 @@ class Camp_Signup_Form {
 		$min_price = $this->parse_currency( $data['minprice_2026'] ?? '' );
 		$max_price = $this->parse_currency( $data['maxprice_2026'] ?? '' );
 
+		// Process social media links
+		$social_media_links = [];
+		if ( ! empty( $data['social_media'] ) && is_array( $data['social_media'] ) ) {
+			foreach ( $data['social_media'] as $link ) {
+				$link = esc_url_raw( trim( $link ) );
+				if ( ! empty( $link ) ) {
+					$social_media_links[] = $link;
+				}
+			}
+		}
+		$social_media_json = ! empty( $social_media_links ) ? wp_json_encode( $social_media_links ) : null;
+		
 		// Prepare camp data
 		$camp_data = [
 			'wordpress_user_id' => $user_id,
@@ -343,6 +445,8 @@ class Camp_Signup_Form {
 			'zip'            => sanitize_text_field( $data['zip'] ?? '' ),
 			'about_camp'     => sanitize_textarea_field( $data['about_camp'] ?? '' ),
 			'logo'           => esc_url_raw( $logo_url ),
+			'social_media_links' => $social_media_json,
+			'video_url'      => esc_url_raw( $data['video_url'] ?? '' ),
 			'approved'       => 0,
 			'created_at'     => current_time( 'mysql' ),
 			'updated_at'     => current_time( 'mysql' ),
@@ -476,10 +580,9 @@ class Camp_Signup_Form {
 					<td align="center" style="padding: 20px 10px;">
 						<div style="max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
 							<div style="background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%); color: #ffffff; padding: 30px 20px; text-align: center;">
-								<h1 style="margin: 0; font-size: 28px; font-weight: bold;">🏕️ Welcome to Best USA Summer Camps!</h1>
+								<h1 style="margin: 0; font-size: 28px; font-weight: bold;">🏕️ Thank You for Creating Your Camp Profile!</h1>
 							</div>
-							<div style="padding: 30px 20px;">
-								<h2 style="color: #497C5E; margin-top: 0; font-size: 22px;">Your Camp Profile Has Been Created</h2>
+							<div style="padding: 30px 20px; text-align: left;">
 								<p style="margin: 15px 0; font-size: 16px;">Hello!</p>
 								<p style="margin: 15px 0; font-size: 16px;">Thank you for registering <strong><?php echo esc_html( $camp_name ); ?></strong> with Best USA Summer Camps. Your camp profile has been successfully created!</p>
 								
@@ -487,20 +590,43 @@ class Camp_Signup_Form {
 									<p style="margin: 0; font-size: 16px;"><strong style="color: #497C5E;">Email:</strong> <?php echo esc_html( $email ); ?></p>
 								</div>
 								
-								<p style="margin: 15px 0; font-size: 16px;"><strong>Next Step: Set Your Password</strong></p>
+								<h3 style="color: #497C5E; font-size: 20px; margin: 25px 0 12px 0;">Step 1: Complete Your Camp Profile</h3>
+								<p style="margin: 12px 0; font-size: 16px;">Our Director Dashboard is designed to be user-friendly and intuitive. To ensure your camp is published and discoverable by families, you must provide a complete profile:</p>
+								<ul style="margin: 15px 0; padding-left: 25px;">
+									<li style="margin: 10px 0; font-size: 15px; line-height: 1.6;"><strong>Full Program Details:</strong> Fill in all required information including session lengths, cabin details, and frequently asked questions.</li>
+									<li style="margin: 10px 0; font-size: 15px; line-height: 1.6;"><strong>The Power of Photos:</strong> Listings without images are not published. High-resolution photos (1280px or larger) are the #1 factor in a parent's decision to request expert advice about your camp.</li>
+								</ul>
+								
+								<h3 style="color: #497C5E; font-size: 20px; margin: 25px 0 12px 0;">Step 2: The "Best USA Summer Camps" Logo Requirement</h3>
+								<p style="margin: 12px 0; font-size: 16px;">To provide this platform free of charge, Best USA Summer Camps operates on a community-support model:</p>
+								<ul style="margin: 15px 0; padding-left: 25px;">
+									<li style="margin: 10px 0; font-size: 15px; line-height: 1.6;"><strong>Requirement:</strong> Your camp must display the Best USA Summer Camps logo with a backlink on your camp's official website.</li>
+									<li style="margin: 10px 0; font-size: 15px; line-height: 1.6;"><strong>Get Your Logo:</strong> <a href="https://bestusacamps.com/the-camp-directors-guide/" style="color: #497C5E; font-weight: 600; text-decoration: none;">Download logos here →</a></li>
+								</ul>
+								<div style="background: #fff3cd; border-left: 4px solid #ffc107; padding: 15px; margin: 20px 0; border-radius: 4px;">
+									<p style="margin: 0; font-size: 15px; font-weight: 600; color: #856404;">Without the logo and backlink, your camp will not be published in our directory.</p>
+								</div>
+								
+								<h3 style="color: #497C5E; font-size: 20px; margin: 25px 0 12px 0;">Step 3: Managing Leads in Your Director Dashboard</h3>
+								<p style="margin: 12px 0; font-size: 16px;">Once your listing is live, you can log in anytime to:</p>
+								<ul style="margin: 15px 0; padding-left: 25px;">
+									<li style="margin: 10px 0; font-size: 15px; line-height: 1.6;">Track profile views and engagement</li>
+									<li style="margin: 10px 0; font-size: 15px; line-height: 1.6;">Update your camp's information and photos</li>
+									<li style="margin: 10px 0; font-size: 15px; line-height: 1.6;">See which parents have expressed interest in your program</li>
+									<li style="margin: 10px 0; font-size: 15px; line-height: 1.6;">Manage inquiries and connect with prospective families</li>
+								</ul>
+								
+								<div style="height: 1px; background: #e9ecef; margin: 30px 0;"></div>
+								
+								<h3 style="color: #497C5E; font-size: 20px; margin: 25px 0 12px 0;">Next: Set Your Password</h3>
 								<p style="margin: 15px 0; font-size: 16px;">To secure your account and access your camp dashboard, please click the button below to create your password:</p>
 								
-								<div style="text-align: center;">
-									<a href="<?php echo esc_url( $reset_url ); ?>" style="display: inline-block; padding: 14px 30px; background: #497C5E !important; color: #ffffff !important; text-decoration: none; border-radius: 5px; font-weight: bold; margin: 20px 0; text-align: center;">Set My Password</a>
+								<div style="margin: 20px 0;">
+									<a href="<?php echo esc_url( $reset_url ); ?>" style="display: inline-block; padding: 14px 30px; background: #497C5E !important; color: #ffffff !important; text-decoration: none; border-radius: 5px; font-weight: bold; text-align: center;">Set My Password</a>
 								</div>
 								
 								<p style="font-size: 14px; color: #666; margin-top: 25px;">If the button doesn't work, copy and paste this link into your browser:<br>
 								<a href="<?php echo esc_url( $reset_url ); ?>" style="color: #497C5E; word-break: break-all;"><?php echo esc_url( $reset_url ); ?></a></p>
-								
-								<div style="height: 1px; background: #e9ecef; margin: 25px 0;"></div>
-								
-								<p style="font-size: 14px; color: #666; margin: 15px 0;"><strong>Need Help?</strong><br>
-								If you did not create this account or have any questions, please contact our support team. We're here to help!</p>
 							</div>
 							<div style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #666; border-top: 1px solid #e9ecef;">
 								<p style="margin: 0;"><strong>Best USA Summer Camps</strong></p>

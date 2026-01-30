@@ -2,14 +2,14 @@
 /*
 Plugin Name: CreativeDBS Camp Management
 Description: Ultimate US Summer Camp Management Application.
-Version: 3.3.0
+Version: 3.3.3
 Author: CreativeDBS
 Text Domain: creativedbs-camp-mgmt
 Requires at least: 5.8
 Requires PHP: 7.4
 */
 
-define('CDBS_CAMP_VERSION', '3.3.0');
+define('CDBS_CAMP_VERSION', '3.3.3');
 
 defined( 'ABSPATH' ) || exit;
 
@@ -28,6 +28,8 @@ $required_files = [
     __DIR__ . '/includes/migrations-modules.php',
     __DIR__ . '/includes/migrations-add-user-id.php',
     __DIR__ . '/includes/migrations-featured-camps.php',
+    __DIR__ . '/includes/migrations-social-video.php',
+    __DIR__ . '/includes/migrations-daily-notifications.php',
     __DIR__ . '/includes/Public/class-public-controller.php',
     __DIR__ . '/includes/Public/class-camp-dashboard.php',
     __DIR__ . '/includes/Public/class-camp-signup-form.php',

@@ -135,35 +135,34 @@
 .camp-signup-form button[type="submit"] {
 	width: 100%;
 	padding: 18px;
-	background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%);
-	color: #ffffff;
-	border: none;
-	border-radius: 5px;
+	background-color: rgb(73, 124, 94);
+	font-family: Abel, sans-serif;
 	font-size: 20px;
-	font-weight: bold;
-	text-transform: uppercase;
-	letter-spacing: 1px;
+	font-weight: 400;
+	text-transform: capitalize;
+	line-height: 1.3em;
+	letter-spacing: 0px;
+	box-shadow: rgba(0, 0, 0, 0.5) 0px 0px 10px 0px;
+	border-style: solid;
+	border-width: 2px;
+	border-color: rgb(255, 255, 255);
+	border-radius: 5px;
+	color: #ffffff;
 	cursor: pointer;
 	transition: opacity 0.3s ease, transform 0.1s ease;
 	margin-top: 20px;
-	box-shadow: 0 4px 6px rgba(73, 124, 94, 0.3);
 }
 
 .camp-signup-form button[type="submit"]:hover {
 	opacity: 0.9;
 	transform: translateY(-1px);
-	box-shadow: 0 6px 8px rgba(73, 124, 94, 0.4);
+	box-shadow: rgba(0, 0, 0, 0.6) 0px 2px 12px 0px;
 }
 
 .camp-signup-form button[type="submit"]:active {
 	transform: translateY(0);
 }
- {
-		grid-template-columns: 1fr;
-		gap: 25px;
-	}
-	
-	.camp-signup-form
+
 /* Required field indicator */
 .camp-signup-form label:has(+ input[required])::after,
 .camp-signup-form label:has(+ textarea[required])::after {
@@ -174,6 +173,10 @@
 
 /* Responsive design */
 @media screen and (max-width: 768px) {
+	.camp-signup-form {
+		grid-template-columns: 1fr;
+		gap: 25px;
+	}
 	.camp-signup-form::before {
 		position: static;
 		display: block;
@@ -201,4 +204,237 @@
 	background-repeat: no-repeat;
 	background-position: right 12px center;
 	padding-right: 32px;
+}
+
+/* Description text styling */
+.camp-signup-form .description {
+	font-size: 13px;
+	color: #666;
+	font-style: italic;
+	margin-top: 8px;
+	line-height: 1.5;
+}
+
+/* Social Media Fields */
+#social-media-container {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin-bottom: 10px;
+}
+
+.social-media-field {
+	display: flex;
+	gap: 10px;
+	align-items: center;
+}
+
+.social-media-field input {
+	flex: 1;
+}
+
+.remove-social-btn {
+	background-color: #dc3545;
+	color: white;
+	border: none;
+	border-radius: 4px;
+	width: 35px;
+	height: 35px;
+	font-size: 20px;
+	line-height: 1;
+	cursor: pointer;
+	transition: background-color 0.3s ease;
+	flex-shrink: 0;
+	padding: 7px 24px 5px 15px;
+}
+
+.remove-social-btn:hover {
+	background-color: #c82333;
+}
+
+.add-social-btn {
+	background-color: #497C5E;
+	color: white;
+	border: none;
+	border-radius: 5px;
+	padding: 10px 16px;
+	font-size: 14px;
+	font-weight: 600;
+	cursor: pointer;
+	transition: background-color 0.3s ease;
+	display: inline-block;
+	width: auto;
+}
+
+.add-social-btn:hover {
+	background-color: #3a6349;
+}
+
+.add-social-btn:disabled {
+	background-color: #ccc;
+	cursor: not-allowed;
+	opacity: 0.6;
+}
+
+/* Success Popup Styles */
+.camp-popup-overlay {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background-color: rgba(0, 0, 0, 0.7);
+	z-index: 99999;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 20px;
+	animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+	from { opacity: 0; }
+	to { opacity: 1; }
+}
+
+.camp-popup-content {
+	background: white;
+	border-radius: 8px;
+	max-width: 700px;
+	width: 100%;
+	max-height: 90vh;
+	overflow-y: auto;
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+	animation: slideUp 0.3s ease;
+}
+
+@keyframes slideUp {
+	from { 
+		transform: translateY(30px);
+		opacity: 0;
+	}
+	to { 
+		transform: translateY(0);
+		opacity: 1;
+	}
+}
+
+.camp-popup-header {
+	background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%);
+	color: white;
+	padding: 25px 30px;
+	border-radius: 8px 8px 0 0;
+}
+
+.camp-popup-header h2 {
+	margin: 0;
+	font-size: 24px;
+	font-weight: 700;
+	line-height: 1.3;
+}
+
+.camp-popup-body {
+	padding: 30px;
+	color: #333;
+	line-height: 1.7;
+	text-align: left;
+}
+
+.camp-popup-body h3 {
+	color: #497C5E;
+	font-size: 20px;
+	font-weight: 700;
+	margin: 25px 0 12px 0;
+}
+
+.camp-popup-body h3:first-child {
+	margin-top: 0;
+}
+
+.camp-popup-body p {
+	margin: 12px 0;
+	font-size: 16px;
+}
+
+.camp-popup-body ul {
+	margin: 15px 0;
+	padding-left: 25px;
+}
+
+.camp-popup-body ul li {
+	margin: 10px 0;
+	font-size: 15px;
+	line-height: 1.6;
+}
+
+.camp-popup-body a {
+	color: #497C5E;
+	font-weight: 600;
+	text-decoration: none;
+}
+
+.camp-popup-body a:hover {
+	text-decoration: underline;
+}
+
+.highlight-box {
+	background: #fff3cd;
+	border-left: 4px solid #ffc107;
+	padding: 15px;
+	margin: 20px 0;
+	border-radius: 4px;
+	font-weight: 600;
+	color: #856404;
+}
+
+.popup-close-btn {
+	background-color: #497C5E;
+	color: white;
+	border: 2px solid #fff;
+	border-radius: 5px;
+	padding: 14px 30px;
+	font-size: 18px;
+	font-weight: 600;
+	cursor: pointer;
+	box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+	transition: all 0.3s ease;
+}
+
+.popup-close-btn:hover {
+	background-color: #3a6349;
+	transform: translateY(-2px);
+	box-shadow: 0 6px 8px rgba(0, 0, 0, 0.3);
+}
+
+.popup-close-btn:active {
+	transform: translateY(0);
+}
+
+/* Responsive adjustments for popup */
+@media screen and (max-width: 768px) {
+	.camp-popup-content {
+		margin: 10px;
+		max-height: 95vh;
+	}
+	
+	.camp-popup-header {
+		padding: 20px;
+	}
+	
+	.camp-popup-header h2 {
+		font-size: 20px;
+	}
+	
+	.camp-popup-body {
+		padding: 20px;
+	}
+	
+	.camp-popup-body h3 {
+		font-size: 18px;
+	}
+	
+	.camp-popup-body p,
+	.camp-popup-body ul li {
+		font-size: 14px;
+	}
 }

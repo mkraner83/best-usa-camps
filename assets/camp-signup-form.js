@@ -1,8 +1,104 @@
 /**
  * Camp Sign-Up Form JavaScript
- * Handles date picker, currency formatting, and form validation
+ * Handles date picker, currency formatting, social media fields, and form validation
  */
 document.addEventListener('DOMContentLoaded', function() {
+	
+	// Show success popup if flag is set
+	if (typeof campSignupData !== 'undefined' && campSignupData.showSuccessPopup) {
+		const popup = document.getElementById('camp-success-popup');
+		if (popup) {
+			popup.style.display = 'flex';
+		}
+	}
+	
+	// Close popup button
+	const closePopupBtn = document.getElementById('close-popup-btn');
+	if (closePopupBtn) {
+		closePopupBtn.addEventListener('click', function() {
+			const popup = document.getElementById('camp-success-popup');
+			if (popup) {
+				popup.style.display = 'none';
+			}
+			// Redirect to password setup page
+			if (typeof campSignupData !== 'undefined' && campSignupData.passwordResetUrl) {
+				window.location.href = campSignupData.passwordResetUrl;
+			}
+		});
+	}
+	
+	// Close popup when clicking overlay
+	const popupOverlay = document.getElementById('camp-success-popup');
+	if (popupOverlay) {
+		popupOverlay.addEventListener('click', function(e) {
+			if (e.target === this) {
+				this.style.display = 'none';
+				// Redirect to password setup page
+				if (typeof campSignupData !== 'undefined' && campSignupData.passwordResetUrl) {
+					window.location.href = campSignupData.passwordResetUrl;
+				}
+			}
+		});
+	}
+	
+	// Social Media Fields Management
+	const socialContainer = document.getElementById('social-media-container');
+	const addSocialBtn = document.getElementById('add-social-btn');
+	let socialFieldCount = 1;
+	const maxSocialFields = 5;
+	
+	if (addSocialBtn && socialContainer) {
+		// Add new social media field
+		addSocialBtn.addEventListener('click', function() {
+			if (socialFieldCount >= maxSocialFields) {
+				return;
+			}
+			
+			socialFieldCount++;
+			
+			const newField = document.createElement('div');
+			newField.className = 'social-media-field';
+			newField.innerHTML = `
+				<input type="url" name="social_media[]" placeholder="https://instagram.com/yourcamp" class="social-media-input">
+				<button type="button" class="remove-social-btn">&times;</button>
+			`;
+			
+			socialContainer.appendChild(newField);
+			
+			// Update first field's remove button visibility
+			updateRemoveButtons();
+			
+			// Disable add button if max reached
+			if (socialFieldCount >= maxSocialFields) {
+				addSocialBtn.disabled = true;
+				addSocialBtn.textContent = 'Maximum 5 Links';
+			}
+			
+			// Attach remove handler to new button
+			const removeBtn = newField.querySelector('.remove-social-btn');
+			removeBtn.addEventListener('click', function() {
+				newField.remove();
+				socialFieldCount--;
+				addSocialBtn.disabled = false;
+				addSocialBtn.textContent = '+ Add Another Social Link';
+				updateRemoveButtons();
+			});
+		});
+		
+		// Function to update remove button visibility
+		function updateRemoveButtons() {
+			const fields = socialContainer.querySelectorAll('.social-media-field');
+			fields.forEach((field, index) => {
+				const removeBtn = field.querySelector('.remove-social-btn');
+				if (removeBtn) {
+					removeBtn.style.display = fields.length > 1 ? 'block' : 'none';
+				}
+			});
+		}
+		
+		// Initial setup for first field
+		updateRemoveButtons();
+	}
 	
 	// Initialize date pickers
 	const openingDayPicker = flatpickr("#opening_day", {
@@ -122,6 +218,17 @@ document.addEventListener('DOMContentLoaded', function() {
 		
 		emailField.addEventListener('input', function() {
 			this.setCustomValidity(''); // Clear custom validity on input
+		});
+	}
+	
+	// Prevent form submission on Enter in activities field
+	const activitiesField = document.getElementById('activities_field');
+	if (activitiesField) {
+		activitiesField.addEventListener('keydown', function(e) {
+			if (e.key === 'Enter') {
+				e.preventDefault();
+				this.blur(); // Remove focus from field
+			}
 		});
 	}
 	

@@ -153,7 +153,7 @@ class Featured_Camps_Frontend {
 
 		ob_start();
 		?>
-		<div class="featured-camps-grid" data-count="<?php echo esc_attr( $count ); ?>" data-columns="<?php echo esc_attr( $columns ); ?>" style="grid-template-columns: repeat(<?php echo esc_attr( $columns ); ?>, 1fr);">
+		<div class="featured-camps-grid" data-count="<?php echo esc_attr( $count ); ?>" data-columns="<?php echo esc_attr( $columns ); ?>">
 			<?php foreach ( $camps as $camp ) : ?>
 				<?php $this->render_camp_card( $camp ); ?>
 			<?php endforeach; ?>
@@ -228,7 +228,7 @@ class Featured_Camps_Frontend {
 
 		ob_start();
 		?>
-		<div class="featured-camps-grid" data-count="<?php echo esc_attr( $count ); ?>" data-columns="<?php echo esc_attr( $columns ); ?>" style="grid-template-columns: repeat(<?php echo esc_attr( $columns ); ?>, 1fr);">
+		<div class="featured-camps-grid" data-count="<?php echo esc_attr( $count ); ?>" data-columns="<?php echo esc_attr( $columns ); ?>">
 			<?php foreach ( $camps as $camp ) : ?>
 				<?php $this->render_camp_card( $camp ); ?>
 			<?php endforeach; ?>

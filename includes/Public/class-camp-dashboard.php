@@ -70,6 +70,10 @@ class Camp_Dashboard {
 		// Customize password reset email
 		add_filter( 'retrieve_password_message', [ $this, 'custom_password_reset_email' ], 10, 4 );
 		add_filter( 'retrieve_password_title', [ $this, 'custom_password_reset_subject' ], 10, 3 );
+		
+		// Register daily notification cron job
+		add_action( 'init', [ $this, 'schedule_daily_notification_cron' ] );
+		add_action( 'camp_send_daily_notifications', [ $this, 'send_daily_notification_batch' ] );
 	}
 	
 	/**
@@ -82,6 +86,137 @@ class Camp_Dashboard {
 				show_admin_bar( false );
 			}
 		}
+	}
+	
+	/**
+	 * Schedule daily notification cron job at 8 PM CET
+	 */
+	public function schedule_daily_notification_cron() {
+		if ( ! wp_next_scheduled( 'camp_send_daily_notifications' ) ) {
+			// 8 PM CET = 19:00 UTC in winter, 18:00 UTC in summer
+			// Using 19:00 UTC (covers most of the year)
+			$timezone = new \DateTimeZone( 'Europe/Paris' ); // CET timezone
+			$now = new \DateTime( 'now', $timezone );
+			$target = new \DateTime( 'today 20:00', $timezone ); // 8 PM CET
+			
+			if ( $now > $target ) {
+				$target->modify( '+1 day' );
+			}
+			
+			$timestamp = $target->getTimestamp();
+			
+			wp_schedule_event( $timestamp, 'daily', 'camp_send_daily_notifications' );
+		}
+	}
+	
+	/**
+	 * Send batched daily notifications grouped by camp
+	 */
+	public function send_daily_notification_batch() {
+		global $wpdb;
+		
+		$table_name = $wpdb->prefix . 'camp_notification_queue';
+		$admin_email = get_option( 'admin_email' );
+		
+		// Get all notifications from today grouped by camp
+		$notifications = $wpdb->get_results(
+			"SELECT * FROM {$table_name} 
+			WHERE DATE(update_time) = CURDATE()
+			ORDER BY camp_id, update_time ASC"
+		);
+		
+		if ( empty( $notifications ) ) {
+			return; // No updates today
+		}
+		
+		// Group notifications by camp
+		$grouped_by_camp = [];
+		foreach ( $notifications as $notification ) {
+			$grouped_by_camp[ $notification->camp_id ][] = $notification;
+		}
+		
+		// Send one email per camp
+		foreach ( $grouped_by_camp as $camp_id => $camp_notifications ) {
+			$camp_name = $camp_notifications[0]->camp_name;
+			$update_count = count( $camp_notifications );
+			
+			$subject = "Daily Update Summary: {$camp_name} ({$update_count} update" . ( $update_count > 1 ? 's' : '' ) . ")";
+			$message = $this->get_daily_batch_email_template( $camp_id, $camp_name, $camp_notifications );
+			
+			$headers = [
+				'Content-Type: text/html; charset=UTF-8',
+				'From: Best USA Summer Camps <noreply@bestusacamps.com>',
+			];
+			
+			wp_mail( $admin_email, $subject, $message, $headers );
+		}
+		
+		// Clear sent notifications
+		$wpdb->query(
+			"DELETE FROM {$table_name} WHERE DATE(update_time) = CURDATE()"
+		);
+	}
+	
+	/**
+	 * Get daily batch notification email template
+	 */
+	private function get_daily_batch_email_template( $camp_id, $camp_name, $notifications ) {
+		$edit_url = admin_url( 'admin.php?page=creativedbs-camp-mgmt&action=edit&camp=' . $camp_id );
+		$edit_url = wp_nonce_url( $edit_url, 'edit_camp' );
+		
+		ob_start();
+		?>
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<title>Daily Camp Update Summary</title>
+		</head>
+		<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0;">
+			<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f4;">
+				<tr>
+					<td align="center" style="padding: 20px 10px;">
+						<div style="max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+							<div style="background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%); color: #ffffff; padding: 30px 20px; text-align: center;">
+								<h1 style="margin: 0; font-size: 28px; font-weight: bold;">📊 Daily Update Summary</h1>
+							</div>
+							<div style="padding: 30px 20px;">
+								<h2 style="color: #497C5E; margin-top: 0; font-size: 22px;"><?php echo esc_html( $camp_name ); ?></h2>
+								<p style="margin: 15px 0; font-size: 16px;">This camp made <strong><?php echo count( $notifications ); ?> update<?php echo count( $notifications ) > 1 ? 's' : ''; ?></strong> today:</p>
+								
+								<div style="background: #f8f9fa; border-left: 4px solid #497C5E; padding: 15px; margin: 20px 0; border-radius: 4px;">
+									<?php foreach ( $notifications as $index => $notif ) : ?>
+										<div style="margin: <?php echo $index > 0 ? '15px' : '0'; ?> 0; padding-top: <?php echo $index > 0 ? '15px' : '0'; ?>; border-top: <?php echo $index > 0 ? '1px solid #dee2e6' : 'none'; ?>;">
+											<p style="margin: 5px 0; font-size: 14px; color: #666;"><?php echo esc_html( date( 'g:i A', strtotime( $notif->update_time ) ) ); ?></p>
+											<p style="margin: 5px 0; font-size: 15px; text-align: left;">
+												<?php if ( $notif->photos_uploaded ) : ?>
+													• New photos uploaded<br>
+												<?php endif; ?>
+												<?php if ( $notif->logo_uploaded ) : ?>
+													• Logo updated<br>
+												<?php endif; ?>
+												• Profile information updated
+											</p>
+										</div>
+									<?php endforeach; ?>
+								</div>
+								
+								<div style="text-align: center; margin-top: 30px;">
+									<a href="<?php echo esc_url( $edit_url ); ?>" style="display: inline-block; padding: 14px 30px; background: #497C5E !important; color: #ffffff !important; text-decoration: none; border-radius: 5px; font-weight: bold;">View Camp Profile</a>
+								</div>
+							</div>
+							<div style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #666; border-top: 1px solid #e9ecef;">
+								<p style="margin: 0;"><strong>Best USA Summer Camps</strong> - Daily Notification</p>
+							</div>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</body>
+		</html>
+		<?php
+		return ob_get_clean();
 	}
 	
 	/**
@@ -794,6 +929,18 @@ class Camp_Dashboard {
 			exit;
 		}
 		
+		// Process social media links
+		$social_media_links = [];
+		if ( ! empty( $_POST['social_media'] ) && is_array( $_POST['social_media'] ) ) {
+			foreach ( $_POST['social_media'] as $link ) {
+				$link = esc_url_raw( trim( $link ) );
+				if ( ! empty( $link ) ) {
+					$social_media_links[] = $link;
+				}
+			}
+		}
+		$social_media_json = ! empty( $social_media_links ) ? wp_json_encode( $social_media_links ) : null;
+		
 		$camp_data = [
 			'camp_name'        => sanitize_text_field( $_POST['camp_name'] ?? '' ),
 			'camp_directors'   => sanitize_text_field( $_POST['camp_directors'] ?? '' ),
@@ -804,6 +951,8 @@ class Camp_Dashboard {
 			'phone'            => sanitize_text_field( $_POST['phone'] ?? '' ),
 			'email'            => sanitize_email( $_POST['email'] ?? '' ),
 			'website'          => esc_url_raw( $_POST['website'] ?? '' ),
+			'social_media_links' => $social_media_json,
+			'video_url'        => esc_url_raw( $_POST['video_url'] ?? '' ),
 			'about_camp'       => $about_camp,
 			'opening_day'      => sanitize_text_field( $_POST['opening_day'] ?? '' ),
 			'closing_day'      => sanitize_text_field( $_POST['closing_day'] ?? '' ),
@@ -817,7 +966,7 @@ class Camp_Dashboard {
 			$camp_data,
 			[ 'id' => $camp_id ],
 			[
-				'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f', '%s'
+				'%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%s', '%f', '%f', '%s'
 			],
 			[ '%d' ]
 		);
@@ -1611,6 +1760,44 @@ class Camp_Dashboard {
 						</div>
 					</div>
 
+					<!-- Social Media Links -->
+					<div class="form-row">
+						<div class="form-group">
+							<label>Social Media Links</label>
+							<div id="dashboard-social-media-container">
+								<?php
+								$social_links = [];
+								if ( ! empty( $camp['social_media_links'] ) ) {
+									$social_links = json_decode( $camp['social_media_links'], true );
+									if ( ! is_array( $social_links ) ) {
+										$social_links = [];
+									}
+								}
+								if ( empty( $social_links ) ) {
+									$social_links = [ '' ]; // At least one field
+								}
+								foreach ( $social_links as $index => $link ) :
+								?>
+								<div class="social-media-field" style="display: flex; gap: 10px; margin-bottom: 10px; align-items: center;">
+									<input type="url" name="social_media[]" value="<?php echo esc_attr( $link ); ?>" placeholder="https://facebook.com/yourcamp" style="flex: 1;">
+									<button type="button" class="dashboard-remove-social-btn" style="<?php echo count( $social_links ) <= 1 ? 'display:none;' : ''; ?> background-color: #dc3545; color: white; border: none; border-radius: 4px; width: 35px; height: 35px; font-size: 20px; cursor: pointer; flex-shrink: 0; padding: 7px 24px 5px 15px;">&times;</button>
+								</div>
+								<?php endforeach; ?>
+							</div>
+							<button type="button" id="dashboard-add-social-btn" style="background-color: #497C5E; color: white; border: none; border-radius: 5px; padding: 10px 16px; font-size: 14px; font-weight: 600; cursor: pointer; margin-top: 10px;">+ Add Another Social Link</button>
+							<p class="description" style="margin-top:8px;color:#666;font-size:13px;">Add your camp's social media profiles (Facebook, Instagram, Twitter, etc.)</p>
+						</div>
+					</div>
+
+					<!-- Video URL -->
+					<div class="form-row">
+						<div class="form-group">
+							<label for="video_url">Camp Video URL</label>
+							<input type="url" id="video_url" name="video_url" value="<?php echo esc_attr( $camp['video_url'] ?? '' ); ?>" placeholder="https://youtube.com/watch?v=... or https://vimeo.com/...">
+							<p class="description" style="margin-top:8px;color:#666;font-size:13px;">Showcase your camp with a video tour! (YouTube, Vimeo, or other video platform)</p>
+						</div>
+					</div>
+
 					<div class="form-row">
 						<div class="form-group">
 							<label for="address">Street Address <span class="required">*</span></label>
@@ -1846,6 +2033,95 @@ class Camp_Dashboard {
 				
 				// Update on typing
 				textarea.addEventListener('input', updateWordCount);
+			});
+			</script>
+			
+			<!-- Social Media Links Management -->
+			<script>
+			document.addEventListener('DOMContentLoaded', function() {
+				const socialContainer = document.getElementById('dashboard-social-media-container');
+				const addSocialBtn = document.getElementById('dashboard-add-social-btn');
+				const maxSocialFields = 5;
+				
+				if (addSocialBtn && socialContainer) {
+					// Count initial fields
+					let socialFieldCount = socialContainer.querySelectorAll('.social-media-field').length;
+					
+					// Add new social media field
+					addSocialBtn.addEventListener('click', function() {
+						if (socialFieldCount >= maxSocialFields) {
+							return;
+						}
+						
+						socialFieldCount++;
+						
+						const newField = document.createElement('div');
+						newField.className = 'social-media-field';
+						newField.style.cssText = 'display: flex; gap: 10px; margin-bottom: 10px; align-items: center;';
+						newField.innerHTML = `
+							<input type="url" name="social_media[]" placeholder="https://instagram.com/yourcamp" style="flex: 1;">
+							<button type="button" class="dashboard-remove-social-btn" style="background-color: #dc3545; color: white; border: none; border-radius: 4px; width: 35px; height: 35px; font-size: 20px; cursor: pointer; flex-shrink: 0; padding: 7px 24px 5px 15px;">&times;</button>
+						`;
+						
+						socialContainer.appendChild(newField);
+						
+						// Update remove button visibility
+						updateRemoveButtons();
+						
+						// Disable add button if max reached
+						if (socialFieldCount >= maxSocialFields) {
+							addSocialBtn.disabled = true;
+							addSocialBtn.textContent = 'Maximum 5 Links';
+							addSocialBtn.style.opacity = '0.6';
+							addSocialBtn.style.cursor = 'not-allowed';
+						}
+						
+						// Attach remove handler to new button
+						const removeBtn = newField.querySelector('.dashboard-remove-social-btn');
+						removeBtn.addEventListener('click', function() {
+							newField.remove();
+							socialFieldCount--;
+							addSocialBtn.disabled = false;
+							addSocialBtn.textContent = '+ Add Another Social Link';
+							addSocialBtn.style.opacity = '1';
+							addSocialBtn.style.cursor = 'pointer';
+							updateRemoveButtons();
+						});
+					});
+					
+					// Function to update remove button visibility
+					function updateRemoveButtons() {
+						const fields = socialContainer.querySelectorAll('.social-media-field');
+						fields.forEach((field) => {
+							const removeBtn = field.querySelector('.dashboard-remove-social-btn');
+							if (removeBtn) {
+								removeBtn.style.display = fields.length > 1 ? 'block' : 'none';
+							}
+						});
+					}
+					
+					// Attach remove handlers to existing fields
+					socialContainer.querySelectorAll('.dashboard-remove-social-btn').forEach(function(btn) {
+						btn.addEventListener('click', function() {
+							btn.closest('.social-media-field').remove();
+							socialFieldCount--;
+							addSocialBtn.disabled = false;
+							addSocialBtn.textContent = '+ Add Another Social Link';
+							addSocialBtn.style.opacity = '1';
+							addSocialBtn.style.cursor = 'pointer';
+							updateRemoveButtons();
+						});
+					});
+					
+					// Initial setup
+					updateRemoveButtons();
+					if (socialFieldCount >= maxSocialFields) {
+						addSocialBtn.disabled = true;
+						addSocialBtn.textContent = 'Maximum 5 Links';
+						addSocialBtn.style.opacity = '0.6';
+						addSocialBtn.style.cursor = 'not-allowed';
+					}
+				}
 			});
 			</script>
 		</div>
@@ -3083,21 +3359,28 @@ class Camp_Dashboard {
 	}
 
 	/**
-	 * Send notification email to admin when camp updates their profile
+	 * Queue notification for daily batch email instead of sending immediately
 	 */
 	private function send_admin_notification_camp_updated( $camp_id, $camp_name, $photos_uploaded, $logo_uploaded ) {
-		$admin_email = get_option( 'admin_email' );
+		global $wpdb;
 		
-		$subject = 'Camp Profile Updated: ' . $camp_name;
+		$table_name = $wpdb->prefix . 'camp_notification_queue';
 		
-		$message = $this->get_admin_update_email_template( $camp_id, $camp_name, $photos_uploaded, $logo_uploaded );
-
-		$headers = [
-			'Content-Type: text/html; charset=UTF-8',
-			'From: Best USA Summer Camps <noreply@bestusacamps.com>',
-		];
-
-		wp_mail( $admin_email, $subject, $message, $headers );
+		// Add notification to queue
+		$wpdb->insert(
+			$table_name,
+			[
+				'camp_id' => $camp_id,
+				'camp_name' => $camp_name,
+				'update_type' => 'profile_update',
+				'update_time' => current_time( 'mysql' ),
+				'photos_uploaded' => $photos_uploaded ? 1 : 0,
+				'logo_uploaded' => $logo_uploaded ? 1 : 0,
+			],
+			[
+				'%d', '%s', '%s', '%s', '%d', '%d'
+			]
+		);
 	}
 
 	/**
