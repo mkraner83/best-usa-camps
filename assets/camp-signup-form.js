@@ -4,25 +4,64 @@
  */
 document.addEventListener('DOMContentLoaded', function() {
 	
-	// Show success popup if flag is set
+	// Show success popup if flag is set (after form submission)
 	if (typeof campSignupData !== 'undefined' && campSignupData.showSuccessPopup) {
 		const popup = document.getElementById('camp-success-popup');
 		if (popup) {
+			// Update popup content for post-submission success
+			const popupHeader = popup.querySelector('.camp-popup-header h2');
+			const popupSubtext = popup.querySelector('.camp-popup-header p');
+			const popupBtn = document.getElementById('close-popup-btn');
+			
+			if (popupHeader) {
+				popupHeader.textContent = '🏕️ Thank You for Creating Your Camp Profile!';
+			}
+			if (popupSubtext) {
+				popupSubtext.textContent = '✅ Your logo has been uploaded successfully!';
+			}
+			if (popupBtn) {
+				popupBtn.textContent = 'Got It! Close This Message';
+			}
+			
 			popup.style.display = 'flex';
 		}
 	}
 	
-	// Close popup button
+	// Close popup button - submit form when clicked
 	const closePopupBtn = document.getElementById('close-popup-btn');
 	if (closePopupBtn) {
 		closePopupBtn.addEventListener('click', function() {
+			// Check if form is pending submission
+			const form = document.querySelector('.camp-signup-form');
 			const popup = document.getElementById('camp-success-popup');
-			if (popup) {
-				popup.style.display = 'none';
-			}
-			// Redirect to password setup page
-			if (typeof campSignupData !== 'undefined' && campSignupData.passwordResetUrl) {
-				window.location.href = campSignupData.passwordResetUrl;
+			
+			if (form && form.dataset.pendingSubmit === 'true') {
+				// Before submission - user clicked to proceed with upload
+				// Hide popup
+				if (popup) {
+					popup.style.display = 'none';
+				}
+				// Show loading overlay
+				const loadingOverlay = document.getElementById('camp-loading-overlay');
+				if (loadingOverlay) {
+					loadingOverlay.style.display = 'flex';
+				}
+				// Mark as ready to submit (allow submit event to proceed)
+				form.dataset.pendingSubmit = 'submitting';
+				
+				// Trigger actual form submission by clicking the submit button
+				const submitBtn = document.getElementById('camp-submit-btn');
+				if (submitBtn) {
+					submitBtn.click();
+				}
+			} else {
+				// After successful submission - redirect to password setup
+				if (popup) {
+					popup.style.display = 'none';
+				}
+				if (typeof campSignupData !== 'undefined' && campSignupData.passwordResetUrl) {
+					window.location.href = campSignupData.passwordResetUrl;
+				}
 			}
 		});
 	}
@@ -64,6 +103,12 @@ document.addEventListener('DOMContentLoaded', function() {
 			`;
 			
 			socialContainer.appendChild(newField);
+			
+			// Add https auto-formatting to the new field
+			const newInput = newField.querySelector('.social-media-input');
+			if (newInput) {
+				addHttpsToSocialField(newInput);
+			}
 			
 			// Update first field's remove button visibility
 			updateRemoveButtons();
@@ -199,27 +244,41 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 	}
 	
-	// Email validation enhancement
-	const emailField = document.getElementById('email');
-	if (emailField) {
-		emailField.addEventListener('blur', function() {
-			const email = this.value.trim();
-			if (email === '') return;
+	// Video URL auto-formatting
+	const videoField = document.getElementById('video_url');
+	if (videoField) {
+		videoField.addEventListener('blur', function() {
+			let url = this.value.trim();
+			if (url === '') return;
 			
-			// Enhanced email validation
-			const emailPattern = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-			if (!emailPattern.test(email)) {
-				this.setCustomValidity('Please enter a valid email address');
-				this.reportValidity();
-			} else {
-				this.setCustomValidity('');
+			// Add https:// if no protocol is specified
+			if (!url.match(/^https?:\/\//i)) {
+				url = 'https://' + url;
+				this.value = url;
 			}
 		});
-		
-		emailField.addEventListener('input', function() {
-			this.setCustomValidity(''); // Clear custom validity on input
+	}
+	
+	// Social media fields auto-formatting
+	function addHttpsToSocialField(field) {
+		if (!field) return;
+		field.addEventListener('blur', function() {
+			let url = this.value.trim();
+			if (url === '') return;
+			
+			// Add https:// if no protocol is specified
+			if (!url.match(/^https?:\/\//i)) {
+				url = 'https://' + url;
+				this.value = url;
+			}
 		});
 	}
+	
+	// Add https handler to existing social media fields
+	const existingSocialFields = document.querySelectorAll('.social-media-input');
+	existingSocialFields.forEach(function(field) {
+		addHttpsToSocialField(field);
+	});
 	
 	// Prevent form submission on Enter in activities field
 	const activitiesField = document.getElementById('activities_field');
@@ -232,16 +291,71 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 	}
 	
-	// Form submission - clean up currency values
+	// Form submission - validate, clean data, then show popup or submit
 	const form = document.querySelector('.camp-signup-form');
 	if (form) {
 		form.addEventListener('submit', function(e) {
-			// Remove currency formatting before submission
+			// 1. FIRST: Validate word count if about camp field exists
+			if (aboutCampField && wordCountDisplay) {
+				const words = countWords(aboutCampField.value);
+				if (words < 180) {
+					e.preventDefault();
+					alert('About Camp description must be at least 180 words. Current: ' + words + ' words');
+					aboutCampField.focus();
+					return false;
+				}
+				if (words > 300) {
+					e.preventDefault();
+					alert('About Camp description must be 300 words or less. Current: ' + words + ' words');
+					aboutCampField.focus();
+					return false;
+				}
+			}
+			
+			// 2. Remove currency formatting before submission
 			if (minPriceField && minPriceField.value) {
 				minPriceField.value = minPriceField.value.replace(/[$,]/g, '');
 			}
 			if (maxPriceField && maxPriceField.value) {
 				maxPriceField.value = maxPriceField.value.replace(/[$,]/g, '');
+			}
+			
+			// 3. Auto-add https:// to URLs if missing
+			const websiteField = document.getElementById('website');
+			if (websiteField && websiteField.value && !websiteField.value.match(/^https?:\/\//i)) {
+				websiteField.value = 'https://' + websiteField.value;
+			}
+			
+			const videoField = document.getElementById('video_url');
+			if (videoField && videoField.value && !videoField.value.match(/^https?:\/\//i)) {
+				videoField.value = 'https://' + videoField.value;
+			}
+			
+			const socialFields = document.querySelectorAll('.social-media-input');
+			socialFields.forEach(function(field) {
+				if (field.value && !field.value.match(/^https?:\/\//i)) {
+					field.value = 'https://' + field.value;
+				}
+			});
+			
+			// 4. Check submission state
+			if (form.dataset.pendingSubmit === 'submitting') {
+				// Allow form to submit (loading overlay already showing)
+				return true;
+			} else {
+				// Initial submission - show popup first (only if validation passed)
+				e.preventDefault();
+				
+				// Mark form as pending submission
+				form.dataset.pendingSubmit = 'true';
+				
+				// Show popup immediately
+				const popup = document.getElementById('camp-success-popup');
+				if (popup) {
+					popup.style.display = 'flex';
+				}
+				
+				return false;
 			}
 		});
 	}
@@ -282,18 +396,5 @@ document.addEventListener('DOMContentLoaded', function() {
 		
 		// Initial count
 		updateWordCount();
-		
-		// Prevent form submission if over 300 words
-		if (form) {
-			form.addEventListener('submit', function(e) {
-				const words = countWords(aboutCampField.value);
-				if (words > 300) {
-					e.preventDefault();
-					alert('About Camp description must be 300 words or less. Current: ' + words + ' words');
-					aboutCampField.focus();
-					return false;
-				}
-			});
-		}
 	}
 });

@@ -15,9 +15,17 @@ use CreativeDBS\CampMgmt\DB;
 class Camp_Signup_Form {
 	public function __construct() {
 		add_shortcode( 'camp_signup_form', [ $this, 'render_form' ] );
+		add_shortcode( 'camp_password_reset', [ $this, 'render_password_reset_request' ] );
+		add_shortcode( 'camp_set_password', [ $this, 'render_password_reset_form' ] );
 		add_action( 'init', [ $this, 'handle_submission' ] );
+		add_action( 'init', [ $this, 'handle_password_reset_request' ] );
+		add_action( 'init', [ $this, 'handle_password_reset' ] );
 		add_action( 'init', [ $this, 'register_camp_role' ] );
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_styles' ] );
+		add_action( 'login_init', [ $this, 'redirect_login_password_reset' ] );
+		// Redirect to login after password reset for camp users
+		add_filter( 'password_reset_redirect', [ $this, 'redirect_to_login_after_reset' ], 10, 2 );
+		add_action( 'template_redirect', [ $this, 'redirect_password_reset_success' ] );
 	}
 
 	/**
@@ -25,7 +33,11 @@ class Camp_Signup_Form {
 	 */
 	public function enqueue_styles() {
 		global $post;
-		if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'camp_signup_form' ) ) {
+		if ( is_a( $post, 'WP_Post' ) && ( 
+			has_shortcode( $post->post_content, 'camp_signup_form' ) ||
+			has_shortcode( $post->post_content, 'camp_password_reset' ) ||
+			has_shortcode( $post->post_content, 'camp_set_password' )
+		) ) {
 			// Styles
 			wp_enqueue_style(
 				'camp-signup-form',
@@ -216,17 +228,28 @@ class Camp_Signup_Form {
 					<?php endforeach; ?>
 				</datalist>
 			</div>
-			<div class="full-width"><label class="required-label">Camp Logo</label><input type="file" name="logo" accept="image/*" required>
-				<p class="description" style="margin-top:8px;color:#666;font-size:13px;">Upload your camp's logo (recommended: 500x500px, PNG or JPG)</p>
+			<div class="full-width"><label class="required-label">Camp Logo</label><input type="file" name="logo" accept="image/jpeg,image/jpg,image/png" required>
+				<p class="description" style="margin-top:8px;color:#666;font-size:13px;">JPG, JPEG or PNG format, max 5MB</p>
 			</div>
-			<button type="submit" name="camp_signup_submit">Create Camp Profile</button>
+			<button type="submit" name="camp_signup_submit" id="camp-submit-btn">Create Camp Profile</button>
 		</form>
+		
+		<!-- Loading Overlay -->
+		<div id="camp-loading-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(73,124,94,0.95);z-index:999999;align-items:center;justify-content:center;">
+			<div style="text-align:center;color:white;">
+				<div style="border:4px solid rgba(255,255,255,0.3);border-top:4px solid white;border-radius:50%;width:50px;height:50px;animation:spin 1s linear infinite;margin:0 auto;"></div>
+				<p style="margin:20px 0 0 0;font-size:18px;font-weight:500;">Uploading your logo and creating your profile...</p>
+				<p style="font-size:14px;margin-top:10px;">Please don't close this page</p>
+			</div>
+		</div>
+		<style>@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }</style>
 		
 		<!-- Success Popup -->
 		<div id="camp-success-popup" class="camp-popup-overlay" style="display:none;">
 			<div class="camp-popup-content">
 				<div class="camp-popup-header">
-					<h2>🏕️ Thank You for Creating Your Camp Profile!</h2>
+				<h2>🏕️ Ready to Create Your Camp Profile!</h2>
+				<p style="margin:10px 0 0 0;font-size:16px;color:#2d5a3f;">Please read the important information below, then click the button to complete your submission.</p>
 				</div>
 				<div class="camp-popup-body">
 					<h3>Step 1: Complete Your Camp Profile</h3>
@@ -254,8 +277,8 @@ class Camp_Signup_Form {
 					</ul>
 					
 					<div style="margin-top: 30px;">
-						<p style="font-size: 14px; color: #666; margin-bottom: 15px;">You'll receive an email shortly with instructions to set your password and access your dashboard.</p>
-						<button type="button" id="close-popup-btn" class="popup-close-btn">Got It! Close This Message</button>
+					<p style="font-size: 16px; color: #2d5a3f; margin-bottom: 15px; font-weight: 600;">Click the button below to upload your logo and create your profile. This may take a few seconds.</p>
+					<button type="button" id="close-popup-btn" class="popup-close-btn">Got It! Submit My Camp Profile</button>
 					</div>
 				</div>
 			</div>
@@ -357,15 +380,8 @@ class Camp_Signup_Form {
 			$reset_url = home_url( '/camp-lost-password/' );
 		}
 
-		// Set session flag to show success popup
-		if ( ! session_id() ) {
-			session_start();
-		}
-		$_SESSION['camp_signup_success'] = true;
-		$_SESSION['camp_password_reset_url'] = $reset_url;
-		
-		// Redirect to same page to show popup
-		wp_redirect( add_query_arg( 'signup', 'success', wp_get_referer() ) );
+		// Redirect directly to password setup page
+		wp_redirect( $reset_url );
 		exit;
 	}
 
@@ -618,15 +634,15 @@ class Camp_Signup_Form {
 								
 								<div style="height: 1px; background: #e9ecef; margin: 30px 0;"></div>
 								
-								<h3 style="color: #497C5E; font-size: 20px; margin: 25px 0 12px 0;">Next: Set Your Password</h3>
-								<p style="margin: 15px 0; font-size: 16px;">To secure your account and access your camp dashboard, please click the button below to create your password:</p>
-								
-								<div style="margin: 20px 0;">
-									<a href="<?php echo esc_url( $reset_url ); ?>" style="display: inline-block; padding: 14px 30px; background: #497C5E !important; color: #ffffff !important; text-decoration: none; border-radius: 5px; font-weight: bold; text-align: center;">Set My Password</a>
-								</div>
-								
-								<p style="font-size: 14px; color: #666; margin-top: 25px;">If the button doesn't work, copy and paste this link into your browser:<br>
-								<a href="<?php echo esc_url( $reset_url ); ?>" style="color: #497C5E; word-break: break-all;"><?php echo esc_url( $reset_url ); ?></a></p>
+							<h3 style="color: #497C5E; font-size: 20px; margin: 25px 0 12px 0;">Access Your Director Dashboard</h3>
+							<p style="margin: 15px 0; font-size: 16px;">You can now log in to your camp dashboard to complete your profile and start managing your listing:</p>
+							
+							<div style="margin: 20px 0;">
+								<a href="https://bestusacamps.com/user-dashboard/" style="display: inline-block; padding: 14px 30px; background: #497C5E !important; color: #ffffff !important; text-decoration: none; border-radius: 5px; font-weight: bold; text-align: center;">Login to Director Dashboard</a>
+							</div>
+							
+							<p style="font-size: 14px; color: #666; margin-top: 25px;">If you need to change your password in the future, you can visit:<br>
+							<a href="<?php echo esc_url( $reset_url ); ?>" style="color: #497C5E;"><?php echo esc_url( $reset_url ); ?></a></p>
 							</div>
 							<div style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #666; border-top: 1px solid #e9ecef;">
 								<p style="margin: 0;"><strong>Best USA Summer Camps</strong></p>
@@ -715,5 +731,323 @@ class Camp_Signup_Form {
 		</html>
 		<?php
 		return ob_get_clean();
+	}
+	
+	/**
+	 * Redirect to login page after password reset instead of showing success message
+	 */
+	public function redirect_to_login_after_reset( $redirect_url, $user ) {
+		// Only redirect camp users to login
+		if ( $user && in_array( 'camp', (array) $user->roles ) ) {
+			return wp_login_url();
+		}
+		return $redirect_url;
+	}
+
+	public function redirect_password_reset_success() {
+		// Check if we're on the password reset success page (after password has been changed)
+		// This catches the white page that says "Your password has been reset. Log in"
+		if ( isset( $_GET['password'] ) && $_GET['password'] === 'changed' ) {
+			// Redirect to login page
+			wp_safe_redirect( wp_login_url() );
+			exit;
+		}
+	}
+
+	/**
+	 * Redirect wp-login.php password reset URLs to custom pages
+	 */
+	public function redirect_login_password_reset() {
+		// Don't redirect the lost password page - WordPress's built-in one is fine
+		// Only redirect the actual password reset form page (rp/resetpass)
+		if ( isset( $_GET['action'] ) && in_array( $_GET['action'], [ 'rp', 'resetpass' ] ) ) {
+			$key = isset( $_GET['key'] ) ? sanitize_text_field( $_GET['key'] ) : '';
+			$login = isset( $_GET['login'] ) ? sanitize_text_field( $_GET['login'] ) : '';
+			
+			if ( $key && $login ) {
+				wp_safe_redirect( home_url( '/set-password/?key=' . $key . '&login=' . $login ) );
+				exit;
+			}
+		}
+	}
+
+	/**
+	 * Render password reset request form
+	 */
+	public function render_password_reset_request() {
+		$message = '';
+		$error = '';
+		
+		if ( isset( $_GET['reset'] ) && $_GET['reset'] === 'success' ) {
+			$message = 'Check your email for the password reset link.';
+		}
+		
+		if ( isset( $_GET['error'] ) ) {
+			$errors = [
+				'invalid_email' => 'Please enter a valid email address.',
+				'user_not_found' => 'No account found with that email address.',
+			];
+			$error = isset( $errors[ $_GET['error'] ] ) ? $errors[ $_GET['error'] ] : 'An error occurred. Please try again.';
+		}
+		
+		ob_start();
+		?>
+		<div class="camp-login-form">
+			<h2>Reset Your Password</h2>
+			
+			<?php if ( $message ) : ?>
+				<div class="camp-message camp-success">
+					<?php echo esc_html( $message ); ?>
+				</div>
+			<?php endif; ?>
+			
+			<?php if ( $error ) : ?>
+				<div class="camp-message camp-error">
+					<?php echo esc_html( $error ); ?>
+				</div>
+			<?php endif; ?>
+			
+			<form method="post" action="">
+				<?php wp_nonce_field( 'camp_password_reset_request', 'camp_reset_nonce' ); ?>
+				<input type="hidden" name="camp_password_reset_request" value="1">
+				
+				<p class="login-username">
+					<label for="user_email">Email Address</label>
+					<input type="email" id="user_email" name="user_email" class="input" required placeholder="your@email.com" size="20">
+				</p>
+				
+				<p class="login-submit">
+					<input type="submit" class="button button-primary" value="Send Reset Link">
+				</p>
+			</form>
+			
+			<div class="camp-login-links">
+				<a href="<?php echo esc_url( wp_login_url() ); ?>">← Back to Login</a>
+			</div>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Handle password reset request submission
+	 */
+	public function handle_password_reset_request() {
+		if ( ! isset( $_POST['camp_password_reset_request'] ) ) {
+			return;
+		}
+		
+		if ( ! isset( $_POST['camp_reset_nonce'] ) || ! wp_verify_nonce( $_POST['camp_reset_nonce'], 'camp_password_reset_request' ) ) {
+			return;
+		}
+		
+		$email = sanitize_email( $_POST['user_email'] );
+		
+		if ( ! is_email( $email ) ) {
+			wp_safe_redirect( add_query_arg( 'error', 'invalid_email', home_url( '/reset-password/' ) ) );
+			exit;
+		}
+		
+		$user = get_user_by( 'email', $email );
+		
+		if ( ! $user ) {
+			wp_safe_redirect( add_query_arg( 'error', 'user_not_found', home_url( '/reset-password/' ) ) );
+			exit;
+		}
+		
+		// Generate reset key
+		$key = get_password_reset_key( $user );
+		
+		if ( is_wp_error( $key ) ) {
+			wp_safe_redirect( add_query_arg( 'error', 'general', home_url( '/reset-password/' ) ) );
+			exit;
+		}
+		
+		// Send reset email
+		$reset_url = home_url( '/set-password/?key=' . $key . '&login=' . rawurlencode( $user->user_login ) );
+		
+		$subject = 'Password Reset Request - Best USA Summer Camps';
+		$message = $this->get_password_reset_email_template( $user->display_name, $reset_url );
+		
+		$headers = [
+			'Content-Type: text/html; charset=UTF-8',
+			'From: Best USA Summer Camps <noreply@bestusacamps.com>',
+		];
+		
+		wp_mail( $user->user_email, $subject, $message, $headers );
+		
+		wp_safe_redirect( add_query_arg( 'reset', 'success', home_url( '/reset-password/' ) ) );
+		exit;
+	}
+
+	/**
+	 * Get password reset email HTML template
+	 */
+	private function get_password_reset_email_template( $display_name, $reset_url ) {
+		ob_start();
+		?>
+		<!DOCTYPE html>
+		<html>
+		<head>
+			<meta charset="UTF-8">
+			<meta name="viewport" content="width=device-width, initial-scale=1.0">
+			<title>Password Reset Request</title>
+		</head>
+		<body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f4f4f4; margin: 0; padding: 0;">
+			<table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f4f4;">
+				<tr>
+					<td align="center" style="padding: 20px 10px;">
+						<div style="max-width: 600px; margin: 20px auto; background: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+							<div style="background: linear-gradient(135deg, #497C5E 0%, #679B7C 100%); color: #ffffff; padding: 30px 20px; text-align: center;">
+								<h1 style="margin: 0; font-size: 28px; font-weight: bold;">🔐 Password Reset Request</h1>
+							</div>
+							<div style="padding: 30px 20px; text-align: left;">
+								<p style="margin: 15px 0; font-size: 16px;">Hi <?php echo esc_html( $display_name ); ?>,</p>
+								<p style="margin: 15px 0; font-size: 16px;">You requested a password reset for your account at Best USA Summer Camps.</p>
+								
+								<p style="margin: 15px 0; font-size: 16px;">Click the button below to set a new password:</p>
+								
+								<div style="margin: 30px 0; text-align: center;">
+									<a href="<?php echo esc_url( $reset_url ); ?>" style="display: inline-block; padding: 14px 30px; background: #497C5E !important; color: #ffffff !important; text-decoration: none; border-radius: 5px; font-weight: bold; text-align: center;">Set New Password</a>
+								</div>
+								
+								<p style="font-size: 14px; color: #666; margin-top: 25px;">Or copy and paste this link into your browser:<br>
+								<a href="<?php echo esc_url( $reset_url ); ?>" style="color: #497C5E; word-break: break-all;"><?php echo esc_url( $reset_url ); ?></a></p>
+								
+								<div style="height: 1px; background: #e9ecef; margin: 30px 0;"></div>
+								
+								<p style="font-size: 14px; color: #666;"><strong>⏰ This link will expire in 24 hours.</strong></p>
+								<p style="font-size: 14px; color: #666;">If you didn't request this password reset, you can safely ignore this email. Your password will not be changed.</p>
+							</div>
+							<div style="background: #f8f9fa; padding: 20px; text-align: center; font-size: 14px; color: #666; border-top: 1px solid #e9ecef;">
+								<p style="margin: 0;"><strong>Best USA Summer Camps</strong></p>
+							</div>
+						</div>
+					</td>
+				</tr>
+			</table>
+		</body>
+		</html>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Render password reset form (actual password change)
+	 */
+	public function render_password_reset_form() {
+		$key = isset( $_GET['key'] ) ? sanitize_text_field( $_GET['key'] ) : '';
+		$login = isset( $_GET['login'] ) ? sanitize_text_field( $_GET['login'] ) : '';
+		$error = '';
+		
+		if ( isset( $_GET['error'] ) ) {
+			$errors = [
+				'invalid_key' => 'This password reset link is invalid or has expired.',
+				'passwords_mismatch' => 'Passwords do not match.',
+				'password_too_short' => 'Password must be at least 8 characters.',
+			];
+			$error = isset( $errors[ $_GET['error'] ] ) ? $errors[ $_GET['error'] ] : 'An error occurred. Please try again.';
+		}
+		
+		// Validate key
+		if ( $key && $login ) {
+			$user = check_password_reset_key( $key, $login );
+			if ( is_wp_error( $user ) ) {
+				$error = 'This password reset link is invalid or has expired.';
+				$key = '';
+				$login = '';
+			}
+		}
+		
+		ob_start();
+		?>
+		<div class="camp-login-form">
+			<h2>Set New Password</h2>
+			
+			<?php if ( $error ) : ?>
+				<div class="camp-message camp-error">
+					<?php echo esc_html( $error ); ?>
+				</div>
+			<?php endif; ?>
+			
+			<?php if ( $key && $login ) : ?>
+				<form method="post" action="">
+					<?php wp_nonce_field( 'camp_password_reset', 'camp_reset_nonce' ); ?>
+					<input type="hidden" name="camp_password_reset" value="1">
+					<input type="hidden" name="key" value="<?php echo esc_attr( $key ); ?>">
+					<input type="hidden" name="login" value="<?php echo esc_attr( $login ); ?>">
+					
+					<p class="login-username">
+						<label for="new_password">New Password</label>
+						<input type="password" id="new_password" name="new_password" class="input" required minlength="8" placeholder="At least 8 characters" size="20" autocomplete="new-password">
+					</p>
+					
+					<p class="login-password">
+						<label for="confirm_password">Confirm Password</label>
+						<input type="password" id="confirm_password" name="confirm_password" class="input" required minlength="8" placeholder="Re-enter your password" size="20" autocomplete="new-password">
+					</p>
+					
+					<p class="login-submit">
+						<input type="submit" class="button button-primary" value="Reset Password">
+					</p>
+				</form>
+			<?php else : ?>
+				<p>This password reset link is invalid or has expired. Please request a new one.</p>
+				<div class="camp-login-links">
+					<a href="<?php echo esc_url( home_url( '/reset-password/' ) ); ?>">Request Password Reset</a>
+				</div>
+			<?php endif; ?>
+			
+			<div class="camp-login-links">
+				<a href="<?php echo esc_url( wp_login_url() ); ?>">← Back to Login</a>
+			</div>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Handle password reset form submission
+	 */
+	public function handle_password_reset() {
+		if ( ! isset( $_POST['camp_password_reset'] ) ) {
+			return;
+		}
+		
+		if ( ! isset( $_POST['camp_reset_nonce'] ) || ! wp_verify_nonce( $_POST['camp_reset_nonce'], 'camp_password_reset' ) ) {
+			return;
+		}
+		
+		$key = sanitize_text_field( $_POST['key'] );
+		$login = sanitize_text_field( $_POST['login'] );
+		$new_password = $_POST['new_password'];
+		$confirm_password = $_POST['confirm_password'];
+		
+		// Validate passwords match
+		if ( $new_password !== $confirm_password ) {
+			wp_safe_redirect( add_query_arg( [ 'error' => 'passwords_mismatch', 'key' => $key, 'login' => $login ], home_url( '/set-password/' ) ) );
+			exit;
+		}
+		
+		// Validate password length
+		if ( strlen( $new_password ) < 8 ) {
+			wp_safe_redirect( add_query_arg( [ 'error' => 'password_too_short', 'key' => $key, 'login' => $login ], home_url( '/set-password/' ) ) );
+			exit;
+		}
+		
+		// Verify reset key
+		$user = check_password_reset_key( $key, $login );
+		
+		if ( is_wp_error( $user ) ) {
+			wp_safe_redirect( add_query_arg( 'error', 'invalid_key', home_url( '/set-password/' ) ) );
+			exit;
+		}
+		
+		// Reset password
+		reset_password( $user, $new_password );
+		
+		// Redirect to login
+		wp_safe_redirect( add_query_arg( 'password', 'changed', wp_login_url() ) );
+		exit;
 	}
 }

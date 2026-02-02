@@ -2039,6 +2039,27 @@ class Camp_Dashboard {
 			<!-- Social Media Links Management -->
 			<script>
 			document.addEventListener('DOMContentLoaded', function() {
+				// Auto-add https:// to video URL field
+				const videoUrlField = document.getElementById('video_url');
+				if (videoUrlField) {
+					videoUrlField.addEventListener('blur', function() {
+						const value = this.value.trim();
+						if (value && !/^https?:\/\//i.test(value)) {
+							this.value = 'https://' + value;
+						}
+					});
+				}
+
+				// Function to add https:// to social media fields
+				function addHttpsToSocialField(field) {
+					field.addEventListener('blur', function() {
+						const value = this.value.trim();
+						if (value && !/^https?:\/\//i.test(value)) {
+							this.value = 'https://' + value;
+						}
+					});
+				}
+
 				const socialContainer = document.getElementById('dashboard-social-media-container');
 				const addSocialBtn = document.getElementById('dashboard-add-social-btn');
 				const maxSocialFields = 5;
@@ -2046,6 +2067,11 @@ class Camp_Dashboard {
 				if (addSocialBtn && socialContainer) {
 					// Count initial fields
 					let socialFieldCount = socialContainer.querySelectorAll('.social-media-field').length;
+
+					// Apply auto-https to existing social media fields
+					socialContainer.querySelectorAll('input[name="social_media[]"]').forEach(function(field) {
+						addHttpsToSocialField(field);
+					});
 					
 					// Add new social media field
 					addSocialBtn.addEventListener('click', function() {
@@ -2064,6 +2090,12 @@ class Camp_Dashboard {
 						`;
 						
 						socialContainer.appendChild(newField);
+
+						// Add auto-https handler to the new field
+						const newInput = newField.querySelector('input[name="social_media[]"]');
+						if (newInput) {
+							addHttpsToSocialField(newInput);
+						}
 						
 						// Update remove button visibility
 						updateRemoveButtons();
@@ -2216,8 +2248,8 @@ class Camp_Dashboard {
 			
 			<div class="form-group">
 				<label for="logo_upload"><?php echo ! empty( $camp['logo'] ) ? 'Replace Logo' : 'Upload Logo'; ?></label>
-				<input type="file" id="logo_upload" name="logo_upload" accept="image/jpeg,image/jpg,image/png,application/pdf">
-				<p class="field-note">JPG, JPEG, PNG, or PDF format, max 5MB</p>
+				<input type="file" id="logo_upload" name="logo_upload" accept="image/jpeg,image/jpg,image/png">
+				<p class="field-note">JPG, JPEG or PNG format, max 5MB</p>
 			</div>
 			
 			<input type="hidden" id="logo_to_remove" name="logo_to_remove" value="">
