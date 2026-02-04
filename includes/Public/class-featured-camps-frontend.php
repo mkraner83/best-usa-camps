@@ -21,6 +21,7 @@ class Featured_Camps_Frontend {
 		add_shortcode( 'best_girls_camps', [ $this, 'render_best_girls_camps' ] );
 		add_shortcode( 'best_boys_camps', [ $this, 'render_best_boys_camps' ] );
 		add_shortcode( 'latest_camps', [ $this, 'render_latest_camps' ] );
+		add_shortcode( 'single_camp', [ $this, 'render_single_camp' ] );
 
 		// Enqueue styles
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_styles' ] );
@@ -84,6 +85,91 @@ class Featured_Camps_Frontend {
 	public function render_latest_camps( $atts ) {
 		$atts = shortcode_atts( [ 'limit' => 3 ], $atts );
 		return $this->render_latest_camps_query( intval( $atts['limit'] ) );
+	}
+
+	/**
+	 * Single camp shortcode - displays one specific camp card
+	 * Usage: [single_camp id="123"] or [single_camp slug="camp-laney"]
+	 */
+	public function render_single_camp( $atts ) {
+		global $wpdb;
+		$table = DB::table_camps();
+
+		// Parse attributes
+		$atts = shortcode_atts( [
+			'id' => 0,
+			'slug' => '',
+		], $atts );
+
+		// Determine which field to search by
+		if ( ! empty( $atts['id'] ) ) {
+			$camp = $wpdb->get_row( $wpdb->prepare(
+				"SELECT id, camp_name, city, state, logo, photos, internal_link, rating, 
+				       opening_day, closing_day, minprice_2026, maxprice_2026
+				FROM {$table} 
+				WHERE id = %d 
+				AND approved = 1 
+				LIMIT 1",
+				intval( $atts['id'] )
+			) );
+		} elseif ( ! empty( $atts['slug'] ) ) {
+			$camp = $wpdb->get_row( $wpdb->prepare(
+				"SELECT id, camp_name, city, state, logo, photos, internal_link, rating, 
+				       opening_day, closing_day, minprice_2026, maxprice_2026
+				FROM {$table} 
+				WHERE slug = %s 
+				AND approved = 1 
+				LIMIT 1",
+				sanitize_title( $atts['slug'] )
+			) );
+		} else {
+			return '<p class="no-featured-camps">Please specify a camp ID or slug.</p>';
+		}
+
+		if ( ! $camp ) {
+			return '<p class="no-featured-camps">Camp not found.</p>';
+		}
+
+		// Enrich camp with taxonomy data
+		$camp->camp_types = $wpdb->get_col( $wpdb->prepare(
+			"SELECT t.name FROM {$wpdb->prefix}camp_type_terms t
+			 INNER JOIN {$wpdb->prefix}camp_management_types_map m ON t.id = m.type_id
+			 WHERE m.camp_id = %d
+			 ORDER BY t.sort_order ASC, t.name ASC",
+			$camp->id
+		) );
+		
+		$camp->weeks = $wpdb->get_col( $wpdb->prepare(
+			"SELECT t.name FROM {$wpdb->prefix}camp_week_terms t
+			 INNER JOIN {$wpdb->prefix}camp_management_weeks_map m ON t.id = m.week_id
+			 WHERE m.camp_id = %d
+			 ORDER BY t.sort_order ASC, t.name ASC",
+			$camp->id
+		) );
+		
+		$camp->activities_total = $wpdb->get_var( $wpdb->prepare(
+			"SELECT COUNT(*) FROM {$wpdb->prefix}camp_management_activities_map
+			 WHERE camp_id = %d",
+			$camp->id
+		) );
+		
+		$camp->activities = $wpdb->get_col( $wpdb->prepare(
+			"SELECT t.name FROM {$wpdb->prefix}camp_activity_terms t
+			 INNER JOIN {$wpdb->prefix}camp_management_activities_map m ON t.id = m.activity_id
+			 WHERE m.camp_id = %d
+			 ORDER BY t.sort_order ASC, t.name ASC
+			 LIMIT 4",
+			$camp->id
+		) );
+
+		// Render single camp card
+		ob_start();
+		?>
+		<div class="featured-camps-grid" data-count="1" data-columns="1">
+			<?php $this->render_camp_card( $camp ); ?>
+		</div>
+		<?php
+		return ob_get_clean();
 	}
 
 	/**
@@ -289,8 +375,31 @@ class Featured_Camps_Frontend {
 							</div>
 						</div>
 					<?php endif; ?>
+										<?php if ( ! empty( $camp->weeks ) ) : ?>
+					<div class="featured-meta-row">
+						<span class="featured-meta-label">Weeks:</span>
+						<div class="featured-badges">
+							<?php foreach ( $camp->weeks as $week ) : ?>
+								<span class="featured-badge"><?php echo esc_html( $week ); ?></span>
+							<?php endforeach; ?>
+						</div>
+					</div>
+					<?php endif; ?>
 					
-					<div class="featured-dates-prices">
+					<?php if ( ! empty( $camp->activities ) ) : ?>
+					<div class="featured-meta-row">
+						<span class="featured-meta-label">Activities:</span>
+						<div class="featured-badges">
+							<?php foreach ( $camp->activities as $activity ) : ?>
+								<span class="featured-badge"><?php echo esc_html( $activity ); ?></span>
+							<?php endforeach; ?>
+							<?php if ( $camp->activities_total > 4 ) : ?>
+								<span class="featured-badge featured-badge-plus">+<?php echo esc_html( $camp->activities_total - 4 ); ?></span>
+							<?php endif; ?>
+						</div>
+					</div>
+					<?php endif; ?>
+										<div class="featured-dates-prices">
 						<?php if ( $camp->opening_day ) : ?>
 							<div class="featured-detail">
 								<strong>Opening Day:</strong> <?php echo esc_html( date( 'M j, Y', strtotime( $camp->opening_day ) ) ); ?>

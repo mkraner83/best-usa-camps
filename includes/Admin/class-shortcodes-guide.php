@@ -174,6 +174,17 @@ class Shortcodes_Guide {
 							<br><strong>Example:</strong> <code>[latest_camps limit="5"]</code>
 						</div>
 					</div>
+
+					<div class="shortcode-item">
+						<code class="shortcode-code" onclick="copyShortcode(this)">[single_camp id="123"]</code>
+						<span class="copy-notice">✓ Copied!</span>
+						<p class="shortcode-desc">Display a single specific camp card by ID or slug.</p>
+						<div class="shortcode-params">
+							<strong>Parameters:</strong> <code>id</code> (camp ID) OR <code>slug</code> (camp slug)
+							<br><strong>Example:</strong> <code>[single_camp id="45"]</code>
+							<br><strong>Example:</strong> <code>[single_camp slug="camp-laney"]</code>
+						</div>
+					</div>
 				</div>
 
 				<!-- Camp Pages Section -->
