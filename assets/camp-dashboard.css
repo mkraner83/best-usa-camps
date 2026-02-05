@@ -188,6 +188,48 @@
 	color: #ffffff;
 }
 
+/* Beta Notice Box */
+.beta-notice-box {
+	background: #567CAC;
+	border: none;
+	border-radius: 8px;
+	padding: 20px;
+	margin-bottom: 30px;
+	display: flex;
+	align-items: flex-start;
+	box-shadow: 0 2px 8px rgba(86, 124, 172, 0.2);
+}
+
+.beta-notice-content {
+	flex: 1;
+}
+
+.beta-notice-content strong {
+	display: block;
+	color: #ffffff;
+	font-size: 18px;
+	margin-bottom: 8px;
+	font-weight: 700;
+}
+
+.beta-notice-content p {
+	margin: 0;
+	color: #ffffff;
+	font-size: 15px;
+	line-height: 1.6;
+}
+
+.beta-notice-content a {
+	color: #ffffff;
+	font-weight: 600;
+	text-decoration: underline;
+}
+
+.beta-notice-content a:hover {
+	color: #f0f0f0;
+	text-decoration: none;
+}
+
 .camp-edit-form {
 	background: #ffffff;
 	padding: 0;

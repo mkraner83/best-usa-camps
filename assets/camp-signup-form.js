@@ -312,7 +312,20 @@ document.addEventListener('DOMContentLoaded', function() {
 				}
 			}
 			
-			// 2. Remove currency formatting before submission
+			// 2. Validate logo file size (5MB max)
+			const logoInput = document.querySelector('input[name="logo"]');
+			if (logoInput && logoInput.files.length > 0) {
+				const fileSize = logoInput.files[0].size;
+				const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+				if (fileSize > maxSize) {
+					e.preventDefault();
+					alert('Logo file size must be 5MB or less. Current file size: ' + (fileSize / (1024 * 1024)).toFixed(2) + 'MB');
+					logoInput.focus();
+					return false;
+				}
+			}
+			
+			// 3. Remove currency formatting before submission
 			if (minPriceField && minPriceField.value) {
 				minPriceField.value = minPriceField.value.replace(/[$,]/g, '');
 			}
@@ -320,7 +333,7 @@ document.addEventListener('DOMContentLoaded', function() {
 				maxPriceField.value = maxPriceField.value.replace(/[$,]/g, '');
 			}
 			
-			// 3. Auto-add https:// to URLs if missing
+			// 4. Auto-add https:// to URLs if missing
 			const websiteField = document.getElementById('website');
 			if (websiteField && websiteField.value && !websiteField.value.match(/^https?:\/\//i)) {
 				websiteField.value = 'https://' + websiteField.value;
@@ -338,7 +351,7 @@ document.addEventListener('DOMContentLoaded', function() {
 				}
 			});
 			
-			// 4. Check submission state
+			// 5. Check submission state
 			if (form.dataset.pendingSubmit === 'submitting') {
 				// Allow form to submit (loading overlay already showing)
 				return true;

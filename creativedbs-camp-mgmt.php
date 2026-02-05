@@ -30,9 +30,12 @@ $required_files = [
     __DIR__ . '/includes/migrations-featured-camps.php',
     __DIR__ . '/includes/migrations-social-video.php',
     __DIR__ . '/includes/migrations-daily-notifications.php',
+    __DIR__ . '/includes/migrations-referral-source.php',
+    __DIR__ . '/includes/migrations-contact-submissions.php',
     __DIR__ . '/includes/Public/class-public-controller.php',
     __DIR__ . '/includes/Public/class-camp-dashboard.php',
     __DIR__ . '/includes/Public/class-camp-signup-form.php',
+    __DIR__ . '/includes/Public/class-contact-form.php',
     __DIR__ . '/includes/Public/class-camp-frontend.php',
     __DIR__ . '/includes/Public/class-camps-list.php',
     __DIR__ . '/includes/Public/class-featured-camps-frontend.php',
@@ -40,6 +43,7 @@ $required_files = [
     __DIR__ . '/includes/Admin/class-import-export.php',
     __DIR__ . '/includes/Admin/class-featured-camps.php',
     __DIR__ . '/includes/Admin/class-shortcodes-guide.php',
+    __DIR__ . '/includes/Admin/class-contact-submissions.php',
 ];
 
 foreach ( $required_files as $file ) {
@@ -72,6 +76,7 @@ if ( function_exists( 'register_uninstall_hook' ) ) {
 add_action( 'plugins_loaded', function() {
 	new \CreativeDBS\CampMgmt\Admin\Featured_Camps();
 	new \CreativeDBS\CampMgmt\Admin\Shortcodes_Guide();
+	new \CreativeDBS\CampMgmt\Admin\Contact_Submissions();
 	new \CreativeDBS\CampMgmt\PublicArea\Featured_Camps_Frontend();
 	if ( is_admin() ) {
 		new \CreativeDBS\CampMgmt\Admin\Import_Export();
@@ -79,6 +84,7 @@ add_action( 'plugins_loaded', function() {
 	new \CreativeDBS\CampMgmt\PublicArea\Public_Controller();
 	new \CreativeDBS\CampMgmt\PublicArea\Camp_Dashboard();
 	new \CreativeDBS\CampMgmt\PublicArea\Camp_Signup_Form();
+	new \CreativeDBS\CampMgmt\PublicArea\Contact_Form();
 }, 0);
 
 // === Legacy code below kept for backward-compatibility. ===
@@ -269,6 +275,7 @@ class CreativeDBS_Camp_Management {
         add_submenu_page(self::SLUG, __('Activities', 'creativedbs'), __('Activities', 'creativedbs'), 'manage_options', self::SLUG.'-activities', [$this, 'render_activities_page']);
         add_submenu_page(self::SLUG, __('Import / Export', 'creativedbs'), __('Import / Export', 'creativedbs'), 'manage_options', self::SLUG.'-import-export', ['\\CreativeDBS\\CampMgmt\\Admin\\Import_Export', 'render_page']);
         add_submenu_page(self::SLUG, __('Add Camp', 'creativedbs'), __('Add Camp', 'creativedbs'), 'manage_options', self::SLUG.'-add', [$this, 'render_add_camp_page']);
+        add_submenu_page(self::SLUG, __('Settings', 'creativedbs'), __('Settings', 'creativedbs'), 'manage_options', self::SLUG.'-settings', [$this, 'render_settings_page']);
     }
 
     public function admin_assets($hook) {
@@ -864,6 +871,12 @@ class CreativeDBS_Camp_Management {
             $camp_id = absint($_POST['camp_id'] ?? 0);
             $activity_names = array_map('sanitize_text_field', self::arrayize($_POST['activity_names'] ?? ''));
             $photos = sanitize_textarea_field($_POST['photos'] ?? '');
+            
+            // Process social media links - convert from textarea (one per line) to JSON array
+            $social_media_raw = sanitize_textarea_field($_POST['social_media_links'] ?? '');
+            $social_media_array = array_filter(array_map('trim', explode("\n", $social_media_raw)));
+            $social_media_array = array_map('esc_url_raw', $social_media_array);
+            $social_media_json = !empty($social_media_array) ? wp_json_encode($social_media_array) : null;
 
             $wpdb->update($table, [
                 'camp_name'      => sanitize_text_field($_POST['camp_name'] ?? ''),
@@ -884,6 +897,8 @@ class CreativeDBS_Camp_Management {
                 'photos'         => $photos,
                 'logo'           => esc_url_raw($_POST['logo'] ?? ''),
                 'search_image'   => esc_url_raw($_POST['search_image'] ?? ''),
+                'video_url'      => esc_url_raw($_POST['video_url'] ?? ''),
+                'social_media_links' => $social_media_json,
                 'rating'         => floatval($_POST['rating'] ?? 0),
                 'approved'       => isset($_POST['approved']) ? 1 : 0,
                 'wordpress_user_id' => absint($_POST['wordpress_user_id'] ?? 0),
@@ -1288,9 +1303,32 @@ class CreativeDBS_Camp_Management {
                             </td>
                         </tr>
 
-                        <tr><th><?php esc_html_e('Approved'); ?></th><td><label><input type="checkbox" name="approved" <?php checked(intval($camp->approved)===1); ?> /> <?php esc_html_e('Approved'); ?></label></td></tr>
-                        
-                        <tr>
+                    <tr><th><?php esc_html_e('Video URL'); ?></th>
+                        <td>
+                            <input type="url" name="video_url" class="regular-text" value="<?php echo esc_attr($camp->video_url ?? ''); ?>" />
+                            <p class="description">YouTube, Vimeo, or other video link showcasing your camp</p>
+                        </td>
+                    </tr>
+
+                    <tr><th><?php esc_html_e('Social Media Links'); ?></th>
+                        <td>
+                            <textarea name="social_media_links" class="large-text" rows="3" placeholder="One URL per line (e.g., Facebook, Instagram, Twitter)"><?php 
+                                $social_links = json_decode($camp->social_media_links ?? '[]', true);
+                                if (is_array($social_links)) {
+                                    echo esc_textarea(implode("\n", $social_links));
+                                }
+                            ?></textarea>
+                            <p class="description">Enter one social media URL per line</p>
+                        </td>
+                    </tr>
+
+                    <tr><th><?php esc_html_e('How did you hear about us?'); ?></th>
+                        <td>
+                            <input type="text" name="referral_source" class="regular-text" value="<?php echo esc_attr($camp->referral_source ?? ''); ?>" readonly />
+                            <p class="description">This field is set during signup and cannot be edited</p>
+                        </td>
+                    </tr>
+
                             <th><?php esc_html_e('WordPress User ID'); ?></th>
                             <td>
                                 <input type="number" name="wordpress_user_id" class="small-text" value="<?php echo esc_attr($camp->wordpress_user_id ?? 0); ?>" min="0" />
@@ -1739,6 +1777,58 @@ class CreativeDBS_Camp_Management {
                     <tr><th><?php esc_html_e('Approved'); ?></th><td><label><input type="checkbox" name="approved" /> <?php esc_html_e('Approved'); ?></label></td></tr>
                 </table>
                 <p><button type="submit" name="creativedbs_create" class="button button-primary"><?php esc_html_e('Create'); ?></button></p>
+            </form>
+        </div>
+        <?php
+    }
+
+    public function render_settings_page() {
+        if (!current_user_can('manage_options')) return;
+
+        // Handle settings update
+        if (isset($_POST['cdbs_save_settings']) && check_admin_referer('cdbs_settings')) {
+            update_option('cdbs_show_beta_notice', isset($_POST['show_beta_notice']) ? '1' : '0');
+            
+            // Save contact form admin emails
+            $contact_emails = sanitize_text_field($_POST['contact_admin_emails'] ?? '');
+            update_option('cdbs_contact_admin_emails', $contact_emails);
+            
+            echo '<div class="updated"><p>Settings saved successfully.</p></div>';
+        }
+
+        $show_beta_notice = get_option('cdbs_show_beta_notice', '1');
+        $contact_admin_emails = get_option('cdbs_contact_admin_emails', get_option('admin_email'));
+        ?>
+        <div class="wrap">
+            <h1><?php esc_html_e('Camp Management Settings', 'creativedbs'); ?></h1>
+            <form method="post">
+                <?php wp_nonce_field('cdbs_settings'); ?>
+                <table class="form-table" role="presentation">
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Beta Notice', 'creativedbs'); ?></th>
+                        <td>
+                            <label>
+                                <input type="checkbox" name="show_beta_notice" value="1" <?php checked($show_beta_notice, '1'); ?> />
+                                <?php esc_html_e('Show beta version notice on Camp Director Dashboard', 'creativedbs'); ?>
+                            </label>
+                            <p class="description">When enabled, camp directors will see a notice at the top of their dashboard indicating this is a beta version.</p>
+                        </td>
+                    </tr>
+                </table>
+                
+                <h2><?php esc_html_e('Contact Us', 'creativedbs'); ?></h2>
+                <table class="form-table" role="presentation">
+                    <tr>
+                        <th scope="row"><?php esc_html_e('Contact Form Admin Emails', 'creativedbs'); ?></th>
+                        <td>
+                            <input type="text" name="contact_admin_emails" value="<?php echo esc_attr($contact_admin_emails); ?>" class="regular-text" />
+                            <p class="description">Email address(es) to receive contact form submissions. Use commas to separate multiple emails (e.g., admin@example.com, support@example.com)</p>
+                        </td>
+                    </tr>
+                </table>
+                <p class="submit">
+                    <button type="submit" name="cdbs_save_settings" class="button button-primary"><?php esc_html_e('Save Settings', 'creativedbs'); ?></button>
+                </p>
             </form>
         </div>
         <?php

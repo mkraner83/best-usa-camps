@@ -228,6 +228,17 @@ class Camp_Signup_Form {
 					<?php endforeach; ?>
 				</datalist>
 			</div>
+			<div class="full-width"><label class="required-label">How did you hear about us?</label>
+				<select name="referral_source" required>
+					<option value="">Select an option</option>
+					<option value="Google (or similar) Search">Google (or similar) Search</option>
+					<option value="Social Media (Facebook / Instagram...)">Social Media (Facebook / Instagram...)</option>
+					<option value="Blog">Blog</option>
+					<option value="Partner Camp">Partner Camp</option>
+					<option value="Camp Directory / Listing Site">Camp Directory / Listing Site</option>
+					<option value="Other">Other</option>
+				</select>
+			</div>
 			<div class="full-width"><label class="required-label">Camp Logo</label><input type="file" name="logo" accept="image/jpeg,image/jpg,image/png" required>
 				<p class="description" style="margin-top:8px;color:#666;font-size:13px;">JPG, JPEG or PNG format, max 5MB</p>
 			</div>
@@ -326,8 +337,14 @@ class Camp_Signup_Form {
 			$errors[] = 'Please select at least one duration.';
 		}
 
+		if ( empty( $_POST['referral_source'] ) ) {
+			$errors[] = 'Please tell us how you heard about us.';
+		}
+
 		if ( empty( $_FILES['logo']['name'] ) ) {
 			$errors[] = 'Camp logo is required.';
+		} elseif ( $_FILES['logo']['size'] > 5 * 1024 * 1024 ) {
+			$errors[] = 'Logo file size must be 5MB or less. Current file size: ' . round( $_FILES['logo']['size'] / (1024 * 1024), 2 ) . 'MB';
 		}
 
 		if ( ! empty( $errors ) ) {
@@ -347,8 +364,16 @@ class Camp_Signup_Form {
 		$user = new \WP_User( $user_id );
 		$user->set_role( 'camp' );
 
-		// Update user meta
+		// Update user meta - extract first and last name from camp director
 		update_user_meta( $user_id, 'camp_name', $camp_name );
+		
+		// Split camp director name into first and last name
+		$name_parts = explode( ' ', trim( $camp_director ), 2 );
+		$first_name = $name_parts[0] ?? '';
+		$last_name = $name_parts[1] ?? '';
+		
+		update_user_meta( $user_id, 'first_name', $first_name );
+		update_user_meta( $user_id, 'last_name', $last_name );
 
 		// Store camp data in database
 		$camp_id = $this->create_camp_entry( $user_id, $_POST );
@@ -463,6 +488,7 @@ class Camp_Signup_Form {
 			'logo'           => esc_url_raw( $logo_url ),
 			'social_media_links' => $social_media_json,
 			'video_url'      => esc_url_raw( $data['video_url'] ?? '' ),
+			'referral_source' => sanitize_text_field( $data['referral_source'] ?? '' ),
 			'approved'       => 0,
 			'created_at'     => current_time( 'mysql' ),
 			'updated_at'     => current_time( 'mysql' ),

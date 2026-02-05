@@ -47,6 +47,16 @@
         if (!hasContent('.camp-faqs')) {
             hideElements(['faqs-title-hide', 'faqs-divider-hide']);
         }
+
+        // Check Social Media section
+        if (!hasContent('.camp-social-media')) {
+            hideElements(['social-title-hide', 'social-divider-hide']);
+        }
+
+        // Check Video section
+        if (!hasContent('.camp-video')) {
+            hideElements(['video-title-hide', 'video-divider-hide']);
+        }
     }
 
     // Run on DOM ready

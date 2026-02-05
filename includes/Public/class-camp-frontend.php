@@ -38,6 +38,8 @@ class Camp_Frontend {
 		add_shortcode( 'camp_additional_info', [ $this, 'render_additional_info' ] );
 		add_shortcode( 'camp_contact_info', [ $this, 'render_contact_info' ] );
 		add_shortcode( 'camp_gallery', [ $this, 'render_gallery' ] );
+		add_shortcode( 'camp_social_media', [ $this, 'render_social_media' ] );
+		add_shortcode( 'camp_video', [ $this, 'render_video' ] );
 		
 		// Search shortcode
 		add_shortcode( 'camp_search', [ $this, 'render_search' ] );
@@ -180,8 +182,20 @@ class Camp_Frontend {
 			$camp['id']
 		) );
 		
-		$types_text = ! empty( $camp_types ) ? implode( ' ', $camp_types ) : 'Summer Camp';
-		$location = sprintf( '%s, %s', $camp['city'], $camp['state'] );
+		// Show only first 2 types, add "and more +" if more
+		if ( ! empty( $camp_types ) ) {
+			if ( count( $camp_types ) > 2 ) {
+				$types_text = implode( ', ', array_slice( $camp_types, 0, 2 ) ) . ', and more +';
+			} elseif ( count( $camp_types ) === 2 ) {
+				$types_text = implode( ', ', $camp_types );
+			} else {
+				$types_text = $camp_types[0];
+			}
+		} else {
+			$types_text = 'Summer Camp';
+		}
+		
+		$location = sprintf( '(%s, %s)', $camp['city'], $camp['state'] );
 		$rating = isset( $camp['rating'] ) ? floatval( $camp['rating'] ) : 0;
 		$full_address = $camp['address'] . ', ' . $camp['city'] . ', ' . $camp['state'] . ' ' . $camp['zip'];
 		$maps_url = 'https://www.google.com/maps/search/?api=1&query=' . urlencode( $full_address );
@@ -195,7 +209,7 @@ class Camp_Frontend {
 				<!-- Camp Name & Subtitle -->
 				<div class="camp-header-info">
 					<h1 class="camp-header-name"><?php echo esc_html( $camp['camp_name'] ); ?></h1>
-					<div class="camp-header-subtitle"><?php echo esc_html( $types_text ); ?> - <?php echo esc_html( $location ); ?></div>
+					<div class="camp-header-subtitle"><?php echo esc_html( $types_text ); ?> <?php echo esc_html( $location ); ?></div>
 				</div>
 				
 				<!-- Logo -->
@@ -1636,6 +1650,207 @@ class Camp_Frontend {
 			'page' => $page,
 			'has_more' => ( $offset + $per_page ) < $total_results,
 		] );
+	}
+
+	/**
+	 * Render social media links as badges
+	 *
+	 * @param array $atts Shortcode attributes
+	 * @return string HTML output
+	 */
+	public function render_social_media( $atts ) {
+		$atts = shortcode_atts( [
+			'class' => '',
+		], $atts );
+		
+		$camp = $this->get_camp_data();
+		if ( ! $camp ) {
+			return '';
+		}
+		
+		// Get social media links from JSON
+		$social_links = ! empty( $camp['social_media_links'] ) ? json_decode( $camp['social_media_links'], true ) : [];
+		
+		if ( empty( $social_links ) || ! is_array( $social_links ) ) {
+			return '';
+		}
+		
+		// Filter out empty links
+		$social_links = array_filter( $social_links );
+		
+		if ( empty( $social_links ) ) {
+			return '';
+		}
+		
+		$custom_class = ! empty( $atts['class'] ) ? ' ' . esc_attr( $atts['class'] ) : '';
+		
+		ob_start();
+		?>
+		<div class="camp-section camp-social-media<?php echo $custom_class; ?>">
+			<div class="social-links-container">
+				<?php foreach ( $social_links as $key => $url ) : ?>
+					<?php if ( ! empty( $url ) ) : 
+						// Extract platform name from URL
+						$platform = $this->extract_platform_from_url( $url );
+						$platform_lower = strtolower( $platform );
+					?>
+						<a href="<?php echo esc_url( $url ); ?>" class="social-badge social-<?php echo esc_attr( $platform_lower ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php echo esc_attr( $platform ); ?>">
+							<?php
+							// Icon mapping for common platforms
+							$icons = [
+								'facebook' => 'fa fa-facebook',
+								'twitter' => 'fa fa-twitter',
+								'x' => 'fa fa-twitter',
+								'instagram' => 'fa fa-instagram',
+								'youtube' => 'fa fa-youtube',
+								'linkedin' => 'fa fa-linkedin',
+								'tiktok' => 'fa fa-music',
+								'pinterest' => 'fa fa-pinterest',
+								'snapchat' => 'fa fa-snapchat',
+							];
+							$icon_class = isset( $icons[ $platform_lower ] ) ? $icons[ $platform_lower ] : 'fa fa-link';
+							?>
+							<i class="<?php echo esc_attr( $icon_class ); ?>"></i>
+							<span class="platform-name"><?php echo esc_html( $platform ); ?></span>
+						</a>
+					<?php endif; ?>
+				<?php endforeach; ?>
+			</div>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Render video embed (responsive, no autoplay)
+	 *
+	 * @param array $atts Shortcode attributes
+	 * @return string HTML output
+	 */
+	public function render_video( $atts ) {
+		$atts = shortcode_atts( [
+			'class' => '',
+			'aspect_ratio' => '16-9', // 16-9, 4-3
+		], $atts );
+		
+		$camp = $this->get_camp_data();
+		if ( ! $camp ) {
+			return '';
+		}
+		
+		$video_url = ! empty( $camp['video_url'] ) ? trim( $camp['video_url'] ) : '';
+		
+		if ( empty( $video_url ) ) {
+			return '';
+		}
+		
+		// Convert various video URLs to embed format
+		$embed_url = $this->convert_to_embed_url( $video_url );
+		
+		if ( empty( $embed_url ) ) {
+			return '';
+		}
+		
+		$custom_class = ! empty( $atts['class'] ) ? ' ' . esc_attr( $atts['class'] ) : '';
+		$aspect_class = 'aspect-' . esc_attr( $atts['aspect_ratio'] );
+		
+		ob_start();
+		?>
+		<div class="camp-section camp-video<?php echo $custom_class; ?>">
+			<div class="video-wrapper <?php echo $aspect_class; ?>">
+				<iframe 
+					src="<?php echo esc_url( $embed_url ); ?>" 
+					frameborder="0" 
+					allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" 
+					allowfullscreen
+					loading="lazy"
+				></iframe>
+			</div>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * Convert video URL to embed format and disable autoplay
+	 *
+	 * @param string $url Video URL
+	 * @return string Embed URL or empty string
+	 */
+	private function convert_to_embed_url( $url ) {
+		// YouTube
+		if ( preg_match( '/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/', $url, $matches ) ) {
+			return 'https://www.youtube.com/embed/' . $matches[1] . '?rel=0&modestbranding=1';
+		}
+		
+		// Vimeo
+		if ( preg_match( '/vimeo\.com\/(\d+)/', $url, $matches ) ) {
+			return 'https://player.vimeo.com/video/' . $matches[1] . '?title=0&byline=0&portrait=0';
+		}
+		
+		// If already an embed URL, ensure no autoplay
+		if ( strpos( $url, 'youtube.com/embed/' ) !== false ) {
+			$url = remove_query_arg( 'autoplay', $url );
+			$url = add_query_arg( [ 'autoplay' => '0', 'rel' => '0', 'modestbranding' => '1' ], $url );
+			return $url;
+		}
+		
+		if ( strpos( $url, 'player.vimeo.com/video/' ) !== false ) {
+			$url = remove_query_arg( 'autoplay', $url );
+			$url = add_query_arg( [ 'autoplay' => '0' ], $url );
+			return $url;
+		}
+		
+		// Return as-is if unrecognized format (could be other embed)
+		return $url;
+	}
+
+	/**
+	 * Extract platform name from social media URL
+	 *
+	 * @param string $url Social media URL
+	 * @return string Platform name
+	 */
+	private function extract_platform_from_url( $url ) {
+		$url = strtolower( $url );
+		
+		if ( strpos( $url, 'facebook.com' ) !== false || strpos( $url, 'fb.com' ) !== false ) {
+			return 'Facebook';
+		}
+		if ( strpos( $url, 'twitter.com' ) !== false ) {
+			return 'Twitter';
+		}
+		if ( strpos( $url, 'x.com' ) !== false ) {
+			return 'X';
+		}
+		if ( strpos( $url, 'instagram.com' ) !== false ) {
+			return 'Instagram';
+		}
+		if ( strpos( $url, 'youtube.com' ) !== false || strpos( $url, 'youtu.be' ) !== false ) {
+			return 'YouTube';
+		}
+		if ( strpos( $url, 'linkedin.com' ) !== false ) {
+			return 'LinkedIn';
+		}
+		if ( strpos( $url, 'tiktok.com' ) !== false ) {
+			return 'TikTok';
+		}
+		if ( strpos( $url, 'pinterest.com' ) !== false ) {
+			return 'Pinterest';
+		}
+		if ( strpos( $url, 'snapchat.com' ) !== false ) {
+			return 'Snapchat';
+		}
+		
+		// Default: try to extract domain name
+		$parsed = parse_url( $url );
+		if ( isset( $parsed['host'] ) ) {
+			$host = str_replace( 'www.', '', $parsed['host'] );
+			$parts = explode( '.', $host );
+			return ucfirst( $parts[0] );
+		}
+		
+		return 'Link';
 	}
 }
 

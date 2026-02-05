@@ -283,18 +283,39 @@ class Shortcodes_Guide {
 						<span class="copy-notice">✓ Copied!</span>
 						<p class="shortcode-desc">Additional camp information.</p>
 					</div>
+				<div class="shortcode-item">
+					<code class="shortcode-code" onclick="copyShortcode(this)">[camp_social_media]</code>
+					<span class="copy-notice">✓ Copied!</span>
+					<p class="shortcode-desc">Display social media links as styled badges (Facebook, Twitter, Instagram, YouTube, LinkedIn, TikTok).</p>
+					<div class="shortcode-params">
+						<strong>Parameters:</strong> <code>class</code>
+						<br><strong>Example:</strong> <code>[camp_social_media class="my-social"]</code>
+						<br><strong>Note:</strong> Automatically hides if no social links are set.
+					</div>
 				</div>
+
+				<div class="shortcode-item">
+					<code class="shortcode-code" onclick="copyShortcode(this)">[camp_video]</code>
+					<span class="copy-notice">✓ Copied!</span>
+					<p class="shortcode-desc">Display camp video as responsive embed (YouTube/Vimeo). No autoplay.</p>
+					<div class="shortcode-params">
+						<strong>Parameters:</strong> <code>aspect_ratio</code> (16-9, 4-3 - default: 16-9), <code>class</code>
+						<br><strong>Example:</strong> <code>[camp_video aspect_ratio="16-9"]</code>
+						<br><strong>Note:</strong> Automatically hides if no video URL is set.
+					</div>
+				</div>				</div>
 
 				<!-- Forms & Search Section -->
 				<div class="shortcode-section">
 					<h2>🔍 Forms & Search Shortcodes</h2>
 
 					<div class="shortcode-item">
-						<code class="shortcode-code" onclick="copyShortcode(this)">[camp_search]</code>
-						<span class="copy-notice">✓ Copied!</span>
-						<p class="shortcode-desc">Camp search form with filters and results.</p>
-					</div>
+					<code class="shortcode-code" onclick="copyShortcode(this)">[contact_form]</code>
+					<span class="copy-notice">✓ Copied!</span>
+					<p class="shortcode-desc">Contact form with name, email, phone, message, and captcha. Sends emails to admin and user confirmation.</p>
+				</div>
 
+				<div class="shortcode-item">
 					<div class="shortcode-item">
 						<code class="shortcode-code" onclick="copyShortcode(this)">[camp_signup_form]</code>
 						<span class="copy-notice">✓ Copied!</span>

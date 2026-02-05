@@ -865,14 +865,23 @@ class Camp_Dashboard {
 				<a href="<?php echo wp_logout_url( wp_login_url() ); ?>" class="btn-logout">Logout</a>
 			</div>
 		</div>
-		<?php
-		return ob_get_clean();
-	}
+		
+	<?php if ( get_option( 'cdbs_show_beta_notice', '1' ) === '1' ) : ?>
+	<div class="beta-notice-box">
+		<div class="beta-notice-content">
+			<strong>Beta Version Notice</strong>
+			<p>This Camp Management Dashboard is currently in beta but is fully functional. If you encounter any issues or unexpected behavior, we'd really appreciate you <a href="https://bestusacamps.com/contact/" target="_blank">letting us know</a> so we can improve it.</p>
+		</div>
+	</div>
+	<?php endif; ?>
+	<?php
+	return ob_get_clean();
+}
 
-	/**
-	 * Enqueue front-end dashboard styles
-	 */
-	public function enqueue_styles() {
+/**
+ * Enqueue front-end dashboard styles
+ */
+public function enqueue_styles() {
 		// Only enqueue on pages with the shortcode
 		global $post;
 		if ( is_a( $post, 'WP_Post' ) && has_shortcode( $post->post_content, 'camp_dashboard' ) ) {
@@ -922,20 +931,28 @@ class Camp_Dashboard {
 		// Update camp data
 		$about_camp = wp_kses_post( $_POST['about_camp'] ?? '' );
 		
-		// Validate word count (max 220 words)
-		$word_count = str_word_count( wp_strip_all_tags( $about_camp ) );
-		if ( $word_count > 220 ) {
-			wp_redirect( add_query_arg( 'error', 'word_limit', wp_get_referer() ) );
-			exit;
-		}
-		
-		// Process social media links
-		$social_media_links = [];
+	// Validate word count (220 min - 300 max words)
+	$word_count = str_word_count( wp_strip_all_tags( $about_camp ) );
+	if ( $word_count < 220 ) {
+		wp_redirect( add_query_arg( 'error', 'word_limit_min', wp_get_referer() ) );
+		exit;
+	}
+	if ( $word_count > 300 ) {
+		wp_redirect( add_query_arg( 'error', 'word_limit_max', wp_get_referer() ) );
+		exit;
+	}
+	
+	// Process social media links
+	$social_media_links = [];
 		if ( ! empty( $_POST['social_media'] ) && is_array( $_POST['social_media'] ) ) {
 			foreach ( $_POST['social_media'] as $link ) {
-				$link = esc_url_raw( trim( $link ) );
+				$link = trim( $link );
 				if ( ! empty( $link ) ) {
-					$social_media_links[] = $link;
+					// Add https:// if no protocol is specified
+					if ( ! preg_match( '/^https?:\/\//i', $link ) ) {
+						$link = 'https://' . $link;
+					}
+					$social_media_links[] = esc_url_raw( $link );
 				}
 			}
 		}
@@ -952,7 +969,7 @@ class Camp_Dashboard {
 			'email'            => sanitize_email( $_POST['email'] ?? '' ),
 			'website'          => esc_url_raw( $_POST['website'] ?? '' ),
 			'social_media_links' => $social_media_json,
-			'video_url'        => esc_url_raw( $_POST['video_url'] ?? '' ),
+			'video_url'        => $this->ensure_url_protocol( $_POST['video_url'] ?? '' ),
 			'about_camp'       => $about_camp,
 			'opening_day'      => sanitize_text_field( $_POST['opening_day'] ?? '' ),
 			'closing_day'      => sanitize_text_field( $_POST['closing_day'] ?? '' ),
@@ -1703,7 +1720,13 @@ class Camp_Dashboard {
 				</div>
 			<?php endif; ?>
 			
-			<?php if ( isset( $_GET['error'] ) && $_GET['error'] === 'word_limit' ) : ?>
+<?php if ( isset( $_GET['error'] ) && $_GET['error'] === 'word_limit_min' ) : ?>
+			<div class="camp-dashboard-error">
+				<p>✗ Camp description must be at least 220 words. Please add more detail to your description.</p>
+			</div>
+		<?php endif; ?>
+		
+		<?php if ( isset( $_GET['error'] ) && $_GET['error'] === 'word_limit_max' ) : ?>
 				<div class="camp-dashboard-error">
 					<p>✗ Camp description must be 300 words or less. Please shorten your description and try again.</p>
 				</div>
@@ -1734,11 +1757,7 @@ class Camp_Dashboard {
 						<label for="about_camp">Camp Description <span class="required">*</span></label>
 						<textarea id="about_camp" name="about_camp" rows="6" maxlength="5000" required><?php echo esc_textarea( $camp['about_camp'] ); ?></textarea>
 						<div class="word-counter">
-							<span id="word-count">0</span> / 300 words <span id="word-limit-warning" style="color: #dc3545; display: none;">● Limit exceeded</span>
-						</div>
-					</div>
-					</div>
-
+						<span id="word-count">0</span> words (220 minimum, 300 maximum) <span id="word-limit-warning" style="color: #dc3545; display: none;">● Limit not met</span>
 				<div class="form-section" id="contact-info">
 					<h2 class="section-title">Contact Information</h2>
 					
@@ -1990,47 +2009,72 @@ class Camp_Dashboard {
 			<script>
 			document.addEventListener('DOMContentLoaded', function() {
 				const textarea = document.getElementById('about_camp');
-				const wordCountSpan = document.getElementById('word-count');
-				const warningSpan = document.getElementById('word-limit-warning');
-				const submitButton = document.querySelector('.camp-edit-form button[type="submit"]');
-				const maxWords = 300;
+			if (!textarea) return;
+			
+			const wordCountSpan = document.getElementById('word-count');
+			const warningSpan = document.getElementById('word-limit-warning');
+			const submitButton = document.querySelector('.camp-edit-form button[type="submit"]');
+			const sidebarSaveButton = document.querySelector('.sidenav-save-btn');
+			const minWords = 220;
+			const maxWords = 300;
+			
+			function countWords(text) {
+				text = text.trim();
+				if (text === '') return 0;
+				return text.split(/\s+/).length;
+			}
+			
+			function updateWordCount() {
+				const text = textarea.value;
+				const wordCount = countWords(text);
+				wordCountSpan.textContent = wordCount;
 				
-				function countWords(text) {
-					// Remove extra whitespace and count words
-					text = text.trim();
-					if (text === '') return 0;
-					return text.split(/\s+/).length;
-				}
-				
-				function updateWordCount() {
-					const text = textarea.value;
-					const wordCount = countWords(text);
-					wordCountSpan.textContent = wordCount;
-					
-					if (wordCount > maxWords) {
-						wordCountSpan.style.color = '#dc3545';
-						wordCountSpan.style.fontWeight = '700';
-						warningSpan.style.display = 'inline';
-						if (submitButton) {
-							submitButton.disabled = true;
-							submitButton.style.opacity = '0.6';
-							submitButton.style.cursor = 'not-allowed';
-						}
-					} else {
-						wordCountSpan.style.color = '#333';
-						wordCountSpan.style.fontWeight = '400';
-						warningSpan.style.display = 'none';
-						if (submitButton) {
-							submitButton.disabled = false;
-							submitButton.style.opacity = '1';
-							submitButton.style.cursor = 'pointer';
-						}
+				if (wordCount < minWords) {
+					wordCountSpan.style.color = '#dc3545';
+					wordCountSpan.style.fontWeight = '700';
+					warningSpan.textContent = '● Too few words (minimum ' + minWords + ')';
+					warningSpan.style.display = 'inline';
+					if (submitButton) {
+						submitButton.disabled = true;
+						submitButton.style.opacity = '0.6';
+						submitButton.style.cursor = 'not-allowed';
+					}
+					if (sidebarSaveButton) {
+						sidebarSaveButton.disabled = true;
+						sidebarSaveButton.style.opacity = '0.6';
+						sidebarSaveButton.style.cursor = 'not-allowed';
+					}
+				} else if (wordCount > maxWords) {
+					wordCountSpan.style.color = '#dc3545';
+					wordCountSpan.style.fontWeight = '700';
+					warningSpan.textContent = '● Too many words (maximum ' + maxWords + ')';
+					warningSpan.style.display = 'inline';
+					if (submitButton) {
+						submitButton.disabled = true;
+						submitButton.style.opacity = '0.6';
+						submitButton.style.cursor = 'not-allowed';
+					}
+					if (sidebarSaveButton) {
+						sidebarSaveButton.disabled = true;
+						sidebarSaveButton.style.opacity = '0.6';
+						sidebarSaveButton.style.cursor = 'not-allowed';
+					}
+				} else {
+					wordCountSpan.style.color = '#2d5a3f';
+					wordCountSpan.style.fontWeight = '700';
+					warningSpan.style.display = 'none';
+					if (submitButton) {
+						submitButton.disabled = false;
+						submitButton.style.opacity = '1';
+						submitButton.style.cursor = 'pointer';
+					}
+					if (sidebarSaveButton) {
+						sidebarSaveButton.disabled = false;
+						sidebarSaveButton.style.opacity = '1';
+						sidebarSaveButton.style.cursor = 'pointer';
 					}
 				}
-				
-				// Update on page load
-				updateWordCount();
-				
+			}
 				// Update on typing
 				textarea.addEventListener('input', updateWordCount);
 			});
@@ -3487,5 +3531,20 @@ class Camp_Dashboard {
 		<?php
 		return ob_get_clean();
 	}
+
+/**
+ * Ensure URL has a protocol (add https:// if missing)
+ */
+private function ensure_url_protocol( $url ) {
+	$url = trim( $url );
+	if ( empty( $url ) ) {
+		return '';
+	}
+	// Add https:// if no protocol is specified
+	if ( ! preg_match( '/^https?:\/\//i', $url ) ) {
+		$url = 'https://' . $url;
+	}
+	return esc_url_raw( $url );
+}
 
 }
