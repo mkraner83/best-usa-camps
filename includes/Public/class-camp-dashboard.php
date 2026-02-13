@@ -928,24 +928,27 @@ public function enqueue_styles() {
 			$camp_id
 		), ARRAY_A );
 
+		// Remove slashes from POST data to prevent double-escaping
+		$post_data = wp_unslash( $_POST );
+
 		// Update camp data
-		$about_camp = wp_kses_post( $_POST['about_camp'] ?? '' );
+		$about_camp = wp_kses_post( $post_data['about_camp'] ?? '' );
 		
-	// Validate word count (220 min - 300 max words)
-	$word_count = str_word_count( wp_strip_all_tags( $about_camp ) );
-	if ( $word_count < 220 ) {
-		wp_redirect( add_query_arg( 'error', 'word_limit_min', wp_get_referer() ) );
-		exit;
-	}
-	if ( $word_count > 300 ) {
-		wp_redirect( add_query_arg( 'error', 'word_limit_max', wp_get_referer() ) );
-		exit;
-	}
-	
-	// Process social media links
-	$social_media_links = [];
-		if ( ! empty( $_POST['social_media'] ) && is_array( $_POST['social_media'] ) ) {
-			foreach ( $_POST['social_media'] as $link ) {
+		// Validate word count (180 min - 300 max words)
+		$word_count = str_word_count( wp_strip_all_tags( $about_camp ) );
+		if ( $word_count < 180 ) {
+			wp_redirect( add_query_arg( 'error', 'word_limit_min', wp_get_referer() ) );
+			exit;
+		}
+		if ( $word_count > 300 ) {
+			wp_redirect( add_query_arg( 'error', 'word_limit_max', wp_get_referer() ) );
+			exit;
+		}
+		
+		// Process social media links
+		$social_media_links = [];
+		if ( ! empty( $post_data['social_media'] ) && is_array( $post_data['social_media'] ) ) {
+			foreach ( $post_data['social_media'] as $link ) {
 				$link = trim( $link );
 				if ( ! empty( $link ) ) {
 					// Add https:// if no protocol is specified
@@ -959,22 +962,22 @@ public function enqueue_styles() {
 		$social_media_json = ! empty( $social_media_links ) ? wp_json_encode( $social_media_links ) : null;
 		
 		$camp_data = [
-			'camp_name'        => sanitize_text_field( $_POST['camp_name'] ?? '' ),
-			'camp_directors'   => sanitize_text_field( $_POST['camp_directors'] ?? '' ),
-			'address'          => sanitize_text_field( $_POST['address'] ?? '' ),
-			'city'             => sanitize_text_field( $_POST['city'] ?? '' ),
-			'state'            => sanitize_text_field( $_POST['state'] ?? '' ),
-			'zip'              => sanitize_text_field( $_POST['zip'] ?? '' ),
-			'phone'            => sanitize_text_field( $_POST['phone'] ?? '' ),
-			'email'            => sanitize_email( $_POST['email'] ?? '' ),
-			'website'          => esc_url_raw( $_POST['website'] ?? '' ),
+			'camp_name'        => sanitize_text_field( $post_data['camp_name'] ?? '' ),
+			'camp_directors'   => sanitize_text_field( $post_data['camp_directors'] ?? '' ),
+			'address'          => sanitize_text_field( $post_data['address'] ?? '' ),
+			'city'             => sanitize_text_field( $post_data['city'] ?? '' ),
+			'state'            => sanitize_text_field( $post_data['state'] ?? '' ),
+			'zip'              => sanitize_text_field( $post_data['zip'] ?? '' ),
+			'phone'            => sanitize_text_field( $post_data['phone'] ?? '' ),
+			'email'            => sanitize_email( $post_data['email'] ?? '' ),
+			'website'          => esc_url_raw( $post_data['website'] ?? '' ),
 			'social_media_links' => $social_media_json,
-			'video_url'        => $this->ensure_url_protocol( $_POST['video_url'] ?? '' ),
+			'video_url'        => $this->ensure_url_protocol( $post_data['video_url'] ?? '' ),
 			'about_camp'       => $about_camp,
-			'opening_day'      => sanitize_text_field( $_POST['opening_day'] ?? '' ),
-			'closing_day'      => sanitize_text_field( $_POST['closing_day'] ?? '' ),
-			'minprice_2026'    => floatval( $_POST['minprice_2026'] ?? 0 ),
-			'maxprice_2026'    => floatval( $_POST['maxprice_2026'] ?? 0 ),
+			'opening_day'      => sanitize_text_field( $post_data['opening_day'] ?? '' ),
+			'closing_day'      => sanitize_text_field( $post_data['closing_day'] ?? '' ),
+			'minprice_2026'    => floatval( $post_data['minprice_2026'] ?? 0 ),
+			'maxprice_2026'    => floatval( $post_data['maxprice_2026'] ?? 0 ),
 			'last_edited'      => current_time( 'mysql' ),
 		];
 
@@ -1722,7 +1725,7 @@ public function enqueue_styles() {
 			
 <?php if ( isset( $_GET['error'] ) && $_GET['error'] === 'word_limit_min' ) : ?>
 			<div class="camp-dashboard-error">
-				<p>✗ Camp description must be at least 220 words. Please add more detail to your description.</p>
+				<p>✗ Camp description must be at least 180 words. Please add more detail to your description.</p>
 			</div>
 		<?php endif; ?>
 		
@@ -1753,15 +1756,19 @@ public function enqueue_styles() {
 					</div>
 
 					<div class="form-row">
-					<div class="form-group">
-						<label for="about_camp">Camp Description <span class="required">*</span></label>
-						<textarea id="about_camp" name="about_camp" rows="6" maxlength="5000" required><?php echo esc_textarea( $camp['about_camp'] ); ?></textarea>
-						<div class="word-counter">
-						<span id="word-count">0</span> words (220 minimum, 300 maximum) <span id="word-limit-warning" style="color: #dc3545; display: none;">● Limit not met</span>
-				<div class="form-section" id="contact-info">
-					<h2 class="section-title">Contact Information</h2>
-					
-					<div class="form-row">
+						<div class="form-group">
+							<label for="about_camp">Camp Description <span class="required">*</span></label>
+							<textarea id="about_camp" name="about_camp" rows="6" maxlength="5000" required><?php echo esc_textarea( $camp['about_camp'] ); ?></textarea>
+							<div class="word-counter">
+								<span id="word-count">0</span> words (180 minimum, 300 maximum) <span id="word-limit-warning" style="color: #dc3545; display: none;">● Limit not met</span>
+							</div>
+						</div>
+					</div>
+
+					<div class="form-section" id="contact-info">
+						<h2 class="section-title">Contact Information</h2>
+						
+						<div class="form-row">
 						<div class="form-group half">
 							<label for="email">Email <span class="required">*</span></label>
 							<input type="email" id="email" name="email" value="<?php echo esc_attr( $camp['email'] ); ?>" required>
@@ -2015,7 +2022,7 @@ public function enqueue_styles() {
 			const warningSpan = document.getElementById('word-limit-warning');
 			const submitButton = document.querySelector('.camp-edit-form button[type="submit"]');
 			const sidebarSaveButton = document.querySelector('.sidenav-save-btn');
-			const minWords = 220;
+			const minWords = 180;
 			const maxWords = 300;
 			
 			function countWords(text) {
@@ -3442,8 +3449,11 @@ public function enqueue_styles() {
 		
 		$table_name = $wpdb->prefix . 'camp_notification_queue';
 		
+		// Log notification attempt
+		error_log( 'CDBS Notification: Queuing notification for camp ' . $camp_id . ' - ' . $camp_name );
+		
 		// Add notification to queue
-		$wpdb->insert(
+		$result = $wpdb->insert(
 			$table_name,
 			[
 				'camp_id' => $camp_id,
@@ -3457,6 +3467,12 @@ public function enqueue_styles() {
 				'%d', '%s', '%s', '%s', '%d', '%d'
 			]
 		);
+		
+		if ( $result === false ) {
+			error_log( 'CDBS Notification ERROR: Failed to insert notification. ' . $wpdb->last_error );
+		} else {
+			error_log( 'CDBS Notification SUCCESS: Notification queued with ID ' . $wpdb->insert_id );
+		}
 	}
 
 	/**

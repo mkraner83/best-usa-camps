@@ -471,12 +471,13 @@ class CreativeDBS_Camp_Management {
             wp_send_json_error('Unauthorized');
         }
         
-        $id = isset($_POST['id']) ? absint($_POST['id']) : 0;
-        $camp_id = isset($_POST['camp_id']) ? absint($_POST['camp_id']) : 0;
-        $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
-        $capacity = isset($_POST['capacity']) ? absint($_POST['capacity']) : 0;
-        $type = isset($_POST['accommodation_type']) ? sanitize_text_field($_POST['accommodation_type']) : '';
-        $description = isset($_POST['description']) ? sanitize_textarea_field($_POST['description']) : '';
+        $post_data = wp_unslash($_POST);
+        $id = isset($post_data['id']) ? absint($post_data['id']) : 0;
+        $camp_id = isset($post_data['camp_id']) ? absint($post_data['camp_id']) : 0;
+        $name = isset($post_data['name']) ? sanitize_text_field($post_data['name']) : '';
+        $capacity = isset($post_data['capacity']) ? absint($post_data['capacity']) : 0;
+        $type = isset($post_data['accommodation_type']) ? sanitize_text_field($post_data['accommodation_type']) : '';
+        $description = isset($post_data['description']) ? sanitize_textarea_field($post_data['description']) : '';
         
         if (!$camp_id || !$name) {
             wp_send_json_error('Missing required fields');
@@ -555,10 +556,11 @@ class CreativeDBS_Camp_Management {
             wp_send_json_error('Unauthorized');
         }
         
-        $id = isset($_POST['id']) ? absint($_POST['id']) : 0;
-        $camp_id = isset($_POST['camp_id']) ? absint($_POST['camp_id']) : 0;
-        $question = isset($_POST['question']) ? sanitize_text_field($_POST['question']) : '';
-        $answer = isset($_POST['answer']) ? sanitize_textarea_field($_POST['answer']) : '';
+        $post_data = wp_unslash($_POST);
+        $id = isset($post_data['id']) ? absint($post_data['id']) : 0;
+        $camp_id = isset($post_data['camp_id']) ? absint($post_data['camp_id']) : 0;
+        $question = isset($post_data['question']) ? sanitize_text_field($post_data['question']) : '';
+        $answer = isset($post_data['answer']) ? sanitize_textarea_field($post_data['answer']) : '';
         
         if (!$camp_id || !$question) {
             wp_send_json_error('Missing required fields');
@@ -640,14 +642,15 @@ class CreativeDBS_Camp_Management {
             wp_send_json_error('Unauthorized');
         }
         
-        $id = isset($_POST['id']) ? absint($_POST['id']) : 0;
-        $camp_id = isset($_POST['camp_id']) ? absint($_POST['camp_id']) : 0;
-        $name = isset($_POST['name']) ? sanitize_text_field($_POST['name']) : '';
-        $start_date = isset($_POST['start_date']) ? sanitize_text_field($_POST['start_date']) : '';
-        $end_date = isset($_POST['end_date']) ? sanitize_text_field($_POST['end_date']) : '';
-        $price = isset($_POST['price']) ? floatval($_POST['price']) : 0;
-        $duration = isset($_POST['duration']) ? sanitize_text_field($_POST['duration']) : '';
-        $description = isset($_POST['description']) ? sanitize_textarea_field($_POST['description']) : '';
+        $post_data = wp_unslash($_POST);
+        $id = isset($post_data['id']) ? absint($post_data['id']) : 0;
+        $camp_id = isset($post_data['camp_id']) ? absint($post_data['camp_id']) : 0;
+        $name = isset($post_data['name']) ? sanitize_text_field($post_data['name']) : '';
+        $start_date = isset($post_data['start_date']) ? sanitize_text_field($post_data['start_date']) : '';
+        $end_date = isset($post_data['end_date']) ? sanitize_text_field($post_data['end_date']) : '';
+        $price = isset($post_data['price']) ? floatval($post_data['price']) : 0;
+        $duration = isset($post_data['duration']) ? sanitize_text_field($post_data['duration']) : '';
+        $description = isset($post_data['description']) ? sanitize_textarea_field($post_data['description']) : '';
         
         if (!$camp_id || !$name || !$start_date || !$end_date) {
             wp_send_json_error('Missing required fields');
@@ -661,11 +664,11 @@ class CreativeDBS_Camp_Management {
             $result = $wpdb->update(
                 $table,
                 [
-                    'name' => $name,
+                    'session_name' => $name,
                     'start_date' => $start_date,
                     'end_date' => $end_date,
                     'price' => $price,
-                    'duration' => $duration,
+                    'notes' => $duration,
                     'description' => $description
                 ],
                 ['id' => $id],
@@ -678,11 +681,11 @@ class CreativeDBS_Camp_Management {
                 $table,
                 [
                     'camp_id' => $camp_id,
-                    'name' => $name,
+                    'session_name' => $name,
                     'start_date' => $start_date,
                     'end_date' => $end_date,
                     'price' => $price,
-                    'duration' => $duration,
+                    'notes' => $duration,
                     'description' => $description
                 ],
                 ['%d', '%s', '%s', '%s', '%f', '%s', '%s']
@@ -808,10 +811,11 @@ class CreativeDBS_Camp_Management {
 
         // Add / Update
         if (isset($_POST['cdbs_master_save']) && check_admin_referer('cdbs_master_'.$kind)) {
-            $id   = isset($_POST['id']) ? intval($_POST['id']) : 0;
-            $name = sanitize_text_field($_POST['name'] ?? '');
-            $slug = sanitize_title(isset($_POST['slug']) && $_POST['slug'] ? $_POST['slug'] : $name);
-            $is_active = isset($_POST['is_active']) ? 1 : 0;
+            $post_data = wp_unslash($_POST);
+            $id   = isset($post_data['id']) ? intval($post_data['id']) : 0;
+            $name = sanitize_text_field($post_data['name'] ?? '');
+            $slug = sanitize_title(isset($post_data['slug']) && $post_data['slug'] ? $post_data['slug'] : $name);
+            $is_active = isset($post_data['is_active']) ? 1 : 0;
             $data = ['name'=>$name, 'slug'=>$slug, 'is_active'=>$is_active, 'updated_at'=>current_time('mysql')];
             if ($id) {
                 $wpdb->update($table, $data, ['id'=>$id]);
@@ -868,47 +872,48 @@ class CreativeDBS_Camp_Management {
 
         // Save edits
         if (isset($_POST['creativedbs_save']) && check_admin_referer('save_camp')) {
-            $camp_id = absint($_POST['camp_id'] ?? 0);
-            $activity_names = array_map('sanitize_text_field', self::arrayize($_POST['activity_names'] ?? ''));
-            $photos = sanitize_textarea_field($_POST['photos'] ?? '');
+            $post_data = wp_unslash($_POST);
+            $camp_id = absint($post_data['camp_id'] ?? 0);
+            $activity_names = array_map('sanitize_text_field', self::arrayize($post_data['activity_names'] ?? ''));
+            $photos = sanitize_textarea_field($post_data['photos'] ?? '');
             
             // Process social media links - convert from textarea (one per line) to JSON array
-            $social_media_raw = sanitize_textarea_field($_POST['social_media_links'] ?? '');
+            $social_media_raw = sanitize_textarea_field($post_data['social_media_links'] ?? '');
             $social_media_array = array_filter(array_map('trim', explode("\n", $social_media_raw)));
             $social_media_array = array_map('esc_url_raw', $social_media_array);
             $social_media_json = !empty($social_media_array) ? wp_json_encode($social_media_array) : null;
 
             $wpdb->update($table, [
-                'camp_name'      => sanitize_text_field($_POST['camp_name'] ?? ''),
-                'opening_day'    => self::parse_date($_POST['opening_day'] ?? ''),
-                'closing_day'    => self::parse_date($_POST['closing_day'] ?? ''),
-                'minprice_2026'  => self::to_money($_POST['minprice_2026'] ?? ''),
-                'maxprice_2026'  => self::to_money($_POST['maxprice_2026'] ?? ''),
+                'camp_name'      => sanitize_text_field($post_data['camp_name'] ?? ''),
+                'opening_day'    => self::parse_date($post_data['opening_day'] ?? ''),
+                'closing_day'    => self::parse_date($post_data['closing_day'] ?? ''),
+                'minprice_2026'  => self::to_money($post_data['minprice_2026'] ?? ''),
+                'maxprice_2026'  => self::to_money($post_data['maxprice_2026'] ?? ''),
                 'activities'     => implode(',', $activity_names),
-                'email'          => sanitize_email($_POST['email'] ?? ''),
-                'phone'          => sanitize_text_field($_POST['phone'] ?? ''),
-                'website'        => esc_url_raw($_POST['website'] ?? ''),
-                'camp_directors' => sanitize_textarea_field($_POST['camp_directors'] ?? ''),
-                'address'        => sanitize_text_field($_POST['address'] ?? ''),
-                'city'           => sanitize_text_field($_POST['city'] ?? ''),
-                'state'          => sanitize_text_field($_POST['state'] ?? ''),
-                'zip'            => sanitize_text_field($_POST['zip'] ?? ''),
-                'about_camp'     => wp_kses_post($_POST['about_camp'] ?? ''),
+                'email'          => sanitize_email($post_data['email'] ?? ''),
+                'phone'          => sanitize_text_field($post_data['phone'] ?? ''),
+                'website'        => esc_url_raw($post_data['website'] ?? ''),
+                'camp_directors' => sanitize_textarea_field($post_data['camp_directors'] ?? ''),
+                'address'        => sanitize_text_field($post_data['address'] ?? ''),
+                'city'           => sanitize_text_field($post_data['city'] ?? ''),
+                'state'          => sanitize_text_field($post_data['state'] ?? ''),
+                'zip'            => sanitize_text_field($post_data['zip'] ?? ''),
+                'about_camp'     => wp_kses_post($post_data['about_camp'] ?? ''),
                 'photos'         => $photos,
-                'logo'           => esc_url_raw($_POST['logo'] ?? ''),
-                'search_image'   => esc_url_raw($_POST['search_image'] ?? ''),
-                'video_url'      => esc_url_raw($_POST['video_url'] ?? ''),
+                'logo'           => esc_url_raw($post_data['logo'] ?? ''),
+                'search_image'   => esc_url_raw($post_data['search_image'] ?? ''),
+                'video_url'      => esc_url_raw($post_data['video_url'] ?? ''),
                 'social_media_links' => $social_media_json,
-                'rating'         => floatval($_POST['rating'] ?? 0),
-                'approved'       => isset($_POST['approved']) ? 1 : 0,
-                'wordpress_user_id' => absint($_POST['wordpress_user_id'] ?? 0),
+                'rating'         => floatval($post_data['rating'] ?? 0),
+                'approved'       => isset($post_data['approved']) ? 1 : 0,
+                'wordpress_user_id' => absint($post_data['wordpress_user_id'] ?? 0),
                 'updated_at'     => current_time('mysql'),
                 'last_edited'    => current_time('mysql'),
             ], ['id' => $camp_id]);
 
             // Sync link tables
-            $selected_types = array_map('intval', $_POST['type_ids'] ?? []);
-            $selected_weeks = array_map('intval', $_POST['week_ids'] ?? []);
+            $selected_types = array_map('intval', $post_data['type_ids'] ?? []);
+            $selected_weeks = array_map('intval', $post_data['week_ids'] ?? []);
 
             // Activities: auto-create
             $terms_table = self::table_activity_terms();
@@ -944,6 +949,9 @@ class CreativeDBS_Camp_Management {
         // List
         $items = $wpdb->get_results("SELECT id, camp_name, state, website, logo, approved, created_at, last_edited FROM {$table} ORDER BY {$orderby_sql} {$order_sql}, id DESC LIMIT 500");
         $base_admin = admin_url('admin.php');
+        
+        $total_camps = count($items);
+        $approved_camps = count(array_filter($items, function($item) { return $item->approved == 1; }));
 
         $build_sort = function($key, $label) use ($base_admin, $orderby, $order) {
             $new_order = ($orderby === $key && strtoupper($order) === 'ASC') ? 'DESC' : 'ASC';
@@ -954,23 +962,36 @@ class CreativeDBS_Camp_Management {
 
         ?>
         <div class="wrap">
+            <?php if (!isset($_GET['action']) || $_GET['action'] !== 'edit'): ?>
             <h1><?php echo esc_html__('Camps', 'creativedbs'); ?></h1>
-            <table class="widefat fixed striped">
-                <thead>
-                    <tr>
-                        <th><?php echo $build_sort('camp_name','Camp Name'); ?></th>
-                        <th><?php esc_html_e('Logo'); ?></th>
-                        <th><?php echo $build_sort('created_at','Date Added'); ?></th>
-                        <th><?php echo $build_sort('last_edited','Date Edited'); ?></th>
-                        <th><?php echo $build_sort('state','State'); ?></th>
-                        <th><?php echo $build_sort('website','Website'); ?></th>
-                        <th><?php esc_html_e('Approved'); ?></th>
-                        <th><?php esc_html_e('Actions'); ?></th>
-                    </tr>
-                </thead>
-                <tbody>
+            
+            <!-- Search Bar -->
+            <div style="margin-bottom: 20px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+                <input type="text" 
+                    id="cdbs-camp-search" 
+                    placeholder="Search camps by name, state..." 
+                    style="padding: 10px; min-width: 300px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px;">
+                <select id="cdbs-sort-select" style="padding: 10px 35px 10px 10px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; min-width: 150px;">
+                    <option value="created_at-desc">Newest First</option>
+                    <option value="created_at-asc">Oldest First</option>
+                    <option value="camp_name-asc">Name (A-Z)</option>
+                    <option value="camp_name-desc">Name (Z-A)</option>
+                </select>
+                <div style="font-size: 14px; color: #4a6b5a; font-weight: 600; padding: 10px 15px; background: #f8f9fa; border-radius: 4px; border: 1px solid #4a6b5a;">
+                    <span id="cdbs-approved-count"><?php echo $approved_camps; ?></span> / <span id="cdbs-camp-count"><?php echo $total_camps; ?></span> <?php echo $total_camps === 1 ? 'camp' : 'camps'; ?>
+                </div>
+                <button type="button" id="cdbs-toggle-inactive" class="button" style="padding: 10px 20px; font-size: 14px; font-weight: 600;">
+                    <span class="show-text">Show Inactive Camps</span>
+                    <span class="hide-text" style="display: none;">Show All Camps</span>
+                </button>
+            </div>
+
+            <!-- Camp Cards Grid -->
+            <div id="cdbs-camps-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 50px 20px; margin-top: 20px;">
                 <?php if (empty($items)) : ?>
-                    <tr><td colspan="8"><?php esc_html_e('No camps found.', 'creativedbs'); ?></td></tr>
+                    <div style="grid-column: 1/-1; padding: 40px; text-align: center; color: #666;">
+                        <p><?php esc_html_e('No camps found.', 'creativedbs'); ?></p>
+                    </div>
                 <?php else: foreach ($items as $row):
                     $edit_url = add_query_arg(['page'=>self::SLUG,'action'=>'edit','camp'=>$row->id], $base_admin);
                     $edit_url = wp_nonce_url($edit_url, 'edit_camp');
@@ -978,46 +999,192 @@ class CreativeDBS_Camp_Management {
                     $del_url = wp_nonce_url($del_url, 'delete_camp_'.$row->id);
                     $state_full = self::full_state_name($row->state);
                     $state_text = trim(($row->state ? strtoupper($row->state) : '') . ($state_full ? ', '.$state_full : ''));
-                    $website_link = $row->website ? \CreativeDBS\CampMgmt\Helpers::format_website_link( $row->website ) : '—';
-?>
-                    <tr>
-                        <td><strong><?php echo esc_html($row->camp_name); ?></strong></td>
-<td><?php
-    $logo_html = \CreativeDBS\CampMgmt\Helpers::format_logo_or_favicon( $row->logo, $row->website, $row->camp_name, 36 );
-    if ( $logo_html && $row->website ) {
-        $website_url = $row->website;
-        if ( ! preg_match( '#^https?://#i', $website_url ) ) {
-            $website_url = 'https://' . $website_url;
-        }
-        echo '<a href="' . esc_url( $website_url ) . '" target="_blank" rel="noopener">' . $logo_html . '</a>';
-    } else {
-        echo $logo_html;
-    }
-?></td>
-                        <td><?php echo esc_html($row->created_at ? date_i18n(get_option('date_format').' '.get_option('time_format'), strtotime($row->created_at)) : '—'); ?></td>
-                        <td><?php echo esc_html($row->last_edited ? date_i18n(get_option('date_format').' '.get_option('time_format'), strtotime($row->last_edited)) : '—'); ?></td>
-                        <td><?php echo esc_html($state_text ?: '—'); ?></td>
-                        <td><?php echo $website_link ?: '—'; ?></td>
-                        <td style="text-align: center;">
-                            <input type="checkbox" 
-                                class="cdbs-approve-checkbox" 
-                                data-camp-id="<?php echo absint($row->id); ?>"
-                                <?php checked($row->approved, 1); ?> />
-                        </td>
-                        <td>
-                            <a class="button" href="<?php echo esc_url($edit_url); ?>">Edit</a>
-                            <a class="button button-link-delete" href="<?php echo esc_url($del_url); ?>" data-cdbs-delete="1">Delete</a>
-                            <a class="button" href="<?php
-                                echo esc_url( add_query_arg(
-                                    ['page' => 'creativedbs-camp-mgmt-creds', 'camp' => intval($row->id)],
-                                    admin_url('admin.php')
-                                ) );
-                            ?>"><?php esc_html_e('Edit Password', 'creativedbs-camp-mgmt'); ?></a>
-                        </td>
-                    </tr>
+                    $creds_url = esc_url( add_query_arg(['page' => 'creativedbs-camp-mgmt-creds', 'camp' => intval($row->id)], admin_url('admin.php')) );
+                    
+                    $logo_html = \CreativeDBS\CampMgmt\Helpers::format_logo_or_favicon( $row->logo, $row->website, $row->camp_name, 60 );
+                    $logo_display = '—';
+                    if ($logo_html && $row->website) {
+                        $website_url = $row->website;
+                        if (!preg_match('#^https?://#i', $website_url)) {
+                            $website_url = 'https://' . $website_url;
+                        }
+                        $logo_display = '<a href="' . esc_url($website_url) . '" target="_blank" rel="noopener">' . $logo_html . '</a>';
+                    } else {
+                        $logo_display = $logo_html ?: '—';
+                    }
+                ?>
+                <div class="cdbs-camp-card" data-camp-id="<?php echo absint($row->id); ?>" data-camp-name="<?php echo esc_attr($row->camp_name); ?>" data-camp-state="<?php echo esc_attr($row->state); ?>" data-camp-created="<?php echo esc_attr($row->created_at); ?>" data-camp-approved="<?php echo $row->approved ? '1' : '0'; ?>">
+                    <div class="cdbs-card-inner" style="background: #ffffff; border-radius: 10px; padding: 15px; height: 100%; display: flex; flex-direction: column; box-shadow: 0 2px 10px rgba(0,0,0,0.08); transition: all 0.3s ease;">
+                        
+                        <!-- Approval Checkbox -->
+                        <div style="text-align: center; margin-bottom: 10px;">
+                            <label style="display: inline-flex; align-items: center; gap: 5px; cursor: pointer; background: #f8f9fa; padding: 4px 10px; border-radius: 15px; border: 2px solid #4a6b5a; font-size: 0.75rem; font-weight: 600; color: #4a6b5a;">
+                                <input type="checkbox" 
+                                    class="cdbs-approve-checkbox" 
+                                    data-camp-id="<?php echo absint($row->id); ?>"
+                                    <?php checked($row->approved, 1); ?> />
+                                <span>Approved</span>
+                            </label>
+                        </div>
+
+                        <!-- Logo -->
+                        <div style="text-align: center; margin-bottom: 10px; min-height: 60px; display: flex; align-items: center; justify-content: center;">
+                            <div class="cdbs-logo-circle" style="width: 60px; height: 60px; border-radius: 50%; overflow: hidden; background: #f8f9fa; border: 2px solid #4a6b5a; box-shadow: 0 2px 6px rgba(0,0,0,0.1); display: flex; align-items: center; justify-content: center;">
+                                <?php echo $logo_display; ?>
+                            </div>
+                        </div>
+
+                        <!-- Camp Name -->
+                        <h3 style="margin: 0 0 6px 0; font-size: 1.1rem; color: #2c3e50; font-family: 'Abel', sans-serif; font-weight: 600; line-height: 1.3; text-align: center; word-break: break-word;">
+                            <?php echo esc_html($row->camp_name); ?>
+                        </h3>
+
+                        <!-- Location -->
+                        <?php if ($state_text) : ?>
+                        <div style="font-size: 0.85rem; color: #7f8c8d; margin: 0 0 10px 0; text-align: center;">
+                            <?php echo esc_html($state_text); ?>
+                        </div>
+                        <?php endif; ?>
+                        
+                        <!-- Details -->
+                        <div style="flex-grow: 1; font-size: 0.75rem; color: #95a5a6; margin-bottom: 10px; text-align: center;">
+                            <div style="margin-bottom: 3px;"><strong>ID:</strong> <?php echo absint($row->id); ?></div>
+                            <div style="margin-bottom: 3px;"><strong>Added:</strong> <?php echo esc_html($row->created_at ? date_i18n('M j, Y', strtotime($row->created_at)) : '—'); ?></div>
+                            <?php if ($row->last_edited) : ?>
+                                <div style="font-size: 0.7rem; color: #bdc3c7;">Edited: <?php echo esc_html(date_i18n('M j, Y', strtotime($row->last_edited))); ?></div>
+                            <?php endif; ?>
+                        </div>
+
+                        <!-- Actions -->
+                        <div style="display: flex; flex-direction: column; gap: 6px; padding-top: 10px; border-top: 2px solid #f0f0f0; margin-top: 10px;">
+                            <a class="button button-primary" href="<?php echo esc_url($edit_url); ?>" style="text-align: center; text-decoration: none; background: #4a6b5a; border-color: #4a6b5a; font-weight: 600; padding: 8px 12px; border-radius: 5px; font-size: 0.9rem;">Full Edit</a>
+                            <a class="button" href="<?php echo esc_url($creds_url); ?>" style="text-align: center; text-decoration: none; border: 2px solid #4a6b5a; color: #4a6b5a; background: white; font-weight: 600; padding: 6px 12px; border-radius: 5px; font-size: 0.85rem;">Edit Password</a>
+                            <a class="button button-link-delete" href="<?php echo esc_url($del_url); ?>" data-cdbs-delete="1" style="text-align: center; color: #d63638; border-color: #d63638; font-weight: 500; font-size: 0.85rem;">Delete</a>
+                        </div>
+                    </div>
+                </div>
                 <?php endforeach; endif; ?>
-                </tbody>
-            </table>
+            </div>
+        </div>
+
+        <!-- Camp Card Styling -->
+        <style>
+            .cdbs-camp-card {
+                cursor: pointer;
+            }
+            .cdbs-card-inner:hover {
+                box-shadow: 0 8px 25px rgba(0,0,0,0.15) !important;
+                transform: translateY(-5px) !important;
+            }
+            #cdbs-camps-grid {
+                margin-top: 20px;
+            }
+            .cdbs-camp-card.hidden {
+                display: none;
+            }
+            .cdbs-logo-circle img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+            }
+        </style>
+
+        <!-- Search & Sort JavaScript -->
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const searchInput = document.getElementById('cdbs-camp-search');
+            const sortSelect = document.getElementById('cdbs-sort-select');
+            const grid = document.getElementById('cdbs-camps-grid');
+            const cards = Array.from(document.querySelectorAll('.cdbs-camp-card'));
+
+            function filterAndSort() {
+                const searchTerm = searchInput.value.toLowerCase();
+                const [sortBy, sortOrder] = (sortSelect.value || 'created_at-desc').split('-');
+
+                // Filter
+                const filtered = cards.filter(card => {
+                    const name = card.getAttribute('data-camp-name').toLowerCase();
+                    const state = card.getAttribute('data-camp-state').toLowerCase();
+                    return name.includes(searchTerm) || state.includes(searchTerm);
+                });
+
+                // Sort
+                filtered.sort((a, b) => {
+                    let aVal = a.getAttribute('data-camp-' + sortBy);
+                    let bVal = b.getAttribute('data-camp-' + sortBy);
+
+                    if (sortBy === 'created_at') {
+                        aVal = new Date(aVal).getTime();
+                        bVal = new Date(bVal).getTime();
+                    } else {
+                        aVal = (aVal || '').localeCompare(bVal || '');
+                    }
+
+                    return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+                });
+
+                // Update display
+                cards.forEach(card => card.classList.add('hidden'));
+                filtered.forEach(card => card.classList.remove('hidden'));
+                
+                // Update counts
+                const totalCountElement = document.getElementById('cdbs-camp-count');
+                const approvedCountElement = document.getElementById('cdbs-approved-count');
+                const approvedCount = filtered.filter(card => card.getAttribute('data-camp-approved') === '1').length;
+                
+                if (totalCountElement) {
+                    totalCountElement.textContent = filtered.length;
+                }
+                if (approvedCountElement) {
+                    approvedCountElement.textContent = approvedCount;
+                }
+            }
+
+            searchInput.addEventListener('input', filterAndSort);
+            sortSelect.addEventListener('change', filterAndSort);
+            
+            // Toggle inactive camps
+            const toggleBtn = document.getElementById('cdbs-toggle-inactive');
+            let showingInactive = false;
+            
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function() {
+                    showingInactive = !showingInactive;
+                    
+                    if (showingInactive) {
+                        // Show only inactive camps
+                        cards.forEach(card => {
+                            const isApproved = card.getAttribute('data-camp-approved') === '1';
+                            if (isApproved) {
+                                card.classList.add('hidden');
+                            } else {
+                                card.classList.remove('hidden');
+                            }
+                        });
+                        toggleBtn.querySelector('.show-text').style.display = 'none';
+                        toggleBtn.querySelector('.hide-text').style.display = 'inline';
+                        toggleBtn.style.background = '#DA9D43';
+                        toggleBtn.style.color = 'white';
+                        
+                        // Update counts
+                        const inactiveCount = cards.filter(card => card.getAttribute('data-camp-approved') === '0').length;
+                        const totalCountElement = document.getElementById('cdbs-camp-count');
+                        const approvedCountElement = document.getElementById('cdbs-approved-count');
+                        if (totalCountElement) totalCountElement.textContent = inactiveCount;
+                        if (approvedCountElement) approvedCountElement.textContent = '0';
+                    } else {
+                        // Show all camps - reapply current filters
+                        filterAndSort();
+                        toggleBtn.querySelector('.show-text').style.display = 'inline';
+                        toggleBtn.querySelector('.hide-text').style.display = 'none';
+                        toggleBtn.style.background = '';
+                        toggleBtn.style.color = '';
+                    }
+                });
+            }
+        });
+        </script>
+            <?php endif; // end if not editing ?>
 
             <?php
             if (isset($_GET['action'], $_GET['camp']) && $_GET['action']==='edit' && wp_verify_nonce($_GET['_wpnonce'] ?? '', 'edit_camp')):
@@ -1033,7 +1200,9 @@ class CreativeDBS_Camp_Management {
                     $sel_act_names = [];
                     if ($act_terms) { foreach ($act_terms as $t){ if (in_array($t->id, $sel_acts, true)) $sel_act_names[] = $t->name; } }
             ?>
-                <hr />
+                <div style="margin-bottom: 20px;">
+                    <a href="<?php echo esc_url(admin_url('admin.php?page=' . self::SLUG)); ?>" class="button">&larr; <?php esc_html_e('Back to Camps', 'creativedbs'); ?></a>
+                </div>
                 <h2><?php esc_html_e('Edit Camp', 'creativedbs'); ?></h2>
                 <form method="post">
                     <?php wp_nonce_field('save_camp'); ?>
@@ -1163,10 +1332,10 @@ class CreativeDBS_Camp_Management {
                                 if ($accommodations): foreach ($accommodations as $acc):
                                 ?>
                                     <div id="accommodation-view-<?php echo $acc->id; ?>" style="border:1px solid #ddd;padding:10px;margin-bottom:10px;background:#fff;position:relative;">
-                                        <strong><?php echo esc_html($acc->name); ?></strong><br/>
-                                        <small><em>Capacity:</em> <?php echo esc_html($acc->capacity); ?> | <em>Type:</em> <?php echo esc_html($acc->accommodation_type); ?></small><br/>
+                                        <strong><?php echo esc_html( wp_unslash( $acc->name ) ); ?></strong><br/>
+                                        <small><em>Capacity:</em> <?php echo esc_html($acc->capacity); ?> | <em>Type:</em> <?php echo esc_html( wp_unslash( $acc->accommodation_type ) ); ?></small><br/>
                                         <?php if ($acc->description): ?>
-                                            <small><?php echo esc_html($acc->description); ?></small>
+                                            <small><?php echo esc_html( wp_unslash( $acc->description ) ); ?></small>
                                         <?php endif; ?>
                                         <div style="position:absolute;top:10px;right:10px;">
                                             <button type="button" class="button button-small" onclick="toggleAccommodationForm(<?php echo $acc->id; ?>)">Edit</button>
@@ -1177,8 +1346,8 @@ class CreativeDBS_Camp_Management {
                                         <h4 style="margin-top:0;">Edit Accommodation</h4>
                                         <p><label><strong>Name:</strong><br/><input type="text" id="acc-name-<?php echo $acc->id; ?>" class="regular-text" value="<?php echo esc_attr($acc->name); ?>" /></label></p>
                                         <p><label><strong>Capacity:</strong><br/><input type="number" id="acc-capacity-<?php echo $acc->id; ?>" class="small-text" value="<?php echo esc_attr($acc->capacity); ?>" /></label></p>
-                                        <p><label><strong>Type:</strong><br/><input type="text" id="acc-type-<?php echo $acc->id; ?>" class="regular-text" value="<?php echo esc_attr($acc->accommodation_type); ?>" /></label></p>
-                                        <p><label><strong>Description:</strong><br/><textarea id="acc-description-<?php echo $acc->id; ?>" class="large-text" rows="3"><?php echo esc_textarea($acc->description); ?></textarea></label></p>
+                                        <p><label><strong>Type:</strong><br/><input type="text" id="acc-type-<?php echo $acc->id; ?>" class="regular-text" value="<?php echo esc_attr( wp_unslash( $acc->accommodation_type ) ); ?>" /></label></p>
+                                        <p><label><strong>Description:</strong><br/><textarea id="acc-description-<?php echo $acc->id; ?>" class="large-text" rows="3"><?php echo esc_textarea( wp_unslash( $acc->description ) ); ?></textarea></label></p>
                                         <button type="button" class="button button-primary" onclick="saveAccommodation(<?php echo $acc->id; ?>, <?php echo $camp_id; ?>)">Save</button>
                                         <button type="button" class="button" onclick="toggleAccommodationForm(<?php echo $acc->id; ?>)">Cancel</button>
                                     </div>
@@ -1830,6 +1999,27 @@ class CreativeDBS_Camp_Management {
                     <button type="submit" name="cdbs_save_settings" class="button button-primary"><?php esc_html_e('Save Settings', 'creativedbs'); ?></button>
                 </p>
             </form>
+            
+            <hr style="margin: 40px 0;">
+            
+            <h2><?php esc_html_e('Debug Tools', 'creativedbs'); ?></h2>
+            <table class="form-table" role="presentation">
+                <tr>
+                    <th scope="row"><?php esc_html_e('Daily Notifications', 'creativedbs'); ?></th>
+                    <td>
+                        <?php 
+                        $plugin_basename = plugin_basename( CREATIVE_DBS_CAMPMGMT_FILE );
+                        $plugin_folder = dirname( $plugin_basename );
+                        $debug_url = plugins_url( $plugin_folder . '/debug-check-notifications.php' );
+                        ?>
+                        <a href="<?php echo esc_url( $debug_url ); ?>" class="button" target="_blank"><?php esc_html_e('Check Notification Status', 'creativedbs'); ?></a>
+                        <p class="description">
+                            View the daily notification queue, check cron schedule, and manually send pending notifications. 
+                            Emails are sent automatically at 8:00 PM CET when camp directors update their profiles.
+                        </p>
+                    </td>
+                </tr>
+            </table>
         </div>
         <?php
     }

@@ -1,0 +1,36 @@
+
+# Cleanup Summary - February 13, 2026
+
+## ✅ Archived (33 files)
+- 13 restore point files
+- 12 old ZIP builds  
+- 6 implementation notes
+- 2 session summaries
+- 1 backup file
+
+## 📁 Remaining in Root (12 docs + 1 build)
+
+### Essential Documentation:
+- README.md - Main documentation
+- BUILD-INSTRUCTIONS.md - Deployment guide
+- SHORTCODES-GUIDE.md - User guide
+- DEVELOPMENT.md - Developer notes
+
+### Feature Documentation:
+- IMPORT-EXPORT-DOCUMENTATION.md
+- IMPORT-EXPORT-FIELD-MAPPING.md
+- DAILY-NOTIFICATIONS-SUMMARY.md
+- PASSWORD-RESET-SETUP.md
+- SOCIAL-VIDEO-SHORTCODES.md
+
+### Project Info:
+- CHANGELOG.md - Version history
+- PROJECT_STATE.md - Current state
+- README-INSTRUCTIONS.md - Additional instructions
+
+### Current Build:
+- creativedbs-camp-mgmt-v3.5.0.zip ⭐
+
+## 📂 Archive Location:
+All archived files moved to: _archive/
+

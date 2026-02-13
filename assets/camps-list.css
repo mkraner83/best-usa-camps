@@ -416,6 +416,83 @@ input[type="text"].camps-search-input:focus {
 	color: #4a6b5a;
 }
 
+/* Pagination Styles */
+.camps-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 10px;
+	margin-top: 40px;
+	padding: 20px 0;
+}
+
+.pagination-btn {
+	padding: 10px 20px;
+	background: #4a6b5a;
+	color: white;
+	text-decoration: none;
+	border-radius: 6px;
+	font-weight: 600;
+	font-size: 1rem;
+	transition: background 0.2s ease;
+	cursor: pointer;
+	border: none;
+	font-family: Abel, sans-serif;
+}
+
+.pagination-btn:hover {
+	background: #3a5a4a;
+	color: white;
+	text-decoration: none;
+}
+
+.pagination-btn.pagination-disabled {
+	background: #e0e0e0;
+	color: #999;
+	cursor: not-allowed;
+	pointer-events: none;
+}
+
+.pagination-numbers {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+}
+
+.pagination-number {
+	display: inline-block;
+	padding: 8px 14px;
+	background: #4a6b5a;
+	color: white;
+	text-decoration: none;
+	border-radius: 5px;
+	font-weight: 600;
+	font-size: 0.95rem;
+	transition: background 0.2s ease;
+	min-width: 40px;
+	text-align: center;
+	font-family: Abel, sans-serif;
+}
+
+.pagination-number:hover {
+	background: #3a5a4a;
+	color: white;
+	text-decoration: none;
+}
+
+.pagination-number.pagination-current {
+	background: #DA9D43;
+	color: white;
+	cursor: default;
+	pointer-events: none;
+}
+
+.pagination-ellipsis {
+	padding: 8px 6px;
+	color: #4a6b5a;
+	font-weight: 600;
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
 	.camps-grid-4 {
@@ -453,6 +530,23 @@ input[type="text"].camps-search-input:focus {
 	
 	.camp-logo-circle.camp-logo-placeholder span {
 		font-size: 1.2rem;
+	}
+	
+	/* Pagination mobile adjustments */
+	.camps-pagination {
+		flex-wrap: wrap;
+		gap: 8px;
+	}
+	
+	.pagination-btn {
+		padding: 8px 16px;
+		font-size: 0.9rem;
+	}
+	
+	.pagination-number {
+		padding: 6px 10px;
+		font-size: 0.85rem;
+		min-width: 35px;
 	}
 }
 

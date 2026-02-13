@@ -482,7 +482,7 @@ class Camp_Frontend {
 		?>
 		<div class="camp-section camp-description<?php echo $custom_class; ?>">
 			<div class="description-content">
-				<?php echo wpautop( wp_kses_post( $camp['about_camp'] ) ); ?>
+				<?php echo wpautop( wp_kses_post( wp_unslash( $camp['about_camp'] ) ) ); ?>
 			</div>
 		</div>
 		<?php
@@ -730,17 +730,21 @@ class Camp_Frontend {
 		<div class="camp-section camp-accommodations">
 			<div class="accommodations-container <?php echo $layout_class . ' ' . $columns_class . $custom_class; ?>">
 				<?php foreach ( $accommodations as $acc ) : ?>
+					<?php
+						$acc_name = wp_unslash( $acc['name'] ?? '' );
+						$acc_description = wp_unslash( $acc['description'] ?? '' );
+					?>
 					<div class="accommodation-card">
 						<div class="accommodation-header">
-							<h3><?php echo esc_html( $acc['name'] ); ?></h3>
+							<h3><?php echo esc_html( $acc_name ); ?></h3>
 							<?php if ( ! empty( $acc['capacity'] ) ) : ?>
 								<div class="capacity-badge">
 									<i class="fa fa-users"></i> <?php echo esc_html( $acc['capacity'] ); ?>
 								</div>
 							<?php endif; ?>
 						</div>
-					<?php if ( ! empty( $acc['description'] ) ) : 
-						$description = esc_html( $acc['description'] );
+					<?php if ( ! empty( $acc_description ) ) : 
+						$description = esc_html( $acc_description );
 						$words = explode( ' ', $description );
 						if ( count( $words ) > 50 ) {
 							$description = implode( ' ', array_slice( $words, 0, 50 ) ) . '...';

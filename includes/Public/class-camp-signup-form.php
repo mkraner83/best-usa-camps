@@ -205,7 +205,7 @@ class Camp_Signup_Form {
 			</select></div>
 			<div class="full-width"><label>About Camp</label><textarea name="about_camp" id="about_camp_signup" placeholder="Share what makes your camp special! Describe your mission, unique programs, facilities, and what campers can expect from a summer at your camp..." required></textarea>
 				<p class="description" style="margin-top:5px;color:#666;font-size:12px;">
-					<span id="word-count-signup">0</span>/300 words
+					<span id="word-count-signup">0</span> words (180 minimum, 300 maximum) <span id="word-limit-warning-signup" style="color: #dc3545; display: none;">● Limit not met</span>
 				</p>
 			</div>
 			<div class="full-width"><label class="required-label">Camp Type</label></div>
@@ -307,11 +307,14 @@ class Camp_Signup_Form {
 			wp_die( 'Security check failed.' );
 		}
 
+		// Remove slashes from POST data to prevent double-escaping
+		$post_data = wp_unslash( $_POST );
+
 		// Validate required fields
 		$errors = [];
-		$email = sanitize_email( $_POST['email'] ?? '' );
-		$camp_name = sanitize_text_field( $_POST['camp_name'] ?? '' );
-		$camp_director = sanitize_text_field( $_POST['camp_directors'] ?? '' );
+		$email = sanitize_email( $post_data['email'] ?? '' );
+		$camp_name = sanitize_text_field( $post_data['camp_name'] ?? '' );
+		$camp_director = sanitize_text_field( $post_data['camp_directors'] ?? '' );
 		
 		if ( empty( $email ) ) {
 			$errors[] = 'Email is required.';
@@ -329,22 +332,26 @@ class Camp_Signup_Form {
 			$errors[] = 'Camp director name is required.';
 		}
 
-		if ( empty( $_POST['type_ids'] ) ) {
+		if ( empty( $post_data['type_ids'] ) ) {
 			$errors[] = 'Please select at least one camp type.';
 		}
 
-		if ( empty( $_POST['week_ids'] ) ) {
+		if ( empty( $post_data['week_ids'] ) ) {
 			$errors[] = 'Please select at least one duration.';
 		}
 
-		if ( empty( $_POST['referral_source'] ) ) {
+		if ( empty( $post_data['referral_source'] ) ) {
 			$errors[] = 'Please tell us how you heard about us.';
 		}
 
-		if ( empty( $_FILES['logo']['name'] ) ) {
-			$errors[] = 'Camp logo is required.';
-		} elseif ( $_FILES['logo']['size'] > 5 * 1024 * 1024 ) {
-			$errors[] = 'Logo file size must be 5MB or less. Current file size: ' . round( $_FILES['logo']['size'] / (1024 * 1024), 2 ) . 'MB';
+		// Validate About Camp word count (180 min - 300 max words)
+		$about_camp = wp_kses_post( $post_data['about_camp'] ?? '' );
+		$word_count = str_word_count( wp_strip_all_tags( $about_camp ) );
+		if ( $word_count < 180 ) {
+			$errors[] = 'Camp description must be at least 180 words. Current: ' . $word_count . ' words. Please add more detail about your camp.';
+		}
+		if ( $word_count > 300 ) {
+			$errors[] = 'Camp description must be 300 words or less. Current: ' . $word_count . ' words. Please shorten your description.';
 		}
 
 		if ( ! empty( $errors ) ) {
@@ -376,7 +383,7 @@ class Camp_Signup_Form {
 		update_user_meta( $user_id, 'last_name', $last_name );
 
 		// Store camp data in database
-		$camp_id = $this->create_camp_entry( $user_id, $_POST );
+		$camp_id = $this->create_camp_entry( $user_id, $post_data );
 
 		if ( ! $camp_id ) {
 			// Rollback user creation if camp creation fails
@@ -385,9 +392,9 @@ class Camp_Signup_Form {
 		}
 
 		// Link camp types, weeks, and activities
-		$this->link_camp_types( $camp_id, $_POST['type_ids'] ?? [] );
-		$this->link_camp_weeks( $camp_id, $_POST['week_ids'] ?? [] );
-		$this->link_camp_activities( $camp_id, $_POST['activities'] ?? '' );
+		$this->link_camp_types( $camp_id, $post_data['type_ids'] ?? [] );
+		$this->link_camp_weeks( $camp_id, $post_data['week_ids'] ?? [] );
+		$this->link_camp_activities( $camp_id, $post_data['activities'] ?? '' );
 
 		// Send thank you email
 		$this->send_welcome_email( $user_id, $username, $email, $camp_name );

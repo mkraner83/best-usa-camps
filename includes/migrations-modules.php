@@ -17,14 +17,25 @@ class Migrations_Modules {
 		if ( ! is_admin() ) {
 			return;
 		}
-		if ( get_option( 'creativedbs_campmgmt_modules_migrated' ) >= 1 ) {
-			return;
-		}
 
 		global $wpdb;
 		require_once ABSPATH . 'wp-admin/includes/upgrade.php';
 
 		$charset = $wpdb->get_charset_collate();
+
+		// Ensure accommodation_type exists even on already-migrated installs
+		$accommodations = $wpdb->prefix . 'camp_accommodations';
+		$accommodations_exists = $wpdb->get_var( $wpdb->prepare( "SHOW TABLES LIKE %s", $accommodations ) );
+		if ( $accommodations_exists ) {
+			$col_exists = $wpdb->get_results( "SHOW COLUMNS FROM {$accommodations} LIKE 'accommodation_type'" );
+			if ( empty( $col_exists ) ) {
+				$wpdb->query( "ALTER TABLE {$accommodations} ADD COLUMN accommodation_type VARCHAR(255) NULL AFTER capacity" );
+			}
+		}
+
+		if ( get_option( 'creativedbs_campmgmt_modules_migrated' ) >= 1 ) {
+			return;
+		}
 
 		// 1) Create camp_accommodations table
 		$accommodations = $wpdb->prefix . 'camp_accommodations';
@@ -34,6 +45,7 @@ class Migrations_Modules {
 			name VARCHAR(255) NOT NULL,
 			description TEXT NULL,
 			capacity INT NULL,
+			accommodation_type VARCHAR(255) NULL,
 			sort_order INT DEFAULT 0,
 			created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
 			PRIMARY KEY (id),

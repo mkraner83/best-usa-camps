@@ -47,9 +47,12 @@ class Contact_Form {
 			return;
 		}
 
+		// Remove slashes from POST data to prevent double-escaping
+		$post_data = wp_unslash( $_POST );
+
 		// Simple math captcha verification
-		$captcha_answer = isset( $_POST['captcha_answer'] ) ? intval( $_POST['captcha_answer'] ) : 0;
-		$captcha_expected = isset( $_POST['captcha_expected'] ) ? intval( $_POST['captcha_expected'] ) : 0;
+		$captcha_answer = isset( $post_data['captcha_answer'] ) ? intval( $post_data['captcha_answer'] ) : 0;
+		$captcha_expected = isset( $post_data['captcha_expected'] ) ? intval( $post_data['captcha_expected'] ) : 0;
 		
 		if ( $captcha_answer !== $captcha_expected ) {
 			wp_redirect( add_query_arg( 'contact_error', 'captcha', wp_get_referer() ) );
@@ -57,12 +60,12 @@ class Contact_Form {
 		}
 
 		// Sanitize and validate
-		$first_name = sanitize_text_field( $_POST['first_name'] ?? '' );
-		$last_name = sanitize_text_field( $_POST['last_name'] ?? '' );
-		$email = sanitize_email( $_POST['email'] ?? '' );
-		$email_confirm = sanitize_email( $_POST['email_confirm'] ?? '' );
-		$phone = sanitize_text_field( $_POST['phone'] ?? '' );
-		$message = sanitize_textarea_field( $_POST['message'] ?? '' );
+		$first_name = sanitize_text_field( $post_data['first_name'] ?? '' );
+		$last_name = sanitize_text_field( $post_data['last_name'] ?? '' );
+		$email = sanitize_email( $post_data['email'] ?? '' );
+		$email_confirm = sanitize_email( $post_data['email_confirm'] ?? '' );
+		$phone = sanitize_text_field( $post_data['phone'] ?? '' );
+		$message = sanitize_textarea_field( $post_data['message'] ?? '' );
 
 		// Validation
 		$errors = [];

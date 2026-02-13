@@ -300,12 +300,22 @@ document.addEventListener('DOMContentLoaded', function() {
 				const words = countWords(aboutCampField.value);
 				if (words < 180) {
 					e.preventDefault();
+					if (warningDisplay) {
+						warningDisplay.textContent = '● Too few words (minimum 180)';
+						warningDisplay.style.color = '#d63638';
+						warningDisplay.style.display = 'inline';
+					}
 					alert('About Camp description must be at least 180 words. Current: ' + words + ' words');
 					aboutCampField.focus();
 					return false;
 				}
 				if (words > 300) {
 					e.preventDefault();
+					if (warningDisplay) {
+						warningDisplay.textContent = '● Too many words (maximum 300)';
+						warningDisplay.style.color = '#d63638';
+						warningDisplay.style.display = 'inline';
+					}
 					alert('About Camp description must be 300 words or less. Current: ' + words + ' words');
 					aboutCampField.focus();
 					return false;
@@ -373,9 +383,10 @@ document.addEventListener('DOMContentLoaded', function() {
 		});
 	}
 
-	// About Camp word count (300 word limit)
+	// About Camp word count (180 minimum, 300 maximum)
 	const aboutCampField = document.getElementById('about_camp_signup');
 	const wordCountDisplay = document.getElementById('word-count-signup');
+	const warningDisplay = document.getElementById('word-limit-warning-signup');
 	
 	if (aboutCampField && wordCountDisplay) {
 		function countWords(text) {
@@ -389,16 +400,35 @@ document.addEventListener('DOMContentLoaded', function() {
 			const words = countWords(text);
 			wordCountDisplay.textContent = words;
 			
-			// Change color based on word count
-			if (words > 300) {
+			// Change color and show warnings based on word count
+			if (words < 180) {
 				wordCountDisplay.style.color = '#d63638';
-				wordCountDisplay.parentElement.style.color = '#d63638';
+				wordCountDisplay.style.fontWeight = '700';
+				if (warningDisplay) {
+					warningDisplay.textContent = '● Too few words (minimum 180)';
+					warningDisplay.style.display = 'inline';
+				}
+			} else if (words > 300) {
+				wordCountDisplay.style.color = '#d63638';
+				wordCountDisplay.style.fontWeight = '700';
+				if (warningDisplay) {
+					warningDisplay.textContent = '● Too many words (maximum 300)';
+					warningDisplay.style.display = 'inline';
+				}
 			} else if (words > 270) {
 				wordCountDisplay.style.color = '#dba617';
-				wordCountDisplay.parentElement.style.color = '#dba617';
+				wordCountDisplay.style.fontWeight = '700';
+				if (warningDisplay) {
+					warningDisplay.textContent = '● Approaching maximum';
+					warningDisplay.style.color = '#dba617';
+					warningDisplay.style.display = 'inline';
+				}
 			} else {
-				wordCountDisplay.style.color = '#666';
-				wordCountDisplay.parentElement.style.color = '#666';
+				wordCountDisplay.style.color = '#28a745';
+				wordCountDisplay.style.fontWeight = '600';
+				if (warningDisplay) {
+					warningDisplay.style.display = 'none';
+				}
 			}
 		}
 		

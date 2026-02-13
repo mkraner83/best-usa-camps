@@ -49,6 +49,10 @@ class Camps_List {
 		$filter_date_from = isset( $_GET['filter_date_from'] ) ? sanitize_text_field( $_GET['filter_date_from'] ) : '';
 		$filter_date_to = isset( $_GET['filter_date_to'] ) ? sanitize_text_field( $_GET['filter_date_to'] ) : '';
 		
+		// Get pagination parameter
+		$current_page = isset( $_GET['camp_page'] ) ? max( 1, intval( $_GET['camp_page'] ) ) : 1;
+		$per_page = 20;
+		
 		// Check if any filters/search are active
 		$has_active_filters = ! empty( $search_query ) || ! empty( $filter_state ) || ! empty( $filter_type ) || 
 		                      ! empty( $filter_duration ) || $filter_price_min !== '' || $filter_price_max !== '' || 
@@ -204,9 +208,22 @@ class Camps_List {
 			$camps = array_values( $camps_by_id );
 		}
 		
+		// Calculate total camps and pagination
+		$total_camps = count( $camps );
+		$total_pages = ceil( $total_camps / $per_page );
+		
+		// Ensure current page is valid
+		if ( $current_page > $total_pages && $total_pages > 0 ) {
+			$current_page = $total_pages;
+		}
+		
+		// Slice camps array for current page
+		$offset = ( $current_page - 1 ) * $per_page;
+		$camps_on_page = array_slice( $camps, $offset, $per_page );
+		
 		// Enrich camps with taxonomy data and camp page URL (only if we have camps)
-		if ( ! empty( $camps ) ) {
-			foreach ( $camps as &$camp ) {
+		if ( ! empty( $camps_on_page ) ) {
+			foreach ( $camps_on_page as &$camp ) {
 				// Get camp types
 				$camp['camp_types'] = $wpdb->get_col( $wpdb->prepare(
 					"SELECT t.name FROM {$wpdb->prefix}camp_type_terms t
@@ -261,9 +278,10 @@ class Camps_List {
 		}
 		
 		// Debug: Log camp IDs to check for duplicates
-		if ( ! empty( $camps ) ) {
-			error_log( 'Camps List - Total camps: ' . count( $camps ) );
-			error_log( 'Camps List - Camp IDs: ' . implode( ', ', array_column( $camps, 'id' ) ) );
+		if ( ! empty( $camps_on_page ) ) {
+			error_log( 'Camps List - Total camps: ' . $total_camps );
+			error_log( 'Camps List - Current page: ' . $current_page . ' of ' . $total_pages );
+			error_log( 'Camps List - Camp IDs on page: ' . implode( ', ', array_column( $camps_on_page, 'id' ) ) );
 		}
 		
 		ob_start();
@@ -283,9 +301,9 @@ class Camps_List {
 			<div class="camps-search-bar">
 				<form method="get" action="" class="camps-search-form" id="camps-filter-form">
 					<?php
-					// Preserve existing query parameters
+					// Preserve existing query parameters (excluding camp_page for form submission)
 					foreach ( $_GET as $key => $value ) {
-						if ( ! in_array( $key, [ 'camp_search', 'camp_sort', 'filter_state', 'filter_type', 'filter_duration', 'filter_price_min', 'filter_price_max', 'filter_date_from', 'filter_date_to' ] ) ) {
+						if ( ! in_array( $key, [ 'camp_search', 'camp_sort', 'filter_state', 'filter_type', 'filter_duration', 'filter_price_min', 'filter_price_max', 'filter_date_from', 'filter_date_to', 'camp_page' ] ) ) {
 							echo '<input type="hidden" name="' . esc_attr( $key ) . '" value="' . esc_attr( $value ) . '">';
 						}
 					}
@@ -462,7 +480,10 @@ class Camps_List {
 									Search for: <?php echo esc_html( $criteria_text ); ?> |
 								</span>
 							<?php endif; ?>
-							<span class="camps-count"><?php echo count( $camps ); ?> camps</span>
+							<span class="camps-count"><?php echo $total_camps; ?> camps</span>
+							<?php if ( $total_pages > 1 ) : ?>
+								<span class="camps-page-info"> - Page <?php echo $current_page; ?> of <?php echo $total_pages; ?></span>
+							<?php endif; ?>
 							<select name="camp_sort" id="camp_sort" class="camps-sort-select" onchange="this.form.submit()">
 								<option value="random" <?php selected( $sort_by, 'random' ); ?>>Random Order</option>
 								<option value="name-asc" <?php selected( $sort_by, 'name-asc' ); ?>>Name A-Z</option>
@@ -481,15 +502,15 @@ class Camps_List {
 				<div class="camps-empty">
 					<p>Use the search or filters above to find camps.</p>
 				</div>
-			<?php elseif ( empty( $camps ) ) : ?>
+			<?php elseif ( empty( $camps_on_page ) ) : ?>
 				<div class="camps-empty">
 					<p>No camps match your search criteria. Try adjusting your filters.</p>
 				</div>
 			<?php else : ?>
 			<div class="camps-grid camps-grid-<?php echo $columns; ?>">
 				<?php 
-				$camp_index = 0;
-				foreach ( $camps as $camp ) : 
+				$camp_index = $offset; // Start from the offset position
+				foreach ( $camps_on_page as $camp ) : 
 					$camp_index++;
 				?>
 					<!-- Camp #<?php echo $camp_index; ?> - ID: <?php echo $camp['id']; ?> -->
@@ -586,6 +607,58 @@ class Camps_List {
 					</div>
 				<?php endforeach; ?>
 			</div>
+			
+			<?php if ( $total_pages > 1 ) : ?>
+				<div class="camps-pagination">
+					<?php
+					// Build base URL with all current filters
+					$base_url_params = $_GET;
+					unset( $base_url_params['camp_page'] ); // Remove page parameter, we'll add it separately
+					$base_url = add_query_arg( $base_url_params, strtok( $_SERVER['REQUEST_URI'], '?' ) );
+					
+					// Previous button
+					if ( $current_page > 1 ) :
+						$prev_url = add_query_arg( 'camp_page', $current_page - 1, $base_url );
+						?>
+						<a href="<?php echo esc_url( $prev_url . '#camps-filter-form' ); ?>" class="pagination-btn pagination-prev">← Previous</a>
+					<?php else : ?>
+						<span class="pagination-btn pagination-prev pagination-disabled">← Previous</span>
+					<?php endif; ?>
+					
+					<div class="pagination-numbers">
+						<?php
+						// Show page numbers with smart truncation
+						$range = 2; // How many pages to show on each side of current page
+						
+						for ( $i = 1; $i <= $total_pages; $i++ ) :
+							// Always show first page, last page, current page, and pages within range
+							if ( $i == 1 || $i == $total_pages || ( $i >= $current_page - $range && $i <= $current_page + $range ) ) :
+								if ( $i == $current_page ) : ?>
+									<span class="pagination-number pagination-current"><?php echo $i; ?></span>
+								<?php else :
+									$page_url = add_query_arg( 'camp_page', $i, $base_url );
+									?>
+									<a href="<?php echo esc_url( $page_url . '#camps-filter-form' ); ?>" class="pagination-number"><?php echo $i; ?></a>
+								<?php endif;
+							elseif ( $i == $current_page - $range - 1 || $i == $current_page + $range + 1 ) :
+								// Show ellipsis
+								?>
+								<span class="pagination-ellipsis">...</span>
+							<?php endif;
+						endfor;
+						?>
+					</div>
+					
+					<!-- Next button -->
+					<?php if ( $current_page < $total_pages ) :
+						$next_url = add_query_arg( 'camp_page', $current_page + 1, $base_url );
+						?>
+						<a href="<?php echo esc_url( $next_url . '#camps-filter-form' ); ?>" class="pagination-btn pagination-next">Next →</a>
+					<?php else : ?>
+						<span class="pagination-btn pagination-next pagination-disabled">Next →</span>
+					<?php endif; ?>
+				</div>
+			<?php endif; ?>
 			<?php endif; ?>
 		</div>
 		
