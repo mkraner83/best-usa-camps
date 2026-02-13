@@ -1758,8 +1758,12 @@ class Camp_Frontend {
 		$custom_class = ! empty( $atts['class'] ) ? ' ' . esc_attr( $atts['class'] ) : '';
 		$aspect_class = 'aspect-' . esc_attr( $atts['aspect_ratio'] );
 		
+		// Output VideoObject schema only once per page
+		$schema_output = $this->output_video_schema( $camp, $video_url, $embed_url );
+		
 		ob_start();
 		?>
+		<?php echo $schema_output; ?>
 		<div class="camp-section camp-video<?php echo $custom_class; ?>">
 			<div class="video-wrapper <?php echo $aspect_class; ?>">
 				<iframe 
@@ -1773,6 +1777,67 @@ class Camp_Frontend {
 		</div>
 		<?php
 		return ob_get_clean();
+	}
+
+	/**
+	 * Output VideoObject structured data (JSON-LD) for Google Search Console
+	 * Only outputs once per page to avoid duplicates
+	 *
+	 * @param array $camp Camp data
+	 * @param string $video_url Original video URL
+	 * @param string $embed_url Embed URL
+	 * @return string JSON-LD script tag or empty string
+	 */
+	private function output_video_schema( $camp, $video_url, $embed_url ) {
+		// Prevent duplicate schema output if shortcode appears multiple times
+		static $schema_output_done = false;
+		
+		if ( $schema_output_done ) {
+			return '';
+		}
+		
+		$schema_output_done = true;
+		
+		// Get thumbnailUrl (required field)
+		// Primary: use page featured image
+		$thumbnail_url = get_the_post_thumbnail_url( get_the_ID(), 'full' );
+		
+		// Fallback 1: site icon
+		if ( empty( $thumbnail_url ) ) {
+			$thumbnail_url = get_site_icon_url( 512 );
+		}
+		
+		// Fallback 2: default placeholder (WordPress default)
+		if ( empty( $thumbnail_url ) ) {
+			$thumbnail_url = includes_url( 'images/media/video.png' );
+		}
+		
+		// Build VideoObject schema
+		$schema = [
+			'@context' => 'https://schema.org',
+			'@type' => 'VideoObject',
+			'name' => ! empty( $camp['camp_name'] ) ? $camp['camp_name'] . ' - Camp Video' : 'Camp Video',
+			'description' => ! empty( $camp['about_camp'] ) ? wp_strip_all_tags( wp_unslash( $camp['about_camp'] ) ) : 'Watch our camp video',
+			'thumbnailUrl' => $thumbnail_url,
+			'embedUrl' => $embed_url,
+			'contentUrl' => $video_url,
+		];
+		
+		// Add uploadDate if available (use camp created_at or current date)
+		if ( ! empty( $camp['created_at'] ) ) {
+			$schema['uploadDate'] = gmdate( 'c', strtotime( $camp['created_at'] ) );
+		} else {
+			$schema['uploadDate'] = gmdate( 'c' );
+		}
+		
+		// Add duration if we can extract it (optional, not required)
+		// Note: Duration requires API calls to YouTube/Vimeo, skipping for now
+		
+		// Output JSON-LD
+		return sprintf(
+			'<script type="application/ld+json">%s</script>',
+			wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
+		);
 	}
 
 	/**
