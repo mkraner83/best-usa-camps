@@ -12,6 +12,12 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 class Camp_Frontend {
 
 	/**
+	 * Store video data for schema output
+	 * @var array|null
+	 */
+	private $video_schema_data = null;
+
+	/**
 	 * Register shortcodes
 	 */
 	public function __construct() {
@@ -50,6 +56,7 @@ class Camp_Frontend {
 		// Enqueue frontend styles
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_frontend_styles' ] );
 		add_action( 'wp_head', [ $this, 'add_fontawesome_fallback' ], 100 );
+		add_action( 'wp_head', [ $this, 'output_video_schema_in_head' ], 1 );
 		
 		// AJAX handlers for search
 		add_action( 'wp_ajax_camp_search', [ $this, 'ajax_camp_search' ] );
@@ -1766,21 +1773,18 @@ class Camp_Frontend {
 		$custom_class = ! empty( $atts['class'] ) ? ' ' . esc_attr( $atts['class'] ) : '';
 		$aspect_class = 'aspect-' . esc_attr( $atts['aspect_ratio'] );
 		
-		// Output VideoObject schema only once per page
-		$schema_output = $this->output_video_schema( $camp, $video_url, $embed_url );
+		// Store data for schema output in head
+		if ( $this->video_schema_data === null ) {
+			$this->video_schema_data = [
+				'camp' => $camp,
+				'video_url' => $video_url,
+				'embed_url' => $embed_url,
+			];
+		}
 		
 		ob_start();
 		?>
-		<?php echo $schema_output; ?>
-		<div class="camp-section camp-video<?php echo $custom_class; ?>" itemscope itemtype="https://schema.org/VideoObject">
-			<meta itemprop="name" content="<?php echo esc_attr( ! empty( $camp['camp_name'] ) ? $camp['camp_name'] . ' - Camp Video' : 'Camp Video' ); ?>">
-			<meta itemprop="thumbnailUrl" content="<?php echo esc_url( $this->get_video_thumbnail_url() ); ?>">
-			<meta itemprop="embedUrl" content="<?php echo esc_url( $embed_url ); ?>">
-			<meta itemprop="contentUrl" content="<?php echo esc_url( $video_url ); ?>">
-			<meta itemprop="uploadDate" content="<?php echo ! empty( $camp['created_at'] ) ? esc_attr( gmdate( 'c', strtotime( $camp['created_at'] ) ) ) : esc_attr( gmdate( 'c' ) ); ?>">
-			<?php if ( ! empty( $camp['about_camp'] ) ) : ?>
-			<meta itemprop="description" content="<?php echo esc_attr( wp_strip_all_tags( wp_unslash( $camp['about_camp'] ) ) ); ?>">
-			<?php endif; ?>
+		<div class="camp-section camp-video<?php echo $custom_class; ?>" data-video-schema="true">
 			<div class="video-wrapper <?php echo $aspect_class; ?>">
 				<iframe 
 					src="<?php echo esc_url( $embed_url ); ?>" 
@@ -1797,23 +1801,33 @@ class Camp_Frontend {
 	}
 
 	/**
-	 * Output VideoObject structured data (JSON-LD) for Google Search Console
-	 * Only outputs once per page to avoid duplicates
-	 *
-	 * @param array $camp Camp data
-	 * @param string $video_url Original video URL
-	 * @param string $embed_url Embed URL
-	 * @return string JSON-LD script tag or empty string
+	 * Output VideoObject structured data in <head> section
+	 * This ensures our schema loads FIRST, before any theme/plugin duplicates
 	 */
-	private function output_video_schema( $camp, $video_url, $embed_url ) {
-		// Prevent duplicate schema output if shortcode appears multiple times
-		static $schema_output_done = false;
+	public function output_video_schema_in_head() {
+		global $post;
 		
-		if ( $schema_output_done ) {
-			return '';
+		// Check if post has [camp_video] shortcode
+		if ( ! is_a( $post, 'WP_Post' ) || ! has_shortcode( $post->post_content, 'camp_video' ) ) {
+			return;
 		}
 		
-		$schema_output_done = true;
+		// Get camp data
+		$camp = $this->get_camp_data();
+		if ( ! $camp ) {
+			return;
+		}
+		
+		$video_url = ! empty( $camp['video_url'] ) ? trim( $camp['video_url'] ) : '';
+		if ( empty( $video_url ) ) {
+			return;
+		}
+		
+		// Convert to embed URL
+		$embed_url = $this->convert_to_embed_url( $video_url );
+		if ( empty( $embed_url ) ) {
+			return;
+		}
 		
 		// Get thumbnailUrl (required field)
 		$thumbnail_url = $this->get_video_thumbnail_url();
@@ -1836,12 +1850,9 @@ class Camp_Frontend {
 			$schema['uploadDate'] = gmdate( 'c' );
 		}
 		
-		// Add duration if we can extract it (optional, not required)
-		// Note: Duration requires API calls to YouTube/Vimeo, skipping for now
-		
-		// Output JSON-LD
-		return sprintf(
-			'<script type="application/ld+json">%s</script>',
+		// Output JSON-LD in head - mark it as ours with data attribute
+		echo sprintf(
+			"\n" . '<script type="application/ld+json" data-camp-video-schema="true">%s</script>' . "\n",
 			wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
 		);
 	}
@@ -1996,30 +2007,30 @@ class Camp_Frontend {
 			
 			function removeDuplicateVideoSchema() {
 				var scripts = document.querySelectorAll('script[type="application/ld+json"]');
-				var videoSchemas = [];
-				var validSchemaIndex = -1;
+				var ourSchema = null;
+				var duplicates = [];
 				
 				// Find all VideoObject schemas
-				scripts.forEach(function(script, index) {
+				scripts.forEach(function(script) {
 					try {
 						var data = JSON.parse(script.textContent);
 						if (data['@type'] === 'VideoObject') {
-							videoSchemas.push({script: script, data: data, index: index});
-							// Keep the one with thumbnailUrl (our valid one)
-							if (data.thumbnailUrl) {
-								validSchemaIndex = videoSchemas.length - 1;
+							// Keep ONLY our schema (marked with data-camp-video-schema)
+							if (script.hasAttribute('data-camp-video-schema')) {
+								ourSchema = script;
+							} else {
+								// This is a duplicate from another source - remove it
+								duplicates.push(script);
 							}
 						}
 					} catch(e) {}
 				});
 				
-				// If multiple VideoObject schemas exist, remove invalid ones
-				if (videoSchemas.length > 1 && validSchemaIndex >= 0) {
-					videoSchemas.forEach(function(item, idx) {
-						if (idx !== validSchemaIndex) {
-							item.script.remove();
-							console.log('Removed duplicate VideoObject schema');
-						}
+				// Remove ALL duplicate VideoObject schemas
+				if (duplicates.length > 0) {
+					duplicates.forEach(function(script) {
+						script.remove();
+						console.log('Removed duplicate VideoObject schema from:', script.textContent.substring(0, 100));
 					});
 				}
 			}
