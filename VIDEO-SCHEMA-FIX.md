@@ -2,6 +2,7 @@
 
 **Date:** February 13, 2026  
 **Issue:** Missing field "thumbnailUrl" in VideoObject structured data  
+**Updated:** Added duplicate schema prevention (Feb 13, 2026)  
 **Status:** ✅ Fixed
 
 ---
@@ -12,7 +13,11 @@ Google Search Console reported invalid VideoObject schema on:
 - https://bestusacamps.com/creative-themes-day-camp/
 - https://bestusacamps.com/winners-camp-foundation/
 
-**Error:** Missing required field `thumbnailUrl`
+**Primary Error:** Missing required field `thumbnailUrl`
+
+**Secondary Issue:** Duplicate VideoObject schemas detected
+- Plugin's schema (valid): "Creative Themes Day Camp - Camp Video" 
+- Auto-generated schema (invalid): From Elementor/theme/SEO plugin, missing thumbnailUrl
 
 ---
 
@@ -23,6 +28,7 @@ Google Search Console reported invalid VideoObject schema on:
 
 ### Changes Made
 
+#### Phase 1: Initial Fix (thumbnailUrl)
 1. **Added new method:** `output_video_schema()` (lines ~1785-1845)
    - Outputs VideoObject JSON-LD structured data
    - Only executes once per page (prevents duplicates with static flag)
@@ -31,6 +37,28 @@ Google Search Console reported invalid VideoObject schema on:
 2. **Enhanced:** `render_video()` function
    - Now calls `output_video_schema()` before rendering iframe
    - Schema outputs once even if `[camp_video]` appears multiple times on same page
+
+#### Phase 2: Duplicate Schema Prevention
+3. **Added microdata attributes** to video wrapper (lines ~1740-1756)
+   - `itemscope itemtype="https://schema.org/VideoObject"`
+   - `<meta itemprop="name">`, `<meta itemprop="thumbnailUrl">`, etc.
+   - Provides redundant schema markup to take precedence
+   - Signals to parsers that schema already exists
+
+4. **Extracted helper method:** `get_video_thumbnail_url()` (lines ~1847-1865)
+   - Reusable thumbnail URL logic for both JSON-LD and microdata
+   - Same 3-tier fallback used consistently
+
+5. **Added oEmbed filter** in constructor
+   - `add_filter( 'oembed_dataparse', [ $this, 'remove_oembed_schema' ] )`
+   - Strips schema markup from WordPress auto-generated oEmbed output
+   - Prevents conflicts with plugin's explicit schema
+
+6. **New method:** `remove_oembed_schema()` (lines ~1950-1970)
+   - Filters oEmbed HTML output
+   - Removes JSON-LD script tags (`application/ld+json`)
+   - Removes microdata attributes from auto-generated video embeds
+   - Only affects video type embeds
 
 ### VideoObject Schema Fields
 
@@ -47,17 +75,24 @@ Google Search Console reported invalid VideoObject schema on:
 ### thumbnailUrl Logic (3-tier fallback)
 
 ```php
-// 1. Primary: Page Featured Image (full size)
-$thumbnail_url = get_the_post_thumbnail_url( get_the_ID(), 'full' );
+/**
+ * Get video thumbnail URL with fallback chain
+ */
+private function get_video_thumbnail_url() {
+    // 1. Primary: Page Featured Image (full size)
+    $thumbnail_url = get_the_post_thumbnail_url( get_the_ID(), 'full' );
 
-// 2. Fallback: Site Icon (512px)
-if ( empty( $thumbnail_url ) ) {
-    $thumbnail_url = get_site_icon_url( 512 );
-}
+    // 2. Fallback: Site Icon (512px)
+    if ( empty( $thumbnail_url ) ) {
+        $thumbnail_url = get_site_icon_url( 512 );
+    }
 
-// 3. Final Fallback: WordPress default video icon
-if ( empty( $thumbnail_url ) ) {
-    $thumbnail_url = includes_url( 'images/media/video.png' );
+    // 3. Final Fallback: WordPress default video icon
+    if ( empty( $thumbnail_url ) ) {
+        $thumbnail_url = includes_url( 'images/media/video.png' );
+    }
+    
+    return $thumbnail_url;
 }
 ```
 
@@ -82,7 +117,7 @@ public function render_video( $atts ) {
 }
 ```
 
-**After:**
+**After (with microdata + duplicate prevention):**
 ```php
 public function render_video( $atts ) {
     // ... validation code ...
@@ -90,19 +125,45 @@ public function render_video( $atts ) {
     // Output VideoObject schema only once per page
     $schema_output = $this->output_video_schema( $camp, $video_url, $embed_url );
     
+    $thumbnail_url = $this->get_video_thumbnail_url();
+    
     ob_start();
     ?>
     <?php echo $schema_output; ?>
-    <div class="camp-section camp-video<?php echo $custom_class; ?>">
+    <div class="camp-section camp-video<?php echo $custom_class; ?>" 
+         itemscope itemtype="https://schema.org/VideoObject">
+        
+        <!-- Microdata meta tags to prevent duplicate schema -->
+        <meta itemprop="name" content="<?php echo esc_attr( $camp['camp_name'] . ' - Camp Video' ); ?>">
+        <meta itemprop="thumbnailUrl" content="<?php echo esc_url( $thumbnail_url ); ?>">
+        <meta itemprop="embedUrl" content="<?php echo esc_url( $embed_url ); ?>">
+        <meta itemprop="contentUrl" content="<?php echo esc_url( $video_url ); ?>">
+        <meta itemprop="uploadDate" content="<?php echo esc_attr( gmdate( 'c' ) ); ?>">
+        <meta itemprop="description" content="<?php echo esc_attr( wp_strip_all_tags( $camp['about_camp'] ) ); ?>">
+        
         <div class="video-wrapper <?php echo $aspect_class; ?>">
-            <iframe src="<?php echo esc_url( $embed_url ); ?>" ...></iframe>
+            <iframe src="<?php echo esc_url( $embed_url ); ?>" 
+                    data-no-schema="true" ...></iframe>
         </div>
     </div>
     <?php
     return ob_get_clean();
 }
 
-// NEW METHOD:
+// NEW HELPER METHOD:
+private function get_video_thumbnail_url() {
+    // Get thumbnailUrl with 3-tier fallback
+    $thumbnail_url = get_the_post_thumbnail_url( get_the_ID(), 'full' );
+    if ( empty( $thumbnail_url ) ) {
+        $thumbnail_url = get_site_icon_url( 512 );
+    }
+    if ( empty( $thumbnail_url ) ) {
+        $thumbnail_url = includes_url( 'images/media/video.png' );
+    }
+    return $thumbnail_url;
+}
+
+// SCHEMA OUTPUT METHOD:
 private function output_video_schema( $camp, $video_url, $embed_url ) {
     static $schema_output_done = false;
     
@@ -112,14 +173,7 @@ private function output_video_schema( $camp, $video_url, $embed_url ) {
     
     $schema_output_done = true;
     
-    // Get thumbnailUrl with 3-tier fallback
-    $thumbnail_url = get_the_post_thumbnail_url( get_the_ID(), 'full' );
-    if ( empty( $thumbnail_url ) ) {
-        $thumbnail_url = get_site_icon_url( 512 );
-    }
-    if ( empty( $thumbnail_url ) ) {
-        $thumbnail_url = includes_url( 'images/media/video.png' );
-    }
+    $thumbnail_url = $this->get_video_thumbnail_url();
     
     // Build complete VideoObject schema
     $schema = [
@@ -138,6 +192,22 @@ private function output_video_schema( $camp, $video_url, $embed_url ) {
         wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
     );
 }
+
+// NEW METHOD: Prevent duplicate schema from oEmbed
+public function remove_oembed_schema( $html, $data, $url ) {
+    // Only remove schema from video embeds
+    if ( isset( $data->type ) && $data->type === 'video' ) {
+        // Remove any script tags containing application/ld+json
+        $html = preg_replace( '/<script[^>]*type=["\']application\/ld\+json["\'][^>]*>.*?<\/script>/is', '', $html );
+        
+        // Remove itemscope/itemtype attributes from iframe/div tags
+        $html = preg_replace( '/\s*itemscope\s*/i', '', $html );
+        $html = preg_replace( '/\s*itemtype=["\'][^"\']*["\']\s*/i', '', $html );
+        $html = preg_replace( '/\s*itemprop=["\'][^"\']*["\']\s*/i', '', $html );
+    }
+    
+    return $html;
+}
 ```
 
 ---
@@ -152,6 +222,12 @@ private function output_video_schema( $camp, $video_url, $embed_url ) {
 - Uses `static $schema_output_done` flag
 - First shortcode outputs schema
 - Subsequent shortcodes skip schema (prevents duplicates)
+
+### ✅ Duplicate Schema from Elementor/Theme/SEO Plugins
+- **Microdata attributes** added to wrapper div (`itemscope`, `itemtype`, `itemprop`)
+- **oEmbed filter** strips schema from WordPress auto-generated embeds
+- **data-no-schema attribute** on iframe signals parsers to skip auto-generation
+- Both JSON-LD and microdata provide same data (redundant but compatible)
 
 ### ✅ Elementor Preview Mode
 - Works in Elementor editor preview
