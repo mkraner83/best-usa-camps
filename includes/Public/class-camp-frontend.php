@@ -57,6 +57,11 @@ class Camp_Frontend {
 		
 		// Prevent duplicate video schema from other sources when our shortcode is active
 		add_filter( 'oembed_dataparse', [ $this, 'remove_oembed_schema' ], 10, 3 );
+		add_action( 'wp_footer', [ $this, 'remove_duplicate_video_schema_js' ], 999 );
+		
+		// Disable automatic schema from common plugins/themes
+		add_filter( 'rank_math/json_ld', [ $this, 'disable_rankmath_video_schema' ], 99 );
+		add_filter( 'wpseo_json_ld_output', [ $this, 'disable_yoast_video_schema' ], 99 );
 	}
 
 	/**
@@ -1967,6 +1972,88 @@ class Camp_Frontend {
 		}
 		
 		return $html;
+	}
+	
+	/**
+	 * Remove duplicate VideoObject schema via JavaScript as last resort
+	 * This catches schema that bypasses WordPress filters (e.g., from Elementor)
+	 */
+	public function remove_duplicate_video_schema_js() {
+		// Only run on pages with our video shortcode
+		global $post;
+		if ( ! is_a( $post, 'WP_Post' ) || ! has_shortcode( $post->post_content, 'camp_video' ) ) {
+			return;
+		}
+		?>
+		<script type="text/javascript">
+		(function() {
+			// Wait for DOM to be fully loaded
+			if (document.readyState === 'loading') {
+				document.addEventListener('DOMContentLoaded', removeDuplicateVideoSchema);
+			} else {
+				removeDuplicateVideoSchema();
+			}
+			
+			function removeDuplicateVideoSchema() {
+				var scripts = document.querySelectorAll('script[type="application/ld+json"]');
+				var videoSchemas = [];
+				var validSchemaIndex = -1;
+				
+				// Find all VideoObject schemas
+				scripts.forEach(function(script, index) {
+					try {
+						var data = JSON.parse(script.textContent);
+						if (data['@type'] === 'VideoObject') {
+							videoSchemas.push({script: script, data: data, index: index});
+							// Keep the one with thumbnailUrl (our valid one)
+							if (data.thumbnailUrl) {
+								validSchemaIndex = videoSchemas.length - 1;
+							}
+						}
+					} catch(e) {}
+				});
+				
+				// If multiple VideoObject schemas exist, remove invalid ones
+				if (videoSchemas.length > 1 && validSchemaIndex >= 0) {
+					videoSchemas.forEach(function(item, idx) {
+						if (idx !== validSchemaIndex) {
+							item.script.remove();
+							console.log('Removed duplicate VideoObject schema');
+						}
+					});
+				}
+			}
+		})();
+		</script>
+		<?php
+	}
+	
+	/**
+	 * Disable RankMath video schema to prevent duplicates
+	 *
+	 * @param array $data JSON-LD data
+	 * @return array Modified data
+	 */
+	public function disable_rankmath_video_schema( $data ) {
+		if ( isset( $data['VideoObject'] ) ) {
+			unset( $data['VideoObject'] );
+		}
+		return $data;
+	}
+	
+	/**
+	 * Disable Yoast video schema to prevent duplicates
+	 *
+	 * @param array $data JSON-LD data
+	 * @return array Modified data
+	 */
+	public function disable_yoast_video_schema( $data ) {
+		if ( isset( $data['@graph'] ) && is_array( $data['@graph'] ) ) {
+			$data['@graph'] = array_filter( $data['@graph'], function( $item ) {
+				return ! isset( $item['@type'] ) || $item['@type'] !== 'VideoObject';
+			} );
+		}
+		return $data;
 	}
 }
 
