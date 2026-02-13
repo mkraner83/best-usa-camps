@@ -54,6 +54,9 @@ class Camp_Frontend {
 		// AJAX handlers for search
 		add_action( 'wp_ajax_camp_search', [ $this, 'ajax_camp_search' ] );
 		add_action( 'wp_ajax_nopriv_camp_search', [ $this, 'ajax_camp_search' ] );
+		
+		// Prevent duplicate video schema from other sources when our shortcode is active
+		add_filter( 'oembed_dataparse', [ $this, 'remove_oembed_schema' ], 10, 3 );
 	}
 
 	/**
@@ -1764,7 +1767,15 @@ class Camp_Frontend {
 		ob_start();
 		?>
 		<?php echo $schema_output; ?>
-		<div class="camp-section camp-video<?php echo $custom_class; ?>">
+		<div class="camp-section camp-video<?php echo $custom_class; ?>" itemscope itemtype="https://schema.org/VideoObject">
+			<meta itemprop="name" content="<?php echo esc_attr( ! empty( $camp['camp_name'] ) ? $camp['camp_name'] . ' - Camp Video' : 'Camp Video' ); ?>">
+			<meta itemprop="thumbnailUrl" content="<?php echo esc_url( $this->get_video_thumbnail_url() ); ?>">
+			<meta itemprop="embedUrl" content="<?php echo esc_url( $embed_url ); ?>">
+			<meta itemprop="contentUrl" content="<?php echo esc_url( $video_url ); ?>">
+			<meta itemprop="uploadDate" content="<?php echo ! empty( $camp['created_at'] ) ? esc_attr( gmdate( 'c', strtotime( $camp['created_at'] ) ) ) : esc_attr( gmdate( 'c' ) ); ?>">
+			<?php if ( ! empty( $camp['about_camp'] ) ) : ?>
+			<meta itemprop="description" content="<?php echo esc_attr( wp_strip_all_tags( wp_unslash( $camp['about_camp'] ) ) ); ?>">
+			<?php endif; ?>
 			<div class="video-wrapper <?php echo $aspect_class; ?>">
 				<iframe 
 					src="<?php echo esc_url( $embed_url ); ?>" 
@@ -1772,6 +1783,7 @@ class Camp_Frontend {
 					allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" 
 					allowfullscreen
 					loading="lazy"
+					data-no-schema="true"
 				></iframe>
 			</div>
 		</div>
@@ -1799,18 +1811,7 @@ class Camp_Frontend {
 		$schema_output_done = true;
 		
 		// Get thumbnailUrl (required field)
-		// Primary: use page featured image
-		$thumbnail_url = get_the_post_thumbnail_url( get_the_ID(), 'full' );
-		
-		// Fallback 1: site icon
-		if ( empty( $thumbnail_url ) ) {
-			$thumbnail_url = get_site_icon_url( 512 );
-		}
-		
-		// Fallback 2: default placeholder (WordPress default)
-		if ( empty( $thumbnail_url ) ) {
-			$thumbnail_url = includes_url( 'images/media/video.png' );
-		}
+		$thumbnail_url = $this->get_video_thumbnail_url();
 		
 		// Build VideoObject schema
 		$schema = [
@@ -1838,6 +1839,28 @@ class Camp_Frontend {
 			'<script type="application/ld+json">%s</script>',
 			wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
 		);
+	}
+
+	/**
+	 * Get video thumbnail URL with fallback chain
+	 *
+	 * @return string Thumbnail URL
+	 */
+	private function get_video_thumbnail_url() {
+		// Primary: use page featured image
+		$thumbnail_url = get_the_post_thumbnail_url( get_the_ID(), 'full' );
+		
+		// Fallback 1: site icon
+		if ( empty( $thumbnail_url ) ) {
+			$thumbnail_url = get_site_icon_url( 512 );
+		}
+		
+		// Fallback 2: default placeholder (WordPress default)
+		if ( empty( $thumbnail_url ) ) {
+			$thumbnail_url = includes_url( 'images/media/video.png' );
+		}
+		
+		return $thumbnail_url;
 	}
 
 	/**
@@ -1920,6 +1943,30 @@ class Camp_Frontend {
 		}
 		
 		return 'Link';
+	}
+	
+	/**
+	 * Remove schema from oEmbed output when our video shortcode is active
+	 * Prevents duplicate VideoObject schema from WordPress/plugins
+	 *
+	 * @param string $html The oEmbed HTML output
+	 * @param object $data The oEmbed data object
+	 * @param string $url The oEmbed URL
+	 * @return string Modified HTML without schema markup
+	 */
+	public function remove_oembed_schema( $html, $data, $url ) {
+		// Only remove schema from video embeds
+		if ( isset( $data->type ) && $data->type === 'video' ) {
+			// Remove any script tags containing application/ld+json
+			$html = preg_replace( '/<script[^>]*type=["\']application\/ld\+json["\'][^>]*>.*?<\/script>/is', '', $html );
+			
+			// Remove itemscope/itemtype attributes from iframe/div tags
+			$html = preg_replace( '/\s*itemscope\s*/i', '', $html );
+			$html = preg_replace( '/\s*itemtype=["\'][^"\']*["\']\s*/i', '', $html );
+			$html = preg_replace( '/\s*itemprop=["\'][^"\']*["\']\s*/i', '', $html );
+		}
+		
+		return $html;
 	}
 }
 
