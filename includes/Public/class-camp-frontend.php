@@ -12,12 +12,6 @@ if ( ! defined( 'ABSPATH' ) ) { exit; }
 class Camp_Frontend {
 
 	/**
-	 * Store video data for schema output
-	 * @var array|null
-	 */
-	private $video_schema_data = null;
-
-	/**
 	 * Register shortcodes
 	 */
 	public function __construct() {
@@ -56,19 +50,10 @@ class Camp_Frontend {
 		// Enqueue frontend styles
 		add_action( 'wp_enqueue_scripts', [ $this, 'enqueue_frontend_styles' ] );
 		add_action( 'wp_head', [ $this, 'add_fontawesome_fallback' ], 100 );
-		add_action( 'wp_head', [ $this, 'output_video_schema_in_head' ], 1 );
 		
 		// AJAX handlers for search
 		add_action( 'wp_ajax_camp_search', [ $this, 'ajax_camp_search' ] );
 		add_action( 'wp_ajax_nopriv_camp_search', [ $this, 'ajax_camp_search' ] );
-		
-		// Prevent duplicate video schema from other sources when our shortcode is active
-		add_filter( 'oembed_dataparse', [ $this, 'remove_oembed_schema' ], 10, 3 );
-		add_action( 'wp_footer', [ $this, 'remove_duplicate_video_schema_js' ], 999 );
-		
-		// Disable automatic schema from common plugins/themes
-		add_filter( 'rank_math/json_ld', [ $this, 'disable_rankmath_video_schema' ], 99 );
-		add_filter( 'wpseo_json_ld_output', [ $this, 'disable_yoast_video_schema' ], 99 );
 	}
 
 	/**
@@ -1770,21 +1755,44 @@ class Camp_Frontend {
 			return '';
 		}
 		
+		// Extract video ID and get thumbnail
+		$video_info = $this->extract_video_info( $video_url );
+		
 		$custom_class = ! empty( $atts['class'] ) ? ' ' . esc_attr( $atts['class'] ) : '';
 		$aspect_class = 'aspect-' . esc_attr( $atts['aspect_ratio'] );
 		
-		// Store data for schema output in head
-		if ( $this->video_schema_data === null ) {
-			$this->video_schema_data = [
-				'camp' => $camp,
-				'video_url' => $video_url,
-				'embed_url' => $embed_url,
-			];
+		// Prepare structured data for Google Search Console
+		$schema_data = [
+			'@context' => 'https://schema.org',
+			'@type' => 'VideoObject',
+			'name' => ! empty( $camp['camp_name'] ) ? $camp['camp_name'] . ' - Camp Video Tour' : 'Camp Video Tour',
+			'description' => ! empty( $camp['about_camp'] ) ? wp_strip_all_tags( $camp['about_camp'] ) : 'Video tour of ' . $camp['camp_name'],
+			'thumbnailUrl' => $video_info['thumbnail_url'],
+			'uploadDate' => ! empty( $camp['created_at'] ) ? gmdate( 'c', strtotime( $camp['created_at'] ) ) : gmdate( 'c' ),
+			'contentUrl' => $video_url,
+			'embedUrl' => $embed_url,
+		];
+		
+		// Add duration if available (helps with SEO)
+		if ( ! empty( $video_info['duration'] ) ) {
+			$schema_data['duration'] = $video_info['duration'];
 		}
 		
 		ob_start();
 		?>
-		<div class="camp-section camp-video<?php echo $custom_class; ?>" data-video-schema="true">
+		<!-- Video Structured Data for Google Search Console -->
+		<script type="application/ld+json">
+		<?php echo wp_json_encode( $schema_data, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT ); ?>
+		</script>
+		
+		<div class="camp-section camp-video<?php echo $custom_class; ?>" itemscope itemtype="https://schema.org/VideoObject">
+			<meta itemprop="name" content="<?php echo esc_attr( $schema_data['name'] ); ?>">
+			<meta itemprop="description" content="<?php echo esc_attr( $schema_data['description'] ); ?>">
+			<meta itemprop="thumbnailUrl" content="<?php echo esc_url( $video_info['thumbnail_url'] ); ?>">
+			<meta itemprop="uploadDate" content="<?php echo esc_attr( $schema_data['uploadDate'] ); ?>">
+			<meta itemprop="contentUrl" content="<?php echo esc_url( $video_url ); ?>">
+			<meta itemprop="embedUrl" content="<?php echo esc_url( $embed_url ); ?>">
+			
 			<div class="video-wrapper <?php echo $aspect_class; ?>">
 				<iframe 
 					src="<?php echo esc_url( $embed_url ); ?>" 
@@ -1792,7 +1800,7 @@ class Camp_Frontend {
 					allow="accelerometer; encrypted-media; gyroscope; picture-in-picture" 
 					allowfullscreen
 					loading="lazy"
-					data-no-schema="true"
+					itemprop="video"
 				></iframe>
 			</div>
 		</div>
@@ -1801,84 +1809,58 @@ class Camp_Frontend {
 	}
 
 	/**
-	 * Output VideoObject structured data in <head> section
-	 * This ensures our schema loads FIRST, before any theme/plugin duplicates
+	 * Extract video information including thumbnail URL
+	 *
+	 * @param string $url Video URL
+	 * @return array Video info (thumbnail_url, platform, video_id, duration)
 	 */
-	public function output_video_schema_in_head() {
-		global $post;
-		
-		// Check if post has [camp_video] shortcode
-		if ( ! is_a( $post, 'WP_Post' ) || ! has_shortcode( $post->post_content, 'camp_video' ) ) {
-			return;
-		}
-		
-		// Get camp data
-		$camp = $this->get_camp_data();
-		if ( ! $camp ) {
-			return;
-		}
-		
-		$video_url = ! empty( $camp['video_url'] ) ? trim( $camp['video_url'] ) : '';
-		if ( empty( $video_url ) ) {
-			return;
-		}
-		
-		// Convert to embed URL
-		$embed_url = $this->convert_to_embed_url( $video_url );
-		if ( empty( $embed_url ) ) {
-			return;
-		}
-		
-		// Get thumbnailUrl (required field)
-		$thumbnail_url = $this->get_video_thumbnail_url();
-		
-		// Build VideoObject schema
-		$schema = [
-			'@context' => 'https://schema.org',
-			'@type' => 'VideoObject',
-			'name' => ! empty( $camp['camp_name'] ) ? $camp['camp_name'] . ' - Camp Video' : 'Camp Video',
-			'description' => ! empty( $camp['about_camp'] ) ? wp_strip_all_tags( wp_unslash( $camp['about_camp'] ) ) : 'Watch our camp video',
-			'thumbnailUrl' => $thumbnail_url,
-			'embedUrl' => $embed_url,
-			'contentUrl' => $video_url,
+	private function extract_video_info( $url ) {
+		$info = [
+			'thumbnail_url' => '',
+			'platform' => '',
+			'video_id' => '',
+			'duration' => '',
 		];
 		
-		// Add uploadDate if available (use camp created_at or current date)
-		if ( ! empty( $camp['created_at'] ) ) {
-			$schema['uploadDate'] = gmdate( 'c', strtotime( $camp['created_at'] ) );
-		} else {
-			$schema['uploadDate'] = gmdate( 'c' );
+		// YouTube
+		if ( preg_match( '/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/', $url, $matches ) ) {
+			$info['platform'] = 'youtube';
+			$info['video_id'] = $matches[1];
+			// Use YouTube's high-quality thumbnail
+			$info['thumbnail_url'] = 'https://img.youtube.com/vi/' . $info['video_id'] . '/maxresdefault.jpg';
+			return $info;
 		}
 		
-		// Output JSON-LD in head - mark it as ours with data attribute
-		echo sprintf(
-			"\n" . '<script type="application/ld+json" data-camp-video-schema="true">%s</script>' . "\n",
-			wp_json_encode( $schema, JSON_UNESCAPED_SLASHES | JSON_PRETTY_PRINT )
-		);
+		// Vimeo
+		if ( preg_match( '/vimeo\.com\/(\d+)/', $url, $matches ) ) {
+			$info['platform'] = 'vimeo';
+			$info['video_id'] = $matches[1];
+			// Vimeo thumbnail requires API call, use fallback
+			$info['thumbnail_url'] = 'https://vumbnail.com/' . $info['video_id'] . '.jpg';
+			return $info;
+		}
+		
+		// Check if already embed URL
+		if ( preg_match( '/youtube\.com\/embed\/([a-zA-Z0-9_-]+)/', $url, $matches ) ) {
+			$info['platform'] = 'youtube';
+			$info['video_id'] = $matches[1];
+			$info['thumbnail_url'] = 'https://img.youtube.com/vi/' . $info['video_id'] . '/maxresdefault.jpg';
+			return $info;
+		}
+		
+		if ( preg_match( '/player\.vimeo\.com\/video\/(\d+)/', $url, $matches ) ) {
+			$info['platform'] = 'vimeo';
+			$info['video_id'] = $matches[1];
+			$info['thumbnail_url'] = 'https://vumbnail.com/' . $info['video_id'] . '.jpg';
+			return $info;
+		}
+		
+		// Fallback - use a default placeholder
+		$info['thumbnail_url'] = plugins_url( 'assets/video-placeholder.jpg', dirname( __FILE__, 2 ) );
+		
+		return $info;
 	}
-
-	/**
-	 * Get video thumbnail URL with fallback chain
-	 *
-	 * @return string Thumbnail URL
-	 */
-	private function get_video_thumbnail_url() {
-		// Primary: use page featured image
-		$thumbnail_url = get_the_post_thumbnail_url( get_the_ID(), 'full' );
-		
-		// Fallback 1: site icon
-		if ( empty( $thumbnail_url ) ) {
-			$thumbnail_url = get_site_icon_url( 512 );
-		}
-		
-		// Fallback 2: default placeholder (WordPress default)
-		if ( empty( $thumbnail_url ) ) {
-			$thumbnail_url = includes_url( 'images/media/video.png' );
-		}
-		
-		return $thumbnail_url;
-	}
-
+	
 	/**
 	 * Convert video URL to embed format and disable autoplay
 	 *
@@ -1959,112 +1941,6 @@ class Camp_Frontend {
 		}
 		
 		return 'Link';
-	}
-	
-	/**
-	 * Remove schema from oEmbed output when our video shortcode is active
-	 * Prevents duplicate VideoObject schema from WordPress/plugins
-	 *
-	 * @param string $html The oEmbed HTML output
-	 * @param object $data The oEmbed data object
-	 * @param string $url The oEmbed URL
-	 * @return string Modified HTML without schema markup
-	 */
-	public function remove_oembed_schema( $html, $data, $url ) {
-		// Only remove schema from video embeds
-		if ( isset( $data->type ) && $data->type === 'video' ) {
-			// Remove any script tags containing application/ld+json
-			$html = preg_replace( '/<script[^>]*type=["\']application\/ld\+json["\'][^>]*>.*?<\/script>/is', '', $html );
-			
-			// Remove itemscope/itemtype attributes from iframe/div tags
-			$html = preg_replace( '/\s*itemscope\s*/i', '', $html );
-			$html = preg_replace( '/\s*itemtype=["\'][^"\']*["\']\s*/i', '', $html );
-			$html = preg_replace( '/\s*itemprop=["\'][^"\']*["\']\s*/i', '', $html );
-		}
-		
-		return $html;
-	}
-	
-	/**
-	 * Remove duplicate VideoObject schema via JavaScript as last resort
-	 * This catches schema that bypasses WordPress filters (e.g., from Elementor)
-	 */
-	public function remove_duplicate_video_schema_js() {
-		// Only run on pages with our video shortcode
-		global $post;
-		if ( ! is_a( $post, 'WP_Post' ) || ! has_shortcode( $post->post_content, 'camp_video' ) ) {
-			return;
-		}
-		?>
-		<script type="text/javascript">
-		(function() {
-			// Wait for DOM to be fully loaded
-			if (document.readyState === 'loading') {
-				document.addEventListener('DOMContentLoaded', removeDuplicateVideoSchema);
-			} else {
-				removeDuplicateVideoSchema();
-			}
-			
-			function removeDuplicateVideoSchema() {
-				var scripts = document.querySelectorAll('script[type="application/ld+json"]');
-				var ourSchema = null;
-				var duplicates = [];
-				
-				// Find all VideoObject schemas
-				scripts.forEach(function(script) {
-					try {
-						var data = JSON.parse(script.textContent);
-						if (data['@type'] === 'VideoObject') {
-							// Keep ONLY our schema (marked with data-camp-video-schema)
-							if (script.hasAttribute('data-camp-video-schema')) {
-								ourSchema = script;
-							} else {
-								// This is a duplicate from another source - remove it
-								duplicates.push(script);
-							}
-						}
-					} catch(e) {}
-				});
-				
-				// Remove ALL duplicate VideoObject schemas
-				if (duplicates.length > 0) {
-					duplicates.forEach(function(script) {
-						script.remove();
-						console.log('Removed duplicate VideoObject schema from:', script.textContent.substring(0, 100));
-					});
-				}
-			}
-		})();
-		</script>
-		<?php
-	}
-	
-	/**
-	 * Disable RankMath video schema to prevent duplicates
-	 *
-	 * @param array $data JSON-LD data
-	 * @return array Modified data
-	 */
-	public function disable_rankmath_video_schema( $data ) {
-		if ( isset( $data['VideoObject'] ) ) {
-			unset( $data['VideoObject'] );
-		}
-		return $data;
-	}
-	
-	/**
-	 * Disable Yoast video schema to prevent duplicates
-	 *
-	 * @param array $data JSON-LD data
-	 * @return array Modified data
-	 */
-	public function disable_yoast_video_schema( $data ) {
-		if ( isset( $data['@graph'] ) && is_array( $data['@graph'] ) ) {
-			$data['@graph'] = array_filter( $data['@graph'], function( $item ) {
-				return ! isset( $item['@type'] ) || $item['@type'] !== 'VideoObject';
-			} );
-		}
-		return $data;
 	}
 }
 

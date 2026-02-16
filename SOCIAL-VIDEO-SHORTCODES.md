@@ -55,6 +55,9 @@ Added two new shortcodes for displaying social media links and videos on camp pa
 - Automatically converts watch URLs to embed format
 - Default: 16:9 aspect ratio
 - Lazy loading enabled
+- **NEW:** Full Schema.org VideoObject structured data for Google Search Console
+- **NEW:** Automatic thumbnail extraction (YouTube/Vimeo)
+- **NEW:** SEO-optimized with proper metadata
 
 **Supported URL Formats:**
 - YouTube: `https://www.youtube.com/watch?v=VIDEO_ID`
@@ -70,6 +73,17 @@ Added two new shortcodes for displaying social media links and videos on camp pa
 **Data Source:**
 - Reads from `video_url` column
 - Set via admin dashboard editor
+
+**Structured Data (Schema.org):**
+The shortcode automatically generates VideoObject structured data including:
+- Video name (camp name + "Camp Video Tour")
+- Description (from camp about_camp field)
+- Thumbnail URL (auto-extracted from YouTube/Vimeo)
+- Upload date (camp creation date)
+- Content URL and Embed URL
+- Microdata attributes for enhanced SEO
+
+This ensures proper indexing by Google Search Console and rich results in search.
 
 ---
 
