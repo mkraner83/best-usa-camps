@@ -1,5 +1,31 @@
 # Changelog
 
+## v3.5.1 (2026-02-16) - Google Search Console Video Fix
+
+### Fixed
+- Google Search Console video indexing errors (missing thumbnailUrl field)
+- "Video isn't on a watch page" errors for camp videos
+
+### Added
+- Schema.org VideoObject structured data to [camp_video] shortcode
+- JSON-LD markup with all required VideoObject fields
+- Microdata attributes on video containers for enhanced SEO
+- Automatic video thumbnail extraction from YouTube and Vimeo
+- extract_video_info() method to parse video URLs and get thumbnails
+
+### Changed
+- render_video() method now generates complete structured data
+- Videos now eligible for Google Video Search indexing
+- Videos now eligible for rich results with thumbnails in search
+
+### Technical
+- YouTube thumbnails: https://img.youtube.com/vi/{ID}/maxresdefault.jpg
+- Vimeo thumbnails: https://vumbnail.com/{ID}.jpg
+- Both JSON-LD and microdata formats for maximum compatibility
+- 100% backwards compatible - no breaking changes
+
+---
+
 ## v3.1.0 (2026-01-20) - Admin Date Tracking Complete
 
 ### Added

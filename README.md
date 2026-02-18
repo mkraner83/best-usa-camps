@@ -2,7 +2,7 @@
 
 WordPress plugin and theme templates for managing summer camp profiles, user dashboards, and custom login flows.
 
-## Current Version: 3.5.0
+## Current Version: 3.5.1
 
 ## Key Features
 - **Modern Admin Dashboard** - Card-based grid interface with real-time search, sort, and filter
