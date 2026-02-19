@@ -1,10 +1,12 @@
 # Project State: Best USA Camps
 
-**Date:** February 19, 2026  
-**Version:** 3.6.0 (Production Ready)  
-**Git Tag:** v3.6.0  
-**Restore Point:** `RESTORE-POINT-v3.6.0.md` (full change log for this session)  
-**Zip:** `creativedbs-camp-mgmt-v3.6.0.zip` (274KB)
+**Date:** February 20, 2026  
+**Version:** 3.7.0 (Production Ready)  
+**Git commit:** `d08c58e` (version bump pushed after)  
+**Branch:** `main`  
+**Restore Point:** `RESTORE-POINT-v3.7.0.md` (full change log for this session)  
+**Previous Restore Point:** `RESTORE-POINT-v3.6.0.md` (February 19, 2026)  
+**Zip:** `creativedbs-camp-mgmt-v3.7.0.zip`
 
 ## Structure
 - Plugin: `creativedbs-camp-mgmt.php` (~2330 lines)
@@ -33,6 +35,7 @@
 | `[camp_favourite_button]` | Heart save button for parents on camp pages (auto-reads `camp_id` from WP post meta) |
 | `[camp_contact_form]` | Message form on camp pages (auto-reads `camp_id` from WP post meta) |
 | `[camp_page]` | All-in-one camp page layout: info tiles, weeks, types, activities, social, contact form, about, contact info, video, sessions, accommodations, FAQs, gallery — all sections hidden when no data |
+| `[camp_livesearch]` | Nav/header autocomplete search: 280ms debounce, logo circles, keyboard navigation (↑↓ Enter Escape), approved-only results; attrs: `placeholder`, `show_all_link` |
 
 ## User Roles & Dashboards
 
@@ -55,7 +58,15 @@
 - **📋 Shortcodes:** Full shortcodes guide (all shortcodes documented with copy-to-clipboard)
 - **Settings:** Plugin settings
 
-## Key Features Added in v3.6.0
+## Key Features Added in v3.7.0 (February 20, 2026)
+
+1. **`[camp_livesearch]` shortcode** — autocomplete search for nav/header; vanilla JS (no jQuery); 280ms debounce; logo thumbnails; keyboard nav; approved-only; max 10 results; supports multiple widgets per page
+2. **Admin Approved checkbox fix #1** — toggle JS scope extended to cover both Overview + All Camps admin pages
+3. **Admin Approved checkbox fix #2** — Full Edit form (`?action=edit`) was missing the Approved checkbox entirely; every save was resetting `approved=0`; fixed by adding checkbox as first row of edit form
+4. **`[camp_page]` typography polish** — Abel font (normal) + Amaranth font (bold spans); main title 40px, section headings 26px; `.cdbs-cp-divider` margin needs `!important` to beat Elementor; mobile scaling at ≤1024px and ≤480px
+5. **Shortcodes guide updated** — `[camp_page]` and `[camp_livesearch]` fully documented in WP admin shortcodes guide
+
+## Key Features Added in v3.6.0 (February 19, 2026)
 
 1. **Admin dashboard landing page** — stat bar + 5 activity cards
 2. **[cdbs_login_bar] shortcode** — header login status bar (guest + logged-in states)
@@ -119,10 +130,10 @@
 - Prepared statement database queries
 
 ## Status
-- **Current:** v3.5.0 (Production Ready)
-- **Latest zip:** creativedbs-camp-mgmt-v3.5.0.zip
-- **Restore Point:** RESTORE-POINT-v3.5.0.md (comprehensive documentation)
-- **Archive:** 33 files safely archived in `_archive/` subdirectories
+- **Current:** v3.7.0 (Production Ready)
+- **Latest zip:** `creativedbs-camp-mgmt-v3.7.0.zip`
+- **Restore Point:** `RESTORE-POINT-v3.7.0.md` (comprehensive documentation)
+- **Git branch:** `main` — commit `d08c58e`
 - **All user-requested features:** ✅ Implemented and tested
 - **All critical bugs:** ✅ Fixed and validated
 
