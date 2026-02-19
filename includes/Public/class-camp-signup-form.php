@@ -409,7 +409,7 @@ class Camp_Signup_Form {
 			$reset_url = network_site_url( "wp-login.php?action=rp&key=$reset_key&login=" . rawurlencode( $username ), 'login' );
 		} else {
 			// Fallback to password reset page
-			$reset_url = home_url( '/camp-lost-password/' );
+			$reset_url = home_url( '/camp-login/' );
 		}
 
 		// Redirect directly to password setup page
@@ -794,11 +794,11 @@ class Camp_Signup_Form {
 		// Don't redirect the lost password page - WordPress's built-in one is fine
 		// Only redirect the actual password reset form page (rp/resetpass)
 		if ( isset( $_GET['action'] ) && in_array( $_GET['action'], [ 'rp', 'resetpass' ] ) ) {
-			$key = isset( $_GET['key'] ) ? sanitize_text_field( $_GET['key'] ) : '';
+			$key   = isset( $_GET['key'] )   ? sanitize_text_field( $_GET['key'] )   : '';
 			$login = isset( $_GET['login'] ) ? sanitize_text_field( $_GET['login'] ) : '';
 			
 			if ( $key && $login ) {
-				wp_safe_redirect( home_url( '/set-password/?key=' . $key . '&login=' . $login ) );
+				wp_safe_redirect( home_url( '/set-password/?key=' . $key . '&login=' . rawurlencode( $login ) ) );
 				exit;
 			}
 		}

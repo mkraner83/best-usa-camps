@@ -1,7 +1,73 @@
 # Project State: Best USA Camps
 
-**Date:** February 18, 2026  
-**Version:** 3.5.1 (Production Ready)
+**Date:** February 19, 2026  
+**Version:** 3.6.0 (Production Ready)  
+**Git Tag:** v3.6.0  
+**Restore Point:** `RESTORE-POINT-v3.6.0.md` (full change log for this session)  
+**Zip:** `creativedbs-camp-mgmt-v3.6.0.zip` (266KB)
+
+## Structure
+- Plugin: `creativedbs-camp-mgmt.php` (~2330 lines)
+- Theme templates: `theme-templates/`
+- Includes: `includes/` (core classes, dashboard, integrations)
+- Assets: `assets/` (CSS, JavaScript)
+- Documentation: .md files in root
+- Archive: `_archive/` (historical files organized by type)
+
+## Active Shortcodes
+
+| Shortcode | Description |
+|-----------|-------------|
+| `[cdbs_login_bar]` | Header login/logout status bar. Shows Log In + Register links to guests; name, role, dashboard link, logout to logged-in users |
+| `[camp_login_page]` | Unified login for all roles |
+| `[camp_lost_password_page]` | Forgot password form |
+| `[camp_set_password_page]` | Set/reset password (used by both camp directors and parents, URL: `/set-password/`) |
+| `[camp_signup_form]` | Camp director registration |
+| `[camp_dashboard]` | Camp director profile management dashboard |
+| `[parent_registration_form]` | Parent + camper submission form (pre-fills for logged-in users) |
+| `[parent_dashboard]` | Parent dashboard: My Submissions, My Favourites, Messages tabs with count badges |
+| `[camps_list]` | Searchable/filterable camp list |
+| `[featured_camps]`, `[best_day_camps]`, `[best_overnight_camps]`, `[best_girls_camps]`, `[best_boys_camps]`, `[latest_camps]`, `[single_camp]` | Featured camp display shortcodes |
+| `[camp_logo]`, `[camp_name]`, `[camp_name_text]`, `[camp_subtitle]`, `[camp_rating]`, `[camp_contact_bar]`, `[camp_contact_info]`, `[camp_description]`, `[camp_activities]`, `[camp_types_weeks]`, `[camp_accommodations]`, `[camp_faqs]`, `[camp_sessions]`, `[camp_additional_info]`, `[camp_social_media]`, `[camp_video]` | Individual camp page shortcodes |
+| `[contact_form]` | General site contact form |
+| `[camp_favourite_button camp_id="X"]` | Heart save button for parents on camp pages |
+| `[camp_contact_form camp_id="X"]` | Message form on camp pages |
+
+## User Roles & Dashboards
+
+| Role | Dashboard | Registration |
+|------|-----------|-------------|
+| `camp` (Camp Director) | `/user-dashboard/` | `/get-listed-on-best-usa-summer-camps/` |
+| `parent` | `/parent-dashboard/` | `/find-the-perfect-summer-camp/` |
+| `administrator` | `/wp-admin/` | — |
+| All roles login | `/camp-login/` | — |
+| Password reset | `/set-password/` | — |
+
+## Admin Interface (Camp Management plugin menu)
+
+- **Position:** 2 (top of WP sidebar), always expanded via `keep_menu_expanded()` JS
+- **Overview (landing page):** Stat bar (Total Camps, Parent Registrations, Favourites, Messages, Contact Submissions) + 5 activity cards, Contact Form section separated by divider
+- **All Camps:** Searchable camp list, edit/approve/delete
+- **Camp Types, Durations/Weeks, Activities:** Option management
+- **Import/Export:** CSV import/export
+- **Add Camp:** Manual camp entry
+- **📋 Shortcodes:** Full shortcodes guide (all shortcodes documented with copy-to-clipboard)
+- **Settings:** Plugin settings
+
+## Key Features Added in v3.6.0
+
+1. **Admin dashboard landing page** — stat bar + 5 activity cards
+2. **[cdbs_login_bar] shortcode** — header login status bar (guest + logged-in states)
+3. **Parent dashboard tab count badges** — circular count pills on each tab
+4. **Parent dashboard messages tab** — redesigned as cards (matching submissions style)
+5. **Parent registration pre-fill** — fields auto-filled for logged-in users
+6. **Camp director set-password redirect fixed** — now uses `/set-password/` (same as parents)
+7. **Contact form redirect fix** — no more blank page after submit
+8. **HTML admin notification emails** — both contact form and parent registration
+
+## Known Issues / Outstanding Items
+- `[cdbs_login_bar]` mobile full-width: CSS is set (`width:100% !important`) — Elementor column containing the widget also needs width=100% set in Elementor's responsive editor (Elementor config, not code)
+- `CDBS: Featured camps migration completed` fires repeatedly in debug.log — pre-existing migration trigger issue
 
 ## Structure
 - Plugin: `creativedbs-camp-mgmt.php` (1973 lines)

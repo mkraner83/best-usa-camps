@@ -2,14 +2,14 @@
 /*
 Plugin Name: CreativeDBS Camp Management
 Description: Ultimate US Summer Camp Management Application.
-Version: 3.5.1
+Version: 3.6.0
 Author: CreativeDBS
 Text Domain: creativedbs-camp-mgmt
 Requires at least: 5.8
 Requires PHP: 7.4
 */
 
-define('CDBS_CAMP_VERSION', '3.5.1');
+define('CDBS_CAMP_VERSION', '3.6.0');
 
 defined( 'ABSPATH' ) || exit;
 
@@ -32,7 +32,12 @@ $required_files = [
     __DIR__ . '/includes/migrations-daily-notifications.php',
     __DIR__ . '/includes/migrations-referral-source.php',
     __DIR__ . '/includes/migrations-contact-submissions.php',
+    __DIR__ . '/includes/migrations-parents.php',
     __DIR__ . '/includes/Public/class-public-controller.php',
+    __DIR__ . '/includes/Public/class-parent-registration.php',
+    __DIR__ . '/includes/Public/class-parent-dashboard.php',
+    __DIR__ . '/includes/Public/class-parent-camp-shortcodes.php',
+    __DIR__ . '/includes/Admin/class-admin-parents.php',
     __DIR__ . '/includes/Public/class-camp-dashboard.php',
     __DIR__ . '/includes/Public/class-camp-signup-form.php',
     __DIR__ . '/includes/Public/class-contact-form.php',
@@ -85,6 +90,10 @@ add_action( 'plugins_loaded', function() {
 	new \CreativeDBS\CampMgmt\PublicArea\Camp_Dashboard();
 	new \CreativeDBS\CampMgmt\PublicArea\Camp_Signup_Form();
 	new \CreativeDBS\CampMgmt\PublicArea\Contact_Form();
+	new \CreativeDBS\CampMgmt\PublicArea\Parent_Registration_Form();
+	new \CreativeDBS\CampMgmt\PublicArea\Parent_Dashboard();
+	new \CreativeDBS\CampMgmt\PublicArea\Parent_Camp_Shortcodes();
+	new \CreativeDBS\CampMgmt\Admin\Admin_Parents();
 }, 0);
 
 // === Legacy code below kept for backward-compatibility. ===
@@ -108,6 +117,7 @@ class CreativeDBS_Camp_Management {
         add_action('admin_menu', [$this, 'register_admin_menu']);
         add_action('admin_enqueue_scripts', [$this, 'admin_assets']);
         add_action('admin_footer', [$this, 'admin_footer_js']);
+        add_action('admin_footer', [$this, 'keep_menu_expanded']);
         add_action('admin_footer', [$this, 'taxonomy_sortable_js']);
         add_action('admin_init', [$this, 'handle_inline_actions']);
         add_action('wp_ajax_cdbs_toggle_approval', [$this, 'ajax_toggle_approval']);
@@ -265,11 +275,13 @@ class CreativeDBS_Camp_Management {
             __('Camp Management', 'creativedbs-camp-mgmt'),
             'manage_options',
             self::SLUG,
-            [$this, 'render_admin_page'],
+            [$this, 'render_main_page'],
             'dashicons-location-alt',
-            26
+            2
         );
 
+        add_submenu_page(self::SLUG, __('Overview', 'creativedbs'), __('Overview', 'creativedbs'), 'manage_options', self::SLUG, [$this, 'render_main_page']);
+        add_submenu_page(self::SLUG, __('All Camps', 'creativedbs'), __('All Camps', 'creativedbs'), 'manage_options', self::SLUG.'-camps', [$this, 'render_admin_page']);
         add_submenu_page(self::SLUG, __('Camp Types', 'creativedbs'), __('Camp Types', 'creativedbs'), 'manage_options', self::SLUG.'-types', [$this, 'render_types_page']);
         add_submenu_page(self::SLUG, __('Durations / Weeks', 'creativedbs'), __('Durations / Weeks', 'creativedbs'), 'manage_options', self::SLUG.'-weeks', [$this, 'render_weeks_page']);
         add_submenu_page(self::SLUG, __('Activities', 'creativedbs'), __('Activities', 'creativedbs'), 'manage_options', self::SLUG.'-activities', [$this, 'render_activities_page']);
@@ -353,7 +365,22 @@ class CreativeDBS_Camp_Management {
         </script>
         <?php
     }
-    
+
+    public function keep_menu_expanded() {
+        ?>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            var menuItem = document.querySelector('#toplevel_page_creativedbs-camp-mgmt');
+            if (!menuItem) return;
+            menuItem.classList.remove('wp-not-current-submenu');
+            menuItem.classList.add('wp-has-current-submenu', 'wp-menu-open', 'open');
+            var sub = menuItem.querySelector('.wp-submenu');
+            if (sub) sub.style.display = '';
+        });
+        </script>
+        <?php
+    }
+
     public function taxonomy_sortable_js() {
         if (!isset($_GET['page'])) return;
         $page = $_GET['page'];
@@ -858,6 +885,277 @@ class CreativeDBS_Camp_Management {
     private static function to_money($val) { if ($val === null || $val === '') return null; if (is_array($val)) $val = reset($val); $val = (string)$val; $val = str_replace('$','', $val); if (strpos($val, ',') !== false) { $val = str_replace('.', '', $val); $val = str_replace(',', '.', $val); } $val = preg_replace('/[^\d\.\-]/', '', $val); return $val === '' ? null : $val; }
 
     /*** MAIN PAGE (list + full edit) ***/
+    // =========================================================================
+    // Main page dispatcher — dashboard or edit/delete passthrough
+    // =========================================================================
+
+    public function render_main_page() {
+        // Delegate to camp list/edit/delete if an action is present
+        if ( isset( $_GET['action'] ) ) {
+            $this->render_admin_page();
+            return;
+        }
+        $this->render_dashboard_page();
+    }
+
+    // =========================================================================
+    // Dashboard landing page
+    // =========================================================================
+
+    public function render_dashboard_page() {
+        if ( ! current_user_can( 'manage_options' ) ) return;
+        global $wpdb;
+
+        $base   = admin_url( 'admin.php' );
+        $slug   = self::SLUG;
+
+        // ── Counts ─────────────────────────────────────────────────────────
+        $cnt_camps         = (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . self::table_camps() );
+        $cnt_approved      = (int) $wpdb->get_var( "SELECT COUNT(*) FROM " . self::table_camps() . " WHERE approved=1" );
+        $cnt_parents       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}cdbs_parent_registrations" );
+        $cnt_favourites    = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}cdbs_parent_favorites" );
+        $cnt_messages      = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}cdbs_messages" );
+        $cnt_unread        = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}cdbs_messages WHERE is_read=0" );
+        $cnt_contact       = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$wpdb->prefix}cdbs_contact_submissions" );
+
+        // ── Latest 5 rows per section ───────────────────────────────────────
+        $recent_camps = $wpdb->get_results(
+            "SELECT camp_name, state, approved, created_at FROM " . self::table_camps() . " ORDER BY created_at DESC LIMIT 5"
+        );
+        $recent_parents = $wpdb->get_results(
+            "SELECT parent_first, parent_last, email, child_first, submitted_at FROM {$wpdb->prefix}cdbs_parent_registrations ORDER BY submitted_at DESC LIMIT 5"
+        );
+        $recent_favs = $wpdb->get_results(
+            "SELECT f.created_at, u.display_name, c.camp_name
+             FROM {$wpdb->prefix}cdbs_parent_favorites f
+             LEFT JOIN {$wpdb->users} u ON u.ID = f.user_id
+             LEFT JOIN " . self::table_camps() . " c ON c.id = f.camp_id
+             ORDER BY f.created_at DESC LIMIT 5"
+        );
+        $recent_messages = $wpdb->get_results(
+            "SELECT m.body, m.is_read, m.created_at, c.camp_name, u.display_name
+             FROM {$wpdb->prefix}cdbs_messages m
+             LEFT JOIN " . self::table_camps() . " c ON c.id = m.camp_id
+             LEFT JOIN {$wpdb->users} u ON u.ID = m.sender_id
+             ORDER BY m.created_at DESC LIMIT 5"
+        );
+        $recent_contact = $wpdb->get_results(
+            "SELECT first_name, last_name, email, submitted_at FROM {$wpdb->prefix}cdbs_contact_submissions ORDER BY submitted_at DESC LIMIT 5"
+        );
+
+        // ── Helpers ─────────────────────────────────────────────────────────
+        $ago = function( $date_str ) {
+            if ( ! $date_str ) return '—';
+            $diff = time() - strtotime( $date_str );
+            if ( $diff < 60 )          return $diff . 's ago';
+            if ( $diff < 3600 )        return floor( $diff / 60 ) . 'm ago';
+            if ( $diff < 86400 )       return floor( $diff / 3600 ) . 'h ago';
+            if ( $diff < 86400 * 7 )   return floor( $diff / 86400 ) . 'd ago';
+            return date( 'M j', strtotime( $date_str ) );
+        };
+        ?>
+        <div class="wrap">
+        <style>
+        .cdbs-dash { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+        .cdbs-dash h1 { font-size: 26px; font-weight: 700; color: #1e293b; margin: 0 0 6px; }
+        .cdbs-dash .cdbs-sub { color: #64748b; font-size: 14px; margin: 0 0 28px; }
+        /* stat bar */
+        .cdbs-stats { display: flex; gap: 16px; flex-wrap: wrap; margin-bottom: 32px; }
+        .cdbs-stat { background: #fff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px 24px; flex: 1 1 140px; min-width: 120px; }
+        .cdbs-stat-num { font-size: 32px; font-weight: 800; color: #2d5a3f; line-height: 1; }
+        .cdbs-stat-label { font-size: 12px; color: #64748b; text-transform: uppercase; letter-spacing: .6px; margin-top: 4px; }
+        .cdbs-stat-sub { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+        /* cards grid */
+        .cdbs-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 24px; }
+        .cdbs-card { background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; box-shadow: 0 1px 4px rgba(0,0,0,.06); }
+        .cdbs-card-head { background: linear-gradient(135deg, #3b7a57 0%, #2d5a3f 100%); padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
+        .cdbs-card-head h2 { color: #fff; margin: 0; font-size: 15px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+        .cdbs-card-head h2 span.dashicons { font-size: 18px; width: 18px; height: 18px; color: rgba(255,255,255,.8); }
+        .cdbs-badge { background: rgba(255,255,255,.22); color: #fff; border-radius: 20px; padding: 2px 10px; font-size: 12px; font-weight: 700; }
+        .cdbs-card-body { padding: 0; }
+        .cdbs-row { display: flex; align-items: flex-start; justify-content: space-between; padding: 11px 18px; border-bottom: 1px solid #f1f5f9; gap: 8px; }
+        .cdbs-row:last-of-type { border-bottom: none; }
+        .cdbs-row-main { font-size: 13.5px; font-weight: 600; color: #1e293b; line-height: 1.4; }
+        .cdbs-row-sub { font-size: 12px; color: #64748b; margin-top: 2px; }
+        .cdbs-row-time { font-size: 11px; color: #94a3b8; white-space: nowrap; flex-shrink: 0; padding-top: 2px; }
+        .cdbs-dot { display: inline-block; width: 7px; height: 7px; border-radius: 50%; margin-right: 5px; vertical-align: middle; }
+        .cdbs-dot-green { background: #22c55e; }
+        .cdbs-dot-grey  { background: #cbd5e1; }
+        .cdbs-dot-amber { background: #f59e0b; }
+        .cdbs-card-foot { padding: 12px 18px; background: #f8fafc; border-top: 1px solid #e2e8f0; text-align: right; }
+        .cdbs-card-foot a { font-size: 13px; font-weight: 600; color: #3b7a57; text-decoration: none; }
+        .cdbs-card-foot a:hover { text-decoration: underline; }
+        .cdbs-empty { padding: 24px 18px; text-align: center; color: #94a3b8; font-size: 13px; }
+        .cdbs-section-divider { display: flex; align-items: center; gap: 14px; margin: 36px 0 20px; }
+        .cdbs-divider-line { flex: 1; border: none; border-top: 2px solid #e2e8f0; margin: 0; }
+        .cdbs-divider-label { font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #94a3b8; white-space: nowrap; background: #f1f5f9; padding: 4px 12px; border-radius: 20px; border: 1px solid #e2e8f0; }
+        </style>
+
+        <div class="cdbs-dash">
+            <h1><?php echo get_bloginfo( 'name' ); ?> &mdash; Overview</h1>
+            <p class="cdbs-sub">Last updated <?php echo date( 'M j, Y \a\t g:i a' ); ?></p>
+
+            <!-- Stat Bar -->
+            <div class="cdbs-stats">
+                <div class="cdbs-stat">
+                    <div class="cdbs-stat-num"><?php echo $cnt_camps; ?></div>
+                    <div class="cdbs-stat-label">Total Camps</div>
+                    <div class="cdbs-stat-sub"><?php echo $cnt_approved; ?> approved</div>
+                </div>
+                <div class="cdbs-stat">
+                    <div class="cdbs-stat-num"><?php echo $cnt_parents; ?></div>
+                    <div class="cdbs-stat-label">Parent Registrations</div>
+                </div>
+                <div class="cdbs-stat">
+                    <div class="cdbs-stat-num"><?php echo $cnt_favourites; ?></div>
+                    <div class="cdbs-stat-label">Favourites Saved</div>
+                </div>
+                <div class="cdbs-stat">
+                    <div class="cdbs-stat-num"><?php echo $cnt_messages; ?></div>
+                    <div class="cdbs-stat-label">Messages</div>
+                    <div class="cdbs-stat-sub"><?php echo $cnt_unread; ?> unread</div>
+                </div>
+            </div>
+
+            <!-- Cards -->
+            <div class="cdbs-cards">
+
+                <!-- Camp Registrations -->
+                <div class="cdbs-card">
+                    <div class="cdbs-card-head">
+                        <h2><span class="dashicons dashicons-location-alt"></span> Camp Registrations</h2>
+                        <span class="cdbs-badge"><?php echo $cnt_camps; ?> total</span>
+                    </div>
+                    <div class="cdbs-card-body">
+                        <?php if ( empty( $recent_camps ) ) : ?>
+                            <div class="cdbs-empty">No camps yet.</div>
+                        <?php else : foreach ( $recent_camps as $r ) : ?>
+                            <div class="cdbs-row">
+                                <div>
+                                    <div class="cdbs-row-main">
+                                        <span class="cdbs-dot <?php echo $r->approved ? 'cdbs-dot-green' : 'cdbs-dot-grey'; ?>"></span>
+                                        <?php echo esc_html( $r->camp_name ); ?>
+                                    </div>
+                                    <div class="cdbs-row-sub"><?php echo esc_html( $r->state ?: '—' ); ?></div>
+                                </div>
+                                <div class="cdbs-row-time"><?php echo $ago( $r->created_at ); ?></div>
+                            </div>
+                        <?php endforeach; endif; ?>
+                    </div>
+                    <div class="cdbs-card-foot"><a href="<?php echo esc_url( add_query_arg( 'page', $slug . '-camps', $base ) ); ?>">View All Camps &rarr;</a></div>
+                </div>
+
+                <!-- Parent Registrations -->
+                <div class="cdbs-card">
+                    <div class="cdbs-card-head">
+                        <h2><span class="dashicons dashicons-groups"></span> Parent Registrations</h2>
+                        <span class="cdbs-badge"><?php echo $cnt_parents; ?> total</span>
+                    </div>
+                    <div class="cdbs-card-body">
+                        <?php if ( empty( $recent_parents ) ) : ?>
+                            <div class="cdbs-empty">No registrations yet.</div>
+                        <?php else : foreach ( $recent_parents as $r ) : ?>
+                            <div class="cdbs-row">
+                                <div>
+                                    <div class="cdbs-row-main"><?php echo esc_html( $r->parent_first . ' ' . $r->parent_last ); ?></div>
+                                    <div class="cdbs-row-sub">Child: <?php echo esc_html( $r->child_first ); ?> &bull; <?php echo esc_html( $r->email ); ?></div>
+                                </div>
+                                <div class="cdbs-row-time"><?php echo $ago( $r->submitted_at ); ?></div>
+                            </div>
+                        <?php endforeach; endif; ?>
+                    </div>
+                    <div class="cdbs-card-foot"><a href="<?php echo esc_url( add_query_arg( 'page', 'cdbs-parent-submissions', $base ) ); ?>">View All &rarr;</a></div>
+                </div>
+
+                <!-- Parent Favourites -->
+                <div class="cdbs-card">
+                    <div class="cdbs-card-head">
+                        <h2><span class="dashicons dashicons-heart"></span> Parent Favourites</h2>
+                        <span class="cdbs-badge"><?php echo $cnt_favourites; ?> total</span>
+                    </div>
+                    <div class="cdbs-card-body">
+                        <?php if ( empty( $recent_favs ) ) : ?>
+                            <div class="cdbs-empty">No favourites saved yet.</div>
+                        <?php else : foreach ( $recent_favs as $r ) : ?>
+                            <div class="cdbs-row">
+                                <div>
+                                    <div class="cdbs-row-main"><?php echo esc_html( $r->camp_name ?: '—' ); ?></div>
+                                    <div class="cdbs-row-sub">Saved by <?php echo esc_html( $r->display_name ?: 'Unknown' ); ?></div>
+                                </div>
+                                <div class="cdbs-row-time"><?php echo $ago( $r->created_at ); ?></div>
+                            </div>
+                        <?php endforeach; endif; ?>
+                    </div>
+                    <div class="cdbs-card-foot"><a href="<?php echo esc_url( add_query_arg( 'page', 'cdbs-parent-favourites', $base ) ); ?>">View All &rarr;</a></div>
+                </div>
+
+                <!-- Parent Messages -->
+                <div class="cdbs-card">
+                    <div class="cdbs-card-head">
+                        <h2><span class="dashicons dashicons-email-alt"></span> Parent Messages</h2>
+                        <span class="cdbs-badge"><?php echo $cnt_unread; ?> unread</span>
+                    </div>
+                    <div class="cdbs-card-body">
+                        <?php if ( empty( $recent_messages ) ) : ?>
+                            <div class="cdbs-empty">No messages yet.</div>
+                        <?php else : foreach ( $recent_messages as $r ) : ?>
+                            <div class="cdbs-row">
+                                <div>
+                                    <div class="cdbs-row-main">
+                                        <?php if ( ! $r->is_read ) : ?><span class="cdbs-dot cdbs-dot-amber"></span><?php endif; ?>
+                                        <?php echo esc_html( $r->camp_name ?: '—' ); ?>
+                                    </div>
+                                    <div class="cdbs-row-sub"><?php echo esc_html( wp_trim_words( $r->body, 8, '…' ) ); ?> &bull; <?php echo esc_html( $r->display_name ?: 'Guest' ); ?></div>
+                                </div>
+                                <div class="cdbs-row-time"><?php echo $ago( $r->created_at ); ?></div>
+                            </div>
+                        <?php endforeach; endif; ?>
+                    </div>
+                    <div class="cdbs-card-foot"><a href="<?php echo esc_url( add_query_arg( 'page', 'cdbs-parent-messages', $base ) ); ?>">View All &rarr;</a></div>
+                </div>
+
+
+            </div><!-- /.cdbs-cards -->
+
+            <!-- Contact Form Section -->
+            <div class="cdbs-section-divider">
+                <hr class="cdbs-divider-line">
+                <span class="cdbs-divider-label">Contact Form</span>
+            </div>
+            <div class="cdbs-cards">
+
+                <!-- Contact Submissions -->
+                <div class="cdbs-card">
+                    <div class="cdbs-card-head">
+                        <h2><span class="dashicons dashicons-feedback"></span> Contact Submissions</h2>
+                        <span class="cdbs-badge"><?php echo $cnt_contact; ?> total</span>
+                    </div>
+                    <div class="cdbs-card-body">
+                        <?php if ( empty( $recent_contact ) ) : ?>
+                            <div class="cdbs-empty">No contact submissions yet.</div>
+                        <?php else : foreach ( $recent_contact as $r ) : ?>
+                            <div class="cdbs-row">
+                                <div>
+                                    <div class="cdbs-row-main"><?php echo esc_html( $r->first_name . ' ' . $r->last_name ); ?></div>
+                                    <div class="cdbs-row-sub"><?php echo esc_html( $r->email ); ?></div>
+                                </div>
+                                <div class="cdbs-row-time"><?php echo $ago( $r->submitted_at ); ?></div>
+                            </div>
+                        <?php endforeach; endif; ?>
+                    </div>
+                    <div class="cdbs-card-foot"><a href="<?php echo esc_url( add_query_arg( 'page', 'cdbs-contact-submissions', $base ) ); ?>">View All &rarr;</a></div>
+                </div>
+
+            </div><!-- /.cdbs-cards contact -->
+        </div><!-- /.cdbs-dash -->
+        </div><!-- /.wrap -->
+        <?php
+    }
+
+    // =========================================================================
+    // All Camps list + edit
+    // =========================================================================
+
     public function render_admin_page() {
         if (!current_user_can('manage_options')) return;
         global $wpdb;

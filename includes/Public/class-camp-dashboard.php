@@ -17,6 +17,15 @@ class Camp_Dashboard {
 		add_shortcode( 'camp_dashboard_navi', [ $this, 'render_dashboard_navi' ] );
 		add_shortcode( 'camp_dashboard_header', [ $this, 'render_dashboard_header' ] );
 		add_shortcode( 'camp_dashboard_title', [ $this, 'render_dashboard_title' ] );
+		// Login / password shortcodes (unified for all roles)
+		add_shortcode( 'camp_login_page', [ $this, 'render_login_page' ] );
+		add_shortcode( 'camp_lost_password_page', [ $this, 'render_lost_password_page' ] );
+		add_shortcode( 'camp_set_password_page', [ $this, 'render_set_password_page' ] );
+		// Process login / set-password BEFORE output (headers/cookies must be set early)
+		add_action( 'init', [ $this, 'process_login_form' ], 1 );
+		add_action( 'init', [ $this, 'process_set_password_form' ], 1 );
+		// Redirect already-logged-in users away from login page (template_redirect = after WP knows the page)
+		add_action( 'template_redirect', [ $this, 'redirect_logged_in_from_login_page' ] );
 		
 		// Handle form submissions
 		add_action( 'init', [ $this, 'handle_form_submission' ] );
@@ -340,7 +349,7 @@ class Camp_Dashboard {
 	 */
 	public function custom_password_reset_email( $message, $key, $user_login, $user_data ) {
 		// Build the reset URL
-		$reset_url = network_site_url( "wp-login.php?action=rp&key=$key&login=" . rawurlencode( $user_login ), 'login' );
+		$reset_url = home_url( '/set-password/?key=' . $key . '&login=' . rawurlencode( $user_login ) );
 		
 		// Get the HTML template
 		$html_message = $this->get_password_reset_email_template( $user_login, $reset_url );
@@ -422,18 +431,309 @@ class Camp_Dashboard {
 		return ob_get_clean();
 	}
 	
+	// =========================================================================
+	// Login / Password shortcodes  (shared by all roles)
+	// =========================================================================
+
+	/**
+	 * Helper: return the role-appropriate dashboard URL for a user.
+	 */
+	private function get_dashboard_url_for_role( \WP_User $user ) {
+		if ( in_array( 'administrator', $user->roles, true ) ) {
+			return admin_url();
+		} elseif ( in_array( 'camp', $user->roles, true ) ) {
+			return home_url( '/user-dashboard/' );
+		} elseif ( in_array( 'parent', $user->roles, true ) ) {
+			return home_url( '/parent-dashboard/' );
+		}
+		return home_url();
+	}
+
+	/**
+	 * Runs on init (priority 1) — before ANY output.
+	 * Processes the login form: calls wp_signon(), sets auth cookie, redirects.
+	 * Errors are passed back to the login page via ?login_error= query param.
+	 */
+	public function process_login_form() {
+		if ( ! isset( $_POST['camp_login_submit'] ) ) {
+			return;
+		}
+		if ( ! isset( $_POST['camp_login_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['camp_login_nonce'] ) ), 'camp_login_action' ) ) {
+			wp_safe_redirect( add_query_arg( 'login_error', '1', home_url( '/camp-login/' ) ) );
+			exit;
+		}
+		$creds = [
+			'user_login'    => isset( $_POST['log'] ) ? sanitize_user( wp_unslash( $_POST['log'] ) ) : '',
+			'user_password' => isset( $_POST['pwd'] ) ? wp_unslash( $_POST['pwd'] ) : '',
+			'remember'      => isset( $_POST['rememberme'] ),
+		];
+		$user = wp_signon( $creds, is_ssl() );
+		if ( is_wp_error( $user ) ) {
+			wp_safe_redirect( add_query_arg( 'login_error', '1', home_url( '/camp-login/' ) ) );
+			exit;
+		}
+		// Success — redirect to role dashboard.
+		wp_safe_redirect( $this->get_dashboard_url_for_role( $user ) );
+		exit;
+	}
+
+	/**
+	 * Runs on init (priority 1) — before ANY output.
+	 * Processes the set-password form: validates key, resets password, auto-logs in, redirects.
+	 */
+	public function process_set_password_form() {
+		if ( ! isset( $_POST['camp_setpwd_submit'] ) ) {
+			return;
+		}
+		$key   = isset( $_POST['key'] )   ? sanitize_text_field( wp_unslash( $_POST['key'] ) )   : '';
+		$login = isset( $_POST['login'] ) ? sanitize_text_field( wp_unslash( $_POST['login'] ) ) : '';
+		$back  = add_query_arg( [ 'key' => $key, 'login' => rawurlencode( $login ) ], home_url( '/set-password/' ) );
+
+		if ( ! isset( $_POST['camp_setpwd_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['camp_setpwd_nonce'] ) ), 'camp_setpwd_action' ) ) {
+			wp_safe_redirect( add_query_arg( 'pwd_error', 'nonce', $back ) );
+			exit;
+		}
+		$user = check_password_reset_key( $key, $login );
+		if ( is_wp_error( $user ) ) {
+			wp_safe_redirect( add_query_arg( 'pwd_error', 'expired', $back ) );
+			exit;
+		}
+		$new_pass     = isset( $_POST['new_password'] )     ? wp_unslash( $_POST['new_password'] )     : '';
+		$confirm_pass = isset( $_POST['confirm_password'] ) ? wp_unslash( $_POST['confirm_password'] ) : '';
+		if ( strlen( $new_pass ) < 8 ) {
+			wp_safe_redirect( add_query_arg( [ 'pwd_error' => 'short', 'key' => $key, 'login' => rawurlencode( $login ) ], home_url( '/set-password/' ) ) );
+			exit;
+		}
+		if ( $new_pass !== $confirm_pass ) {
+			wp_safe_redirect( add_query_arg( [ 'pwd_error' => 'mismatch', 'key' => $key, 'login' => rawurlencode( $login ) ], home_url( '/set-password/' ) ) );
+			exit;
+		}
+		// All good — reset password, log in, redirect.
+		reset_password( $user, $new_pass );
+		wp_set_auth_cookie( $user->ID, false, is_ssl() );
+		wp_safe_redirect( $this->get_dashboard_url_for_role( $user ) );
+		exit;
+	}
+
+	/**
+	 * Runs on template_redirect.
+	 * If a logged-in user visits /camp-login/, /camp-lost-password/, or /set-password/,
+	 * send them straight to their dashboard.
+	 */
+	public function redirect_logged_in_from_login_page() {
+		if ( ! is_user_logged_in() ) {
+			return;
+		}
+		if ( is_page( 'camp-login' ) || is_page( 'camp-lost-password' ) || is_page( 'set-password' ) ) {
+			wp_safe_redirect( $this->get_dashboard_url_for_role( wp_get_current_user() ) );
+			exit;
+		}
+	}
+
+	/**
+	 * [camp_login_page] — renders the login form (pure output, no processing).
+	 */
+	public function render_login_page() {
+		$error   = isset( $_GET['login_error'] ) ? 'Incorrect username/email or password. Please try again.' : '';
+		$success = isset( $_GET['pwd_set'] )     ? 'Your password has been set. Please log in.' : '';
+		$prefill = isset( $_GET['login'] )        ? sanitize_user( wp_unslash( $_GET['login'] ) ) : '';
+
+		wp_enqueue_style( 'camp-signup-form', plugin_dir_url( CREATIVE_DBS_CAMPMGMT_FILE ) . 'assets/camp-signup-form.css', [], CDBS_CAMP_VERSION );
+
+		ob_start();
+		?>
+		<div class="camp-login-form">
+			<h2>Login</h2>
+
+			<?php if ( $error ) : ?>
+				<div class="camp-message camp-error"><?php echo esc_html( $error ); ?></div>
+			<?php endif; ?>
+			<?php if ( $success ) : ?>
+				<div class="camp-message camp-success"><?php echo esc_html( $success ); ?></div>
+			<?php endif; ?>
+
+			<form name="loginform" id="loginform" method="post" action="" autocomplete="off">
+				<?php wp_nonce_field( 'camp_login_action', 'camp_login_nonce' ); ?>
+
+				<p class="login-username">
+					<label for="user_login">Username or Email Address</label>
+					<input type="text" name="log" id="user_login" class="input" value="<?php echo esc_attr( $prefill ); ?>" size="20" autocomplete="username" required>
+				</p>
+
+				<p class="login-password">
+					<label for="user_pass">Password</label>
+					<input type="password" name="pwd" id="user_pass" class="input" value="" size="20" autocomplete="current-password" required>
+				</p>
+
+				<p class="login-remember">
+					<input name="rememberme" type="checkbox" id="rememberme" value="forever">
+					<label for="rememberme">Remember Me</label>
+				</p>
+
+				<p class="login-submit">
+					<input type="submit" name="camp_login_submit" id="wp-submit" class="button button-primary" value="LOG IN">
+				</p>
+			</form>
+
+			<div class="camp-login-links">
+				<a href="<?php echo esc_url( home_url( '/camp-lost-password/' ) ); ?>">Lost your password?</a>
+			</div>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * [camp_lost_password_page] — renders forgot-password form.
+	 * retrieve_password() only sends email + returns bool/WP_Error — no cookies, safe in shortcode.
+	 */
+	public function render_lost_password_page() {
+		$error   = '';
+		$success = '';
+
+		if ( isset( $_POST['camp_reset_submit'] ) ) {
+			if ( ! isset( $_POST['camp_reset_nonce'] ) || ! wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST['camp_reset_nonce'] ) ), 'camp_reset_action' ) ) {
+				$error = 'Security check failed. Please try again.';
+			} else {
+				$raw = isset( $_POST['user_login'] ) ? sanitize_text_field( wp_unslash( $_POST['user_login'] ) ) : '';
+				if ( empty( $raw ) ) {
+					$error = 'Please enter your username or email address.';
+				} else {
+					$_POST['user_login'] = $raw;
+					$result = retrieve_password();
+					if ( is_wp_error( $result ) ) {
+						$error = $result->get_error_message();
+					} else {
+						$success = 'If an account with that username/email exists, a reset link has been sent to your email address.';
+					}
+				}
+			}
+		}
+
+		wp_enqueue_style( 'camp-signup-form', plugin_dir_url( CREATIVE_DBS_CAMPMGMT_FILE ) . 'assets/camp-signup-form.css', [], CDBS_CAMP_VERSION );
+
+		ob_start();
+		?>
+		<div class="camp-login-form">
+			<h2>Reset Your Password</h2>
+
+			<?php if ( $error ) : ?>
+				<div class="camp-message camp-error"><?php echo esc_html( $error ); ?></div>
+			<?php endif; ?>
+			<?php if ( $success ) : ?>
+				<div class="camp-message camp-success"><?php echo esc_html( $success ); ?></div>
+			<?php endif; ?>
+
+			<?php if ( ! $success ) : ?>
+			<form method="post" action="">
+				<?php wp_nonce_field( 'camp_reset_action', 'camp_reset_nonce' ); ?>
+				<p class="login-username">
+					<label for="user_login">Username or Email Address</label>
+					<input type="text" name="user_login" id="user_login" class="input" value="" size="20" autocomplete="username" required>
+				</p>
+				<p class="login-submit">
+					<input type="submit" name="camp_reset_submit" class="button button-primary" value="Send Reset Link">
+				</p>
+			</form>
+			<?php endif; ?>
+
+			<div class="camp-login-links">
+				<a href="<?php echo esc_url( home_url( '/camp-login/' ) ); ?>">← Back to Login</a>
+			</div>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * [camp_set_password_page] — renders the set-new-password form (pure output).
+	 * Actual processing happens in process_set_password_form() on init.
+	 */
+	public function render_set_password_page() {
+		$key   = isset( $_GET['key'] )   ? sanitize_text_field( wp_unslash( $_GET['key'] ) )   : '';
+		$login = isset( $_GET['login'] ) ? sanitize_text_field( wp_unslash( $_GET['login'] ) ) : '';
+
+		// Map error codes passed back via query string.
+		$error_map = [
+			'expired'  => 'This password reset link is invalid or has expired. Please request a new one.',
+			'nonce'    => 'Security check failed. Please try again.',
+			'short'    => 'Password must be at least 8 characters.',
+			'mismatch' => 'Passwords do not match.',
+		];
+		$error = isset( $_GET['pwd_error'], $error_map[ $_GET['pwd_error'] ] ) ? $error_map[ $_GET['pwd_error'] ] : '';
+
+		// Validate key for display purposes (show form or error).
+		$valid_user = null;
+		if ( $key && $login && ! in_array( sanitize_text_field( $_GET['pwd_error'] ?? '' ), [ 'expired' ], true ) ) {
+			$check = check_password_reset_key( $key, $login );
+			if ( ! is_wp_error( $check ) ) {
+				$valid_user = $check;
+			} elseif ( ! $error ) {
+				$error = 'This password reset link is invalid or has expired. Please request a new one.';
+			}
+		}
+
+		wp_enqueue_style( 'camp-signup-form', plugin_dir_url( CREATIVE_DBS_CAMPMGMT_FILE ) . 'assets/camp-signup-form.css', [], CDBS_CAMP_VERSION );
+
+		ob_start();
+		?>
+		<div class="camp-login-form">
+			<h2>Set New Password</h2>
+
+			<?php if ( $error ) : ?>
+				<div class="camp-message camp-error"><?php echo esc_html( $error ); ?></div>
+			<?php endif; ?>
+
+			<?php if ( $valid_user ) : ?>
+			<form method="post" action="">
+				<?php wp_nonce_field( 'camp_setpwd_action', 'camp_setpwd_nonce' ); ?>
+				<input type="hidden" name="key"   value="<?php echo esc_attr( $key ); ?>">
+				<input type="hidden" name="login" value="<?php echo esc_attr( $login ); ?>">
+
+				<p class="login-username">
+					<label for="new_password">New Password</label>
+					<input type="password" id="new_password" name="new_password" class="input" required minlength="8" placeholder="At least 8 characters" size="20" autocomplete="new-password">
+				</p>
+
+				<p class="login-password">
+					<label for="confirm_password">Confirm Password</label>
+					<input type="password" id="confirm_password" name="confirm_password" class="input" required minlength="8" placeholder="Re-enter your password" size="20" autocomplete="new-password">
+				</p>
+
+				<p class="login-submit">
+					<input type="submit" name="camp_setpwd_submit" class="button button-primary" value="Set Password">
+				</p>
+			</form>
+			<?php else : ?>
+				<div class="camp-login-links">
+					<a href="<?php echo esc_url( home_url( '/camp-lost-password/' ) ); ?>">Request a new reset link</a>
+				</div>
+			<?php endif; ?>
+
+			<div class="camp-login-links">
+				<a href="<?php echo esc_url( home_url( '/camp-login/' ) ); ?>">← Back to Login</a>
+			</div>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
 	/**
 	 * Redirect users after login based on their role
 	 */
 	public function camp_login_redirect( $redirect_to, $request, $user ) {
 		if ( isset( $user->roles ) && is_array( $user->roles ) ) {
+			// Administrators go to WordPress admin
+			if ( in_array( 'administrator', $user->roles ) ) {
+				return admin_url();
+			}
 			// Camp directors go to their dashboard
 			if ( in_array( 'camp', $user->roles ) ) {
 				return home_url( '/user-dashboard/' );
 			}
-			// Administrators go to WordPress admin
-			if ( in_array( 'administrator', $user->roles ) ) {
-				return admin_url();
+			// Parents go to parent dashboard
+			if ( in_array( 'parent', $user->roles ) ) {
+				return home_url( '/parent-dashboard/' );
 			}
 		}
 		return $redirect_to;
@@ -524,7 +824,7 @@ class Camp_Dashboard {
 			
 			/* Form title */
 			.login form::before {
-				content: 'Camp Login';
+				content: 'Login';
 				display: block;
 				text-align: center;
 				color: #497C5E;

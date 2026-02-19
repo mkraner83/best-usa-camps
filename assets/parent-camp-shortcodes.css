@@ -1,0 +1,270 @@
+/* ============================================================
+   Parent Camp Shortcodes  (assets/parent-camp-shortcodes.css)
+   Styles for [camp_favourite_button] and [camp_contact_form]
+   ============================================================ */
+
+/* ---- Favourite button ---- */
+.pcs-fav-wrapper {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+}
+.pcs-fav-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 2px solid #3b7a57;
+    color: #3b7a57;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, color .15s, border-color .15s, transform .1s;
+    font-family: inherit;
+    text-decoration: none;
+}
+.pcs-fav-btn:hover {
+    background: #3b7a57;
+    color: #fff;
+    transform: translateY(-1px);
+}
+.pcs-fav-btn.pcs-fav-active {
+    background: #3b7a57;
+    color: #fff;
+}
+.pcs-fav-btn.pcs-fav-active:hover {
+    background: #ef4444;
+    border-color: #ef4444;
+}
+.pcs-fav-btn.pcs-fav-guest {
+    border-color: #94a3b8;
+    color: #64748b;
+}
+.pcs-fav-btn.pcs-fav-guest:hover {
+    background: #64748b;
+    color: #fff;
+    border-color: #64748b;
+}
+.pcs-fav-hint {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+/* ---- Contact form ---- */
+.pcs-contact-wrapper {
+    background: #E6E6E6;
+    border: none;
+    border-radius: 0;
+    padding: 0;
+    margin: 0;
+}
+
+.pcs-notice {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 15px;
+}
+.pcs-notice-success {
+    background: #f0fdf4;
+    border-left: 4px solid #22c55e;
+    color: #14532d;
+}
+.pcs-logged-as {
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 16px;
+}
+.pcs-form-row { margin-bottom: 16px; }
+.pcs-two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+}
+.pcs-label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 6px;
+}
+.pcs-required { color: #ef4444; }
+.pcs-input,
+.pcs-textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    font-size: 14px;
+    color: #374151;
+    background: #fff;
+    box-sizing: border-box;
+    font-family: inherit;
+    transition: border-color .15s, box-shadow .15s;
+}
+.pcs-input:focus,
+.pcs-textarea:focus {
+    outline: none;
+    border-color: #3b7a57;
+    box-shadow: 0 0 0 3px rgba(59,122,87,.12);
+}
+.pcs-textarea {
+    resize: vertical;
+    min-height: 110px;
+}
+.pcs-submit-btn {
+    background: #3b7a57;
+    color: #fff;
+    border: none;
+    border-radius: 7px;
+    padding: 11px 28px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background .15s, transform .1s;
+    font-family: inherit;
+}
+.pcs-submit-btn:hover {
+    background: #2d5a3f;
+    transform: translateY(-1px);
+}
+
+@media (max-width: 560px) {
+    .pcs-two-col { grid-template-columns: 1fr; }
+}
+
+/* ---- Guest locked state ---- */
+.pcs-guest-lock {
+    position: relative;
+}
+.pcs-guest-form-blur {
+    opacity: .35;
+    pointer-events: none;
+    user-select: none;
+    filter: blur(1.5px);
+}
+.pcs-guest-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    background: rgba(230,230,230,.55);
+    border-radius: 8px;
+    padding: 24px;
+    text-align: center;
+}
+.pcs-guest-overlay p {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1e293b;
+    margin: 0 0 4px;
+}
+.pcs-guest-overlay-btns {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+.pcs-guest-btn {
+    display: inline-block;
+    padding: 10px 22px;
+    border-radius: 7px;
+    font-size: 14px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background .15s;
+}
+.pcs-guest-btn-login {
+    background: #3b7a57;
+    color: #fff;
+}
+.pcs-guest-btn-login:hover { background: #2d5a3f; color: #fff; }
+.pcs-guest-btn-register {
+    background: #fff;
+    color: #3b7a57;
+    border: 2px solid #3b7a57;
+}
+.pcs-guest-btn-register:hover { background: #f0fdf4; color: #2d5a3f; }
+
+/* =========================================================================
+   Login status bar  [cdbs_login_bar]
+   ========================================================================= */
+.cdbs-login-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.32);
+    border-radius: 999px;
+    padding: 2px 15px;
+    font-family: Abel, sans-serif;
+    font-size: 12px;
+    font-weight: 400;
+    letter-spacing: 0;
+    white-space: nowrap;
+    line-height: 1;
+}
+.cdbs-login-bar__who {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: #ffffff;
+}
+.cdbs-login-bar__dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #22c55e;
+    flex-shrink: 0;
+}
+.cdbs-login-bar__role {
+    font-family: Abel, sans-serif;
+    font-size: 11px;
+    font-weight: 400;
+    letter-spacing: 0.1px;
+    text-transform: uppercase;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 999px;
+    padding: 2px 8px;
+}
+.cdbs-login-bar__sep {
+    display: inline-block;
+    width: 1px;
+    height: 14px;
+    background: rgba(255, 255, 255, 0.35);
+    flex-shrink: 0;
+}
+.cdbs-login-bar__link {
+    font-family: Abel, sans-serif;
+    font-size: 13px;
+    font-weight: 400;
+    letter-spacing: 0.1px;
+    color: #ffffff;
+    text-decoration: none;
+    transition: opacity .15s;
+}
+.cdbs-login-bar__link:hover { opacity: 0.75; text-decoration: underline; color: #ffffff; }
+.cdbs-login-bar__logout { opacity: 0.7; }
+.cdbs-login-bar__logout:hover { opacity: 1; color: #ffffff; }
+
+@media (max-width: 767px) {
+    .cdbs-login-bar {
+        display: flex !important;
+        width: 100% !important;
+        box-sizing: border-box;
+        border-radius: 8px;
+        justify-content: center;
+    }
+    .cdbs-login-bar__sep {
+        flex-shrink: 0;
+    }
+}
+
