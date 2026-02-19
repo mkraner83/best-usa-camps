@@ -1378,7 +1378,7 @@
 .cdbs-cp-divider {
 	border: none;
 	border-top: 2px solid rgba(190, 190, 190, 0.42);
-	margin: 28px 0 36px;
+	margin: 52px 0px 30px 0 !important;
 }
 
 /* Section headings */
@@ -1450,6 +1450,11 @@
 
 /* Responsive: all columns go full-width on tablet/mobile */
 @media (max-width: 1024px) {
+	.cdbs-camp-page {
+		padding-left: 10px;
+		padding-right: 10px;
+	}
+
 	.cdbs-cp-col--80,
 	.cdbs-cp-col--20,
 	.cdbs-cp-col--50,

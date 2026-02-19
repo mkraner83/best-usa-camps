@@ -307,7 +307,7 @@ class CreativeDBS_Camp_Management {
 
     public function admin_footer_js() {
         if (!isset($_GET['page'])) return;
-        if ($_GET['page'] !== self::SLUG) return; // only main page
+        if ($_GET['page'] !== self::SLUG && $_GET['page'] !== self::SLUG . '-camps') return;
         ?>
         <script>
         (function(){
@@ -1506,6 +1506,14 @@ class CreativeDBS_Camp_Management {
                     <?php wp_nonce_field('save_camp'); ?>
                     <input type="hidden" name="camp_id" value="<?php echo esc_attr($camp->id); ?>" />
                     <table class="form-table" role="presentation">
+                        <tr><th><?php esc_html_e('Approved'); ?></th>
+                            <td>
+                                <label>
+                                    <input type="checkbox" name="approved" value="1" <?php checked( $camp->approved, 1 ); ?> />
+                                    <?php esc_html_e( 'Approved — camp is visible on the public site' ); ?>
+                                </label>
+                            </td>
+                        </tr>
                         <tr><th><?php esc_html_e('Camp Name'); ?></th><td><input type="text" name="camp_name" class="regular-text" value="<?php echo esc_attr($camp->camp_name); ?>" required /></td></tr>
                         <tr><th><?php esc_html_e('Opening Day'); ?></th><td><input type="date" name="opening_day" value="<?php echo esc_attr($camp->opening_day); ?>" /></td></tr>
                         <tr><th><?php esc_html_e('Closing Day'); ?></th><td><input type="date" name="closing_day" value="<?php echo esc_attr($camp->closing_day); ?>" /></td></tr>

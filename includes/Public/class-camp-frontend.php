@@ -46,6 +46,11 @@ class Camp_Frontend {
 
 		// Search shortcode
 		add_shortcode( 'camp_search', [ $this, 'render_search' ] );
+
+		// Live-search (nav/header autocomplete)
+		add_shortcode( 'camp_livesearch', [ $this, 'render_livesearch' ] );
+		add_action( 'wp_ajax_cdbs_livesearch', [ $this, 'ajax_livesearch' ] );
+		add_action( 'wp_ajax_nopriv_cdbs_livesearch', [ $this, 'ajax_livesearch' ] );
 		
 		// Debug shortcode
 		add_shortcode( 'camp_debug', [ $this, 'render_debug' ] );
@@ -103,6 +108,25 @@ class Camp_Frontend {
 			}
 		}
 		
+		// Livesearch: always enqueue (can appear in nav/header on any page)
+		wp_enqueue_style(
+			'camp-livesearch',
+			plugin_dir_url( CREATIVE_DBS_CAMPMGMT_FILE ) . 'assets/camp-livesearch.css',
+			[],
+			CDBS_CAMP_VERSION
+		);
+		wp_enqueue_script(
+			'camp-livesearch',
+			plugin_dir_url( CREATIVE_DBS_CAMPMGMT_FILE ) . 'assets/camp-livesearch.js',
+			[],
+			CDBS_CAMP_VERSION,
+			true
+		);
+		wp_localize_script( 'camp-livesearch', 'CDBS_LS', [
+			'ajax_url' => admin_url( 'admin-ajax.php' ),
+			'nonce'    => wp_create_nonce( 'cdbs_livesearch' ),
+		] );
+
 		// Camp detail page styles
 		if ( $has_camp_id ) {
 			// Camp frontend styles
@@ -1944,6 +1968,108 @@ class Camp_Frontend {
 		}
 		
 		return 'Link';
+	}
+
+	// =========================================================================
+	// [camp_livesearch] — Lightweight nav/header autocomplete
+	// =========================================================================
+
+	/**
+	 * Shortcode: [camp_livesearch] — lightweight autocomplete for nav/header
+	 * Attributes: placeholder, show_all_link
+	 */
+	public function render_livesearch( $atts ) {
+		$atts = shortcode_atts( [
+			'placeholder'   => 'Search camps…',
+			'show_all_link' => '',   // URL to full search page, e.g. /find-a-camp/
+		], $atts );
+
+		$uid         = 'cdbs-ls-' . wp_unique_id();
+		$placeholder = esc_attr( $atts['placeholder'] );
+		$all_link    = esc_url( $atts['show_all_link'] );
+
+		ob_start();
+		?>
+		<div class="cdbs-ls-wrap" id="<?php echo $uid; ?>" data-nonce="<?php echo esc_attr( wp_create_nonce( 'cdbs_livesearch' ) ); ?>">
+			<div class="cdbs-ls-field">
+				<svg class="cdbs-ls-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+				<input
+					type="text"
+					class="cdbs-ls-input"
+					placeholder="<?php echo $placeholder; ?>"
+					autocomplete="off"
+					aria-label="<?php echo $placeholder; ?>"
+				/>
+				<button class="cdbs-ls-clear" type="button" aria-label="Clear" style="display:none;">&times;</button>
+			</div>
+			<div class="cdbs-ls-dropdown" role="listbox" aria-live="polite"></div>
+			<?php if ( $all_link ) : ?>
+			<div class="cdbs-ls-footer">
+				<a href="<?php echo $all_link; ?>" class="cdbs-ls-all-link">Browse all camps &rarr;</a>
+			</div>
+			<?php endif; ?>
+		</div>
+		<?php
+		return ob_get_clean();
+	}
+
+	/**
+	 * AJAX: return matching camps as JSON for livesearch autocomplete
+	 */
+	public function ajax_livesearch() {
+		check_ajax_referer( 'cdbs_livesearch', 'nonce' );
+
+		global $wpdb;
+		$q = isset( $_POST['q'] ) ? sanitize_text_field( wp_unslash( $_POST['q'] ) ) : '';
+
+		if ( strlen( $q ) < 2 ) {
+			wp_send_json_success( [] );
+		}
+
+		$table = $wpdb->prefix . 'camp_management';
+		$like  = '%' . $wpdb->esc_like( $q ) . '%';
+
+		$camps = $wpdb->get_results( $wpdb->prepare(
+			"SELECT id, camp_name, logo, state, website
+			 FROM {$table}
+			 WHERE approved = 1 AND camp_name LIKE %s
+			 ORDER BY camp_name ASC
+			 LIMIT 10",
+			$like
+		) );
+
+		if ( empty( $camps ) ) {
+			wp_send_json_success( [] );
+		}
+
+		// Resolve WP page URLs via postmeta camp_id
+		$ids          = array_map( 'intval', wp_list_pluck( $camps, 'id' ) );
+		$placeholders = implode( ',', array_fill( 0, count( $ids ), '%d' ) );
+		$meta_rows    = $wpdb->get_results(
+			$wpdb->prepare(
+				"SELECT post_id, meta_value FROM {$wpdb->postmeta}
+				 WHERE meta_key = 'camp_id' AND CAST(meta_value AS UNSIGNED) IN ({$placeholders})",
+				...$ids
+			)
+		);
+
+		$url_map = [];
+		foreach ( $meta_rows as $row ) {
+			$url_map[ intval( $row->meta_value ) ] = get_permalink( intval( $row->post_id ) );
+		}
+
+		$out = [];
+		foreach ( $camps as $c ) {
+			$out[] = [
+				'id'    => intval( $c->id ),
+				'name'  => $c->camp_name,
+				'logo'  => $c->logo ?: '',
+				'state' => $c->state ?: '',
+				'url'   => $url_map[ intval( $c->id ) ] ?? '',
+			];
+		}
+
+		wp_send_json_success( $out );
 	}
 
 	// =========================================================================

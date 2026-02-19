@@ -277,9 +277,20 @@ class Shortcodes_Guide {
 				</div>
 
 				<!-- Camp Pages Section -->
-				<div class="shortcode-section">
+				<div class="shortcode-section" style="border-color:#497C5E;">
 					<h2>📄 Individual Camp Page Shortcodes</h2>
-					<p class="shortcode-desc" style="margin-top: 0;">Use these on individual camp pages to display camp information.</p>
+					<p class="shortcode-desc" style="margin-top: 0;">Use these on individual camp pages to display camp information. The page must have a <code>camp_id</code> custom field set to the camp's ID.</p>
+
+					<div class="shortcode-item" style="border-left-color:#497C5E;background:#f0f6f3;">
+						<code class="shortcode-code" onclick="copyShortcode(this)" style="background:#2d5a47;">[camp_page]</code>
+						<span class="copy-notice">&check; Copied!</span>
+						<p class="shortcode-desc"><strong>⭐ All-in-one shortcode</strong> — replaces all individual camp page shortcodes with a single, fully-laid-out page. Renders: Important Information tiles, Weeks, Types, Activities, Social links, Contact Form, About (description), Contact Info, Video, Sessions &amp; Pricing, Accommodations, FAQs, Photo Gallery. Each section is <strong>automatically hidden</strong> if the camp has no data for it.</p>
+						<div class="shortcode-params">
+							<strong>Usage:</strong> <code>[camp_page]</code> — no parameters needed. Auto-reads <code>camp_id</code> from the page's custom field.<br>
+							<strong>Recommended placement:</strong> Use in Elementor as a Shortcode widget on each individual camp page, after the image carousel.<br>
+							<strong>Tip:</strong> The favourite button, contact form, and all sections are included automatically.
+						</div>
+					</div>
 
 					<div class="shortcode-item">
 						<code class="shortcode-code" onclick="copyShortcode(this)">[camp_logo]</code>
@@ -418,8 +429,23 @@ class Shortcodes_Guide {
 					<h2>🌐 General / Utility Shortcodes</h2>
 
 					<div class="shortcode-item">
+						<code class="shortcode-code" onclick="copyShortcode(this)">[camp_livesearch]</code>
+						<span class="copy-notice">&check; Copied!</span>
+						<p class="shortcode-desc">Live autocomplete search field for the navigation bar, header, or any page. As the user types, matching approved camp names appear in a dropdown with a tiny logo and state. Clicking a result navigates directly to the camp page. Starts searching after 2 characters.</p>
+						<div class="shortcode-params">
+							<strong>Parameters:</strong><br>
+							&bull; <code>placeholder</code> — input placeholder text (default: <code>Search camps&hellip;</code>)<br>
+							&bull; <code>show_all_link</code> — URL to add a "Browse all camps &rarr;" footer link (optional)<br>
+							<strong>Examples:</strong><br>
+							<code>[camp_livesearch]</code><br>
+							<code>[camp_livesearch placeholder="Find a camp..." show_all_link="/camp-search/"]</code><br>
+							<strong>Keyboard:</strong> &uarr;&darr; navigate results, Enter to go, Escape to close.<br>
+							<strong>Recommended placement:</strong> Elementor header / top navigation bar (Shortcode widget, default width 260px).
+						</div>
+					</div>
+
+					<div class="shortcode-item">
 						<code class="shortcode-code" onclick="copyShortcode(this)">[cdbs_login_bar]</code>
-						<span class="copy-notice">✓ Copied!</span>
 						<p class="shortcode-desc">Login status bar for the site header/navigation. <strong>Logged-in parents &amp; camp directors</strong> see their name, role pill, "My Dashboard" link, and "Log Out". <strong>Guests</strong> see "Log In", "Register (Camp)", and "Register (Parent)" links. Invisible to admins. Styled as a compact white-bordered pill — place it in your Elementor header.</p>
 						<div class="shortcode-params">
 							<strong>Recommended placement:</strong> Header / top navigation bar<br>
