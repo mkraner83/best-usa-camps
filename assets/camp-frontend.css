@@ -1326,3 +1326,177 @@
 		display: none;
 	}
 }
+/* =============================================================================
+   [camp_page] — Combined camp page layout
+   ============================================================================= */
+
+.cdbs-camp-page {
+	width: 100%;
+}
+
+/* Rows */
+.cdbs-cp-row {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 24px;
+	margin-bottom: 24px;
+}
+
+/* Columns */
+.cdbs-cp-col {
+	min-width: 0;
+}
+.cdbs-cp-col--grow { flex: 1 1 0; min-width: 0; }
+.cdbs-cp-col--80 { flex: 0 0 calc(80% - 12px); max-width: calc(80% - 12px); }
+.cdbs-cp-col--20 { flex: 0 0 calc(20% - 12px); max-width: calc(20% - 12px); }
+.cdbs-cp-col--50 { flex: 0 0 calc(50% - 12px); max-width: calc(50% - 12px); }
+.cdbs-cp-col--60 { flex: 0 0 calc(60% - 12px); max-width: calc(60% - 12px); }
+.cdbs-cp-col--40 { flex: 0 0 calc(40% - 12px); max-width: calc(40% - 12px); }
+
+/* Gray box — Weeks, Types, Activities, Contact Form, Contact Info+Video */
+.cdbs-cp-box {
+	background: #e8e8e8;
+	border-radius: 12px;
+	padding: 24px 28px 28px;
+}
+
+/* Favourite button: top-right of the heading row */
+.cdbs-cp-fav-top {
+	flex-shrink: 0;
+	display: flex;
+	align-items: flex-start;
+	padding-top: 4px;
+}
+
+/* Full-width tiles wrapper */
+.cdbs-cp-tiles {
+	width: 100%;
+	margin-bottom: 24px;
+}
+
+/* Section divider — matches Elementor: solid 2px #BEBEBE6B */
+.cdbs-cp-divider {
+	border: none;
+	border-top: 2px solid rgba(190, 190, 190, 0.42);
+	margin: 28px 0 36px;
+}
+
+/* Section headings */
+/* --- Section headings (all boxes except main title) --- */
+.cdbs-cp-heading {
+	font-family: "Abel", sans-serif;
+	font-size: 26px;
+	font-weight: 400;
+	letter-spacing: 2px;
+	color: #333333;
+	margin: 0 0 12px 0;
+	line-height: 1.3;
+}
+
+/* Bold/highlighted span in section headings */
+.cdbs-cp-hl {
+	font-family: "Amaranth", sans-serif;
+	font-size: 26px;
+	font-weight: 900;
+	letter-spacing: 1.9px;
+}
+
+/* --- Main title: "Camp Name Important Information" --- */
+.cdbs-cp-heading--main {
+	font-family: "Abel", sans-serif;
+	font-size: 40px;
+	font-weight: 400;
+	letter-spacing: 2px;
+	color: #333333;
+}
+
+.cdbs-cp-heading--main .cdbs-cp-hl {
+	font-family: "Amaranth", sans-serif;
+	font-size: 39px;
+	font-weight: 900;
+	letter-spacing: 1.9px;
+}
+
+/* Heading separator: ···—— (dots + line) — replicates ElementsKit heading decorator */
+.cdbs-cp-sep {
+	display: flex;
+	align-items: center;
+	gap: 4px;
+	margin-bottom: 20px;
+}
+.cdbs-cp-sep::before {
+	content: '···';
+	font-size: 18px;
+	letter-spacing: -1px;
+	color: #3b7a57;
+	line-height: 1;
+	flex-shrink: 0;
+}
+.cdbs-cp-sep::after {
+	content: '';
+	display: block;
+	height: 2px;
+	width: 120px;
+	background: #1e293b;
+	border-radius: 2px;
+}
+
+/* Video: hide on tablet and mobile (matches original hidden:tablet) */
+@media (max-width: 1024px) {
+	.cdbs-cp-hide-mobile {
+		display: none !important;
+	}
+}
+
+/* Responsive: all columns go full-width on tablet/mobile */
+@media (max-width: 1024px) {
+	.cdbs-cp-col--80,
+	.cdbs-cp-col--20,
+	.cdbs-cp-col--50,
+	.cdbs-cp-col--60,
+	.cdbs-cp-col--40 {
+		flex: 0 0 100%;
+		max-width: 100%;
+	}
+
+	/* On mobile the fav button moves below the heading — keep it left-aligned */
+	.cdbs-cp-fav-top {
+		padding-top: 0;
+	}
+
+	/* Scale down section headings on tablet/mobile */
+	.cdbs-cp-heading {
+		font-size: 18px;
+		letter-spacing: 1.2px;
+	}
+	.cdbs-cp-hl {
+		font-size: 18px;
+		letter-spacing: 1.1px;
+	}
+
+	/* Scale down main title on tablet/mobile */
+	.cdbs-cp-heading--main {
+		font-size: 26px;
+		letter-spacing: 1.2px;
+	}
+	.cdbs-cp-heading--main .cdbs-cp-hl {
+		font-size: 25px;
+		letter-spacing: 1.1px;
+	}
+}
+
+/* Further scale down on small phones */
+@media (max-width: 480px) {
+	.cdbs-cp-heading {
+		font-size: 16px;
+	}
+	.cdbs-cp-hl {
+		font-size: 16px;
+	}
+	.cdbs-cp-heading--main {
+		font-size: 22px;
+	}
+	.cdbs-cp-heading--main .cdbs-cp-hl {
+		font-size: 21px;
+	}
+}

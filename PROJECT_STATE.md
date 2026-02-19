@@ -4,7 +4,7 @@
 **Version:** 3.6.0 (Production Ready)  
 **Git Tag:** v3.6.0  
 **Restore Point:** `RESTORE-POINT-v3.6.0.md` (full change log for this session)  
-**Zip:** `creativedbs-camp-mgmt-v3.6.0.zip` (266KB)
+**Zip:** `creativedbs-camp-mgmt-v3.6.0.zip` (274KB)
 
 ## Structure
 - Plugin: `creativedbs-camp-mgmt.php` (~2330 lines)
@@ -30,8 +30,9 @@
 | `[featured_camps]`, `[best_day_camps]`, `[best_overnight_camps]`, `[best_girls_camps]`, `[best_boys_camps]`, `[latest_camps]`, `[single_camp]` | Featured camp display shortcodes |
 | `[camp_logo]`, `[camp_name]`, `[camp_name_text]`, `[camp_subtitle]`, `[camp_rating]`, `[camp_contact_bar]`, `[camp_contact_info]`, `[camp_description]`, `[camp_activities]`, `[camp_types_weeks]`, `[camp_accommodations]`, `[camp_faqs]`, `[camp_sessions]`, `[camp_additional_info]`, `[camp_social_media]`, `[camp_video]` | Individual camp page shortcodes |
 | `[contact_form]` | General site contact form |
-| `[camp_favourite_button camp_id="X"]` | Heart save button for parents on camp pages |
-| `[camp_contact_form camp_id="X"]` | Message form on camp pages |
+| `[camp_favourite_button]` | Heart save button for parents on camp pages (auto-reads `camp_id` from WP post meta) |
+| `[camp_contact_form]` | Message form on camp pages (auto-reads `camp_id` from WP post meta) |
+| `[camp_page]` | All-in-one camp page layout: info tiles, weeks, types, activities, social, contact form, about, contact info, video, sessions, accommodations, FAQs, gallery — all sections hidden when no data |
 
 ## User Roles & Dashboards
 
@@ -64,6 +65,9 @@
 6. **Camp director set-password redirect fixed** — now uses `/set-password/` (same as parents)
 7. **Contact form redirect fix** — no more blank page after submit
 8. **HTML admin notification emails** — both contact form and parent registration
+9. **`[camp_page]` combined shortcode** — one shortcode replaces all Elementor layout sections on camp pages; auto-reads `camp_id` from WP post meta; all sections conditionally hidden when no data
+10. **`[camp_favourite_button]` + `[camp_contact_form]` auto camp_id** — both shortcodes now auto-read `camp_id` from WP post meta, no manual attribute needed
+11. **`[camp_page]` typography** — Abel font (normal) + Amaranth font (bold spans); main title 40px, section headings 26px; proportionally scaled on mobile
 
 ## Known Issues / Outstanding Items
 - `[cdbs_login_bar]` mobile full-width: CSS is set (`width:100% !important`) — Elementor column containing the widget also needs width=100% set in Elementor's responsive editor (Elementor config, not code)

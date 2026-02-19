@@ -41,6 +41,9 @@ class Camp_Frontend {
 		add_shortcode( 'camp_social_media', [ $this, 'render_social_media' ] );
 		add_shortcode( 'camp_video', [ $this, 'render_video' ] );
 		
+		// Combined full-page shortcode
+		add_shortcode( 'camp_page', [ $this, 'render_camp_page' ] );
+
 		// Search shortcode
 		add_shortcode( 'camp_search', [ $this, 'render_search' ] );
 		
@@ -1941,6 +1944,169 @@ class Camp_Frontend {
 		}
 		
 		return 'Link';
+	}
+
+	// =========================================================================
+	// [camp_page] — Full combined camp page layout
+	// =========================================================================
+
+	public function render_camp_page( $atts ) {
+		$camp_data = $this->get_camp_data();
+		if ( ! $camp_data ) return '';
+
+		$camp_name = esc_html( $camp_data['camp_name'] ?? '' );
+
+		// Render each section (all auto-detect camp via post meta camp_id).
+		// Only render a section heading if the section has content.
+		$additional_info = trim( do_shortcode( '[camp_additional_info]' ) );
+		$favourite       = trim( do_shortcode( '[camp_favourite_button]' ) );
+		$weeks           = trim( do_shortcode( '[camp_weeks]' ) );
+		$types           = trim( do_shortcode( '[camp_types]' ) );
+		$activities      = trim( do_shortcode( '[camp_activities]' ) );
+		$social          = trim( do_shortcode( '[camp_social_media]' ) );
+		$contact_form    = trim( do_shortcode( '[camp_contact_form]' ) );
+		$description     = trim( do_shortcode( '[camp_description]' ) );
+		$contact_info    = trim( do_shortcode( '[camp_contact_info]' ) );
+		$video           = trim( do_shortcode( '[camp_video]' ) );
+		$sessions        = trim( do_shortcode( '[camp_sessions]' ) );
+		$accommodations  = trim( do_shortcode( '[camp_accommodations layout="cards" columns="3"]' ) );
+		$faqs            = trim( do_shortcode( '[camp_faqs style="accordion"]' ) );
+		$gallery         = trim( do_shortcode( '[camp_gallery]' ) );
+
+		ob_start();
+		?>
+		<div class="cdbs-camp-page">
+
+			<?php // ── Row 1: Heading (left) + Favourite Button (top-right), then sep + tiles ── ?>
+			<div class="cdbs-cp-row cdbs-cp-row--info-fav">
+				<div class="cdbs-cp-col cdbs-cp-col--grow">
+					<h3 class="cdbs-cp-heading cdbs-cp-heading--main"><?php echo $camp_name; ?> <span class="cdbs-cp-hl">Important Information</span></h3>
+					<div class="cdbs-cp-sep"></div>
+				</div>
+				<?php if ( $favourite ) : ?>
+				<div class="cdbs-cp-col cdbs-cp-fav-top">
+					<?php echo $favourite; ?>
+				</div>
+				<?php endif; ?>
+			</div>
+			<div class="cdbs-cp-tiles">
+				<?php echo $additional_info; ?>
+			</div>
+
+			<?php // ── Row 2: Weeks (50%) + Types (50%) — both in gray boxes ── ?>
+			<?php if ( $weeks || $types ) : ?>
+			<div class="cdbs-cp-row cdbs-cp-row--2col">
+				<?php if ( $weeks ) : ?>
+				<div class="cdbs-cp-col cdbs-cp-col--50 cdbs-cp-box">
+					<h3 class="cdbs-cp-heading">Camp <span class="cdbs-cp-hl">Weeks</span></h3>
+					<div class="cdbs-cp-sep"></div>
+					<?php echo $weeks; ?>
+				</div>
+				<?php endif; ?>
+				<?php if ( $types ) : ?>
+				<div class="cdbs-cp-col cdbs-cp-col--50 cdbs-cp-box">
+					<h3 class="cdbs-cp-heading">Camp <span class="cdbs-cp-hl">Types</span></h3>
+					<div class="cdbs-cp-sep"></div>
+					<?php echo $types; ?>
+				</div>
+				<?php endif; ?>
+			</div>
+			<?php endif; ?>
+
+			<?php // ── Row 3: Activities + Social (left 50% box) | Contact Form (right 50% box) ── ?>
+			<?php if ( $activities || $social || $contact_form ) : ?>
+			<div class="cdbs-cp-row cdbs-cp-row--2col">
+				<?php if ( $activities || $social ) : ?>
+				<div class="cdbs-cp-col cdbs-cp-col--50 cdbs-cp-box">
+					<?php if ( $activities ) : ?>
+					<h3 class="cdbs-cp-heading">Camp <span class="cdbs-cp-hl">Activities</span></h3>
+					<div class="cdbs-cp-sep"></div>
+					<?php echo $activities; ?>
+					<?php endif; ?>
+					<?php if ( $social ) : ?>
+					<h3 class="cdbs-cp-heading" style="margin-top:28px"><span class="cdbs-cp-hl">Social</span> Links</h3>
+					<div class="cdbs-cp-sep"></div>
+					<?php echo $social; ?>
+					<?php endif; ?>
+				</div>
+				<?php endif; ?>
+				<?php if ( $contact_form ) : ?>
+				<div class="cdbs-cp-col cdbs-cp-col--50 cdbs-cp-box">
+					<h3 class="cdbs-cp-heading"><span class="cdbs-cp-hl">Send a Message</span> to <?php echo $camp_name; ?></h3>
+					<div class="cdbs-cp-sep"></div>
+					<?php echo $contact_form; ?>
+				</div>
+				<?php endif; ?>
+			</div>
+			<?php endif; ?>
+
+			<?php // ── Divider ── ?>
+			<hr class="cdbs-cp-divider">
+
+			<?php // ── Row 4: Description plain (60%) + Contact Info+Video gray box (40%) ── ?>
+			<?php if ( $description || $contact_info ) : ?>
+			<div class="cdbs-cp-row cdbs-cp-row--60-40">
+				<?php if ( $description ) : ?>
+				<div class="cdbs-cp-col cdbs-cp-col--60">
+					<h3 class="cdbs-cp-heading"><span class="cdbs-cp-hl">About</span> <?php echo $camp_name; ?></h3>
+					<div class="cdbs-cp-sep"></div>
+					<?php echo $description; ?>
+				</div>
+				<?php endif; ?>
+				<?php if ( $contact_info ) : ?>
+				<div class="cdbs-cp-col cdbs-cp-col--40 cdbs-cp-box">
+					<h3 class="cdbs-cp-heading"><span class="cdbs-cp-hl">Contact</span> <?php echo $camp_name; ?></h3>
+					<div class="cdbs-cp-sep"></div>
+					<?php echo $contact_info; ?>
+					<?php if ( $video ) : ?>
+					<div class="cdbs-cp-hide-mobile">
+						<h3 class="cdbs-cp-heading" style="margin-top:28px"><span class="cdbs-cp-hl"><?php echo $camp_name; ?></span> Video</h3>
+						<div class="cdbs-cp-sep"></div>
+						<?php echo $video; ?>
+					</div>
+					<?php endif; ?>
+				</div>
+				<?php endif; ?>
+			</div>
+			<?php endif; ?>
+
+			<?php // ── Sessions ── ?>
+			<?php if ( $sessions ) : ?>
+			<hr class="cdbs-cp-divider">
+			<h3 class="cdbs-cp-heading"><span class="cdbs-cp-hl">Sessions and Pricing</span> for <?php echo $camp_name; ?></h3>
+			<div class="cdbs-cp-sep"></div>
+			<?php echo $sessions; ?>
+			<?php endif; ?>
+
+			<?php // ── Accommodations ── ?>
+			<?php if ( $accommodations ) : ?>
+			<hr class="cdbs-cp-divider">
+			<h3 class="cdbs-cp-heading"><span class="cdbs-cp-hl">Cabins and Accommodations</span> at <?php echo $camp_name; ?></h3>
+			<div class="cdbs-cp-sep"></div>
+			<?php echo $accommodations; ?>
+			<?php endif; ?>
+
+			<?php // ── FAQs ── ?>
+			<?php if ( $faqs ) : ?>
+			<hr class="cdbs-cp-divider">
+			<h3 class="cdbs-cp-heading"><?php echo $camp_name; ?> <span class="cdbs-cp-hl">FAQs</span></h3>
+			<div class="cdbs-cp-sep"></div>
+			<?php echo $faqs; ?>
+			<?php endif; ?>
+
+			<?php // ── Gallery ── ?>
+			<?php if ( $gallery ) : ?>
+			<hr class="cdbs-cp-divider">
+			<h3 class="cdbs-cp-heading"><?php echo $camp_name; ?> <span class="cdbs-cp-hl">Photo Gallery</span></h3>
+			<div class="cdbs-cp-sep"></div>
+			<?php echo $gallery; ?>
+			<?php endif; ?>
+
+			<hr class="cdbs-cp-divider">
+
+		</div>
+		<?php
+		return ob_get_clean();
 	}
 }
 

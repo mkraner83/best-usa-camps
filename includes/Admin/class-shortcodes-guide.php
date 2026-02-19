@@ -437,23 +437,23 @@ class Shortcodes_Guide {
 					</div>
 
 					<div class="shortcode-item">
-						<code class="shortcode-code" onclick="copyShortcode(this)">[camp_favourite_button camp_id="123"]</code>
+						<code class="shortcode-code" onclick="copyShortcode(this)">[camp_favourite_button]</code>
 						<span class="copy-notice">✓ Copied!</span>
 						<p class="shortcode-desc">Heart toggle button on individual camp pages. Logged-in parents can save/remove camps from their favourites. Guests see a "Log in to save" prompt. Non-parent roles see nothing.</p>
 						<div class="shortcode-params">
 							<strong>Parameters:</strong> <code>camp_id</code> (required)
-							<br><strong>Example:</strong> <code>[camp_favourite_button camp_id="45"]</code>
+							<br><strong>Note:</strong> <code>camp_id</code> is optional — if omitted, the shortcode automatically reads the <code>camp_id</code> custom field from the current page. You can still override it manually: <code>[camp_favourite_button camp_id="45"]</code>
 							<br><strong>Find camp ID:</strong> Camp Management → All Camps
 						</div>
 					</div>
 
 					<div class="shortcode-item">
-						<code class="shortcode-code" onclick="copyShortcode(this)">[camp_contact_form camp_id="123"]</code>
+						<code class="shortcode-code" onclick="copyShortcode(this)">[camp_contact_form]</code>
 						<span class="copy-notice">✓ Copied!</span>
 						<p class="shortcode-desc">Contact/message form on individual camp pages. Saves the message to the messages table and notifies the admin. Works for both logged-in users and guests.</p>
 						<div class="shortcode-params">
 							<strong>Parameters:</strong> <code>camp_id</code> (required)
-							<br><strong>Example:</strong> <code>[camp_contact_form camp_id="45"]</code>
+							<br><strong>Note:</strong> <code>camp_id</code> is optional — if omitted, the shortcode automatically reads the <code>camp_id</code> custom field from the current page. You can still override it manually: <code>[camp_contact_form camp_id="45"]</code>
 							<br><strong>View messages:</strong> Camp Management → Parent Messages
 						</div>
 					</div>

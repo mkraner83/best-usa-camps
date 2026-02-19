@@ -124,6 +124,12 @@ class Parent_Camp_Shortcodes {
 		$atts    = shortcode_atts( [ 'camp_id' => 0 ], $atts );
 		$camp_id = intval( $atts['camp_id'] );
 
+		// Fallback: read camp id from the page's custom field "camp_id"
+		if ( ! $camp_id ) {
+			$page_id = get_the_ID() ?: get_queried_object_id();
+			$camp_id = intval( get_post_meta( $page_id, 'camp_id', true ) );
+		}
+
 		if ( ! $camp_id ) return '';
 
 		if ( ! is_user_logged_in() ) {
@@ -203,6 +209,12 @@ class Parent_Camp_Shortcodes {
 	public function render_contact_form( $atts ) {
 		$atts    = shortcode_atts( [ 'camp_id' => 0 ], $atts );
 		$camp_id = intval( $atts['camp_id'] );
+
+		// Fallback: read camp id from the page's custom field "page_id"
+		if ( ! $camp_id ) {
+			$page_id = get_the_ID() ?: get_queried_object_id();
+			$camp_id = intval( get_post_meta( $page_id, 'camp_id', true ) );
+		}
 
 		if ( ! $camp_id ) return '';
 
