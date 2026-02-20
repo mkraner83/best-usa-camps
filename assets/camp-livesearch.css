@@ -4,6 +4,7 @@
 
 .cdbs-ls-wrap {
 	position: relative;
+	z-index: 999999;
 	display: inline-block;
 	width: 260px;
 	max-width: 100%;
@@ -74,7 +75,7 @@
 	border: 1.5px solid #e0e6ed;
 	border-radius: 10px;
 	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.13);
-	z-index: 99999;
+	z-index: 9999999;
 	overflow: hidden;
 	display: none;
 }
